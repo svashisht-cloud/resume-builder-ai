@@ -3,61 +3,11 @@ import { z } from "zod";
 const EvidenceIdSchema = z.string().min(1);
 
 export const ContactInfoSchema = z.object({
-  name: z.string().optional(),
-  email: z.string().email().optional(),
-  phone: z.string().optional(),
-  location: z.string().optional(),
-  links: z.array(z.string()).default([]),
-});
-
-export const ResumeBulletSchema = z.object({
-  id: EvidenceIdSchema,
-  text: z.string().min(1),
-});
-
-export const ResumeExperienceSchema = z.object({
-  id: EvidenceIdSchema,
-  company: z.string().min(1),
-  title: z.string().min(1),
-  location: z.string().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  bullets: z.array(ResumeBulletSchema),
-});
-
-export const ParsedResumeSchema = z.object({
-  contact: ContactInfoSchema,
-  summary: z.string().optional(),
-  skills: z.array(z.string()),
-  experience: z.array(ResumeExperienceSchema),
-  education: z.array(z.string()).default([]),
-  projects: z.array(z.string()).default([]),
-  certifications: z.array(z.string()).default([]),
-  sourceText: z.string().min(1),
-});
-
-export const ParsedJobDescriptionSchema = z.object({
-  title: z.string().min(1),
-  company: z.string().optional(),
-  location: z.string().optional(),
-  responsibilities: z.array(z.string()),
-  requiredSkills: z.array(z.string()),
-  preferredSkills: z.array(z.string()).default([]),
-  keywords: z.array(z.string()),
-  sourceText: z.string().min(1),
-});
-
-export const SupportedKeywordSchema = z.object({
-  keyword: z.string().min(1),
-  evidenceIds: z.array(EvidenceIdSchema),
-});
-
-export const GapAnalysisSchema = z.object({
-  supportedKeywords: z.array(SupportedKeywordSchema),
-  missingKeywords: z.array(z.string()),
-  unsupportedKeywords: z.array(z.string()),
-  recommendedFocus: z.array(z.string()),
-  notes: z.array(z.string()).default([]),
+  name: z.string().nullable(),
+  email: z.string().email().nullable(),
+  phone: z.string().nullable(),
+  location: z.string().nullable(),
+  links: z.array(z.string()),
 });
 
 export const TailoredResumeBulletSchema = z.object({
@@ -69,19 +19,39 @@ export const TailoredResumeExperienceSchema = z.object({
   sourceExperienceId: EvidenceIdSchema,
   company: z.string().min(1),
   title: z.string().min(1),
-  location: z.string().optional(),
-  dates: z.string().optional(),
+  location: z.string().nullable(),
+  dates: z.string().nullable(),
   bullets: z.array(TailoredResumeBulletSchema),
+});
+
+export const SkillGroupSchema = z.object({
+  category: z.string().min(1),
+  items: z.array(z.string().min(1)),
+});
+
+export const ResumeProjectSchema = z.object({
+  name: z.string().min(1),
+  techStack: z.string().nullable(),
+  date: z.string().nullable(),
+  bullets: z.array(z.string().min(1)),
+});
+
+export const ResumeEducationSchema = z.object({
+  institution: z.string().min(1),
+  degree: z.string().min(1),
+  location: z.string().nullable(),
+  date: z.string().nullable(),
+  gpa: z.string().nullable(),
 });
 
 export const TailoredResumeSchema = z.object({
   contact: ContactInfoSchema,
   summary: z.string(),
-  skills: z.array(z.string()),
+  skills: z.array(SkillGroupSchema),
   experience: z.array(TailoredResumeExperienceSchema),
-  education: z.array(z.string()).default([]),
-  projects: z.array(z.string()).default([]),
-  certifications: z.array(z.string()).default([]),
+  education: z.array(ResumeEducationSchema),
+  projects: z.array(ResumeProjectSchema),
+  certifications: z.array(z.string()),
 });
 
 export const ChangeLogEntrySchema = z.object({
@@ -93,7 +63,7 @@ export const ChangeLogEntrySchema = z.object({
     "projects",
     "certifications",
   ]),
-  originalText: z.string().optional(),
+  originalText: z.string().nullable(),
   tailoredText: z.string().min(1),
   reason: z.string().min(1),
   evidenceIds: z.array(EvidenceIdSchema),
@@ -103,28 +73,35 @@ export const ChangeLogSchema = z.object({
   changes: z.array(ChangeLogEntrySchema),
 });
 
-export const ATSSectionScoreSchema = z.object({
-  section: z.string().min(1),
-  score: z.number().int().min(0).max(100),
-  notes: z.string().optional(),
+export const ResumeEvaluationRubricSchema = z.object({
+  skillsAlignment: z.number().int().min(0).max(100),
+  experienceAlignment: z.number().int().min(0).max(100),
+  projectAlignment: z.number().int().min(0).max(100),
+  clarity: z.number().int().min(0).max(100),
+  atsReadability: z.number().int().min(0).max(100),
 });
 
-export const ATSScoreSchema = z.object({
-  overall: z.number().int().min(0).max(100),
-  sectionScores: z.array(ATSSectionScoreSchema),
-  matchedKeywords: z.array(z.string()),
-  missingKeywords: z.array(z.string()),
+export const ResumeEvaluationSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  summary: z.string().min(1),
   strengths: z.array(z.string()),
-  risks: z.array(z.string()),
+  gaps: z.array(z.string()),
+  improvementSuggestions: z.array(z.string()),
+  matchedAreas: z.array(z.string()),
+  missingAreas: z.array(z.string()),
+  rubric: ResumeEvaluationRubricSchema,
+});
+
+export const ScoreComparisonSchema = z.object({
+  before: z.number().int().min(0).max(100),
+  after: z.number().int().min(0).max(100),
+  delta: z.number().int(),
 });
 
 export type ContactInfo = z.infer<typeof ContactInfoSchema>;
-export type ResumeBullet = z.infer<typeof ResumeBulletSchema>;
-export type ResumeExperience = z.infer<typeof ResumeExperienceSchema>;
-export type ParsedResume = z.infer<typeof ParsedResumeSchema>;
-export type ParsedJobDescription = z.infer<typeof ParsedJobDescriptionSchema>;
-export type SupportedKeyword = z.infer<typeof SupportedKeywordSchema>;
-export type GapAnalysis = z.infer<typeof GapAnalysisSchema>;
+export type SkillGroup = z.infer<typeof SkillGroupSchema>;
+export type ResumeProject = z.infer<typeof ResumeProjectSchema>;
+export type ResumeEducation = z.infer<typeof ResumeEducationSchema>;
 export type TailoredResumeBullet = z.infer<typeof TailoredResumeBulletSchema>;
 export type TailoredResumeExperience = z.infer<
   typeof TailoredResumeExperienceSchema
@@ -132,5 +109,8 @@ export type TailoredResumeExperience = z.infer<
 export type TailoredResume = z.infer<typeof TailoredResumeSchema>;
 export type ChangeLogEntry = z.infer<typeof ChangeLogEntrySchema>;
 export type ChangeLog = z.infer<typeof ChangeLogSchema>;
-export type ATSSectionScore = z.infer<typeof ATSSectionScoreSchema>;
-export type ATSScore = z.infer<typeof ATSScoreSchema>;
+export type ResumeEvaluationRubric = z.infer<
+  typeof ResumeEvaluationRubricSchema
+>;
+export type ResumeEvaluation = z.infer<typeof ResumeEvaluationSchema>;
+export type ScoreComparison = z.infer<typeof ScoreComparisonSchema>;

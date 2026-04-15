@@ -1,24 +1,80 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f7f4;
-  --foreground: #18181b;
+  --background: #0a0f1e;
+  --surface: #0f1629;
+  --surface-raised: #131c35;
+  --accent: #06b6d4;
+  --accent-secondary: #6366f1;
+  --foreground: #ffffff;
+  --muted: #94a3b8;
+  --border: #1e293b;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-accent: var(--accent);
+  --color-accent-secondary: var(--accent-secondary);
   --color-foreground: var(--foreground);
-  --font-sans: Arial, Helvetica, sans-serif;
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 button,
 a {
   cursor: pointer;
+}
+
+@keyframes slide {
+  0%   { transform: translateX(-150%); }
+  100% { transform: translateX(450%); }
+}
+
+@media print {
+  @page {
+    margin: 0.4in;
+    size: letter;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .resume-print-area,
+  .resume-print-area * {
+    visibility: visible;
+  }
+
+  .resume-print-area {
+    background: #ffffff !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    inset: 0 auto auto 0;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    position: absolute;
+    width: 100%;
+  }
+
+  .resume-document {
+    break-after: auto;
+    color-adjust: exact;
+    print-color-adjust: exact;
+    width: 100%;
+  }
 }
