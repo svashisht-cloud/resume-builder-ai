@@ -1,13 +1,13 @@
 # TASKS.md
 
 ## Current status
-- MR-2 shared schemas implemented
-- structured pipeline contracts defined
-- API not started
+- MR-3 mocked backend wiring implemented
+- dashboard uses resume upload plus JD text for mocked tailoring
+- result panel widened to match input panel
 
 ## Next step
-- wire JD + resume inputs to backend tailoring flow
+- replace mocked resume upload handling with real resume parsing
 
 ## Notes
 - using Next.js app router
-- no backend yet
+- backend is mocked only
