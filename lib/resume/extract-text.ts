@@ -1,7 +1,11 @@
 import mammoth from "mammoth";
-import { PDFParse } from "pdf-parse";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+// pdf-parse is imported dynamically so we can polyfill DOMMatrix before
+// pdfjs-dist (its dependency) evaluates. Node.js 18 (Vercel default) does
+// not include DOMMatrix; a static import would crash at module load time.
+
+type PdfParseModule = typeof import("pdf-parse");
 
 const SUPPORTED_TYPES = new Set([
   "text/plain",
@@ -13,13 +17,19 @@ function getExtension(fileName: string) {
   return fileName.split(".").pop()?.toLowerCase() ?? "";
 }
 
-function configurePdfWorker() {
+async function loadPdfParse(): Promise<PdfParseModule> {
+  // pdfjs-dist references DOMMatrix at module evaluation; provide a minimal
+  // stub for Node.js 18 which does not include this browser API.
+  if (typeof globalThis.DOMMatrix === "undefined") {
+    (globalThis as Record<string, unknown>).DOMMatrix = class {};
+  }
+  const mod = await import("pdf-parse");
   const workerPath = path.join(
     process.cwd(),
     "node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
   );
-
-  PDFParse.setWorker(pathToFileURL(workerPath).href);
+  mod.PDFParse.setWorker(pathToFileURL(workerPath).href);
+  return mod;
 }
 
 export async function extractResumeText(file: File) {
@@ -40,7 +50,7 @@ export async function extractResumeText(file: File) {
   }
 
   if (extension === "pdf" || file.type === "application/pdf") {
-    configurePdfWorker();
+    const { PDFParse } = await loadPdfParse();
     const parser = new PDFParse({ data: buffer });
 
     try {
