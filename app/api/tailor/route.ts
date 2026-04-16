@@ -13,6 +13,7 @@ import {
   ScoreComparisonSchema,
   TailoredResumeSchema,
 } from "@/types";
+import type { TailorResponse } from "@/types/api";
 
 export const runtime = "nodejs";
 
@@ -51,6 +52,20 @@ export async function POST(request: Request) {
       );
     }
 
+    if (resumeFile.size > 5 * 1024 * 1024) {
+      return Response.json(
+        { error: "Resume file is too large. Maximum size is 5 MB." },
+        { status: 400 },
+      );
+    }
+
+    if (jobDescriptionText.length > 15_000) {
+      return Response.json(
+        { error: "Job description is too long. Maximum is 15 000 characters." },
+        { status: 400 },
+      );
+    }
+
     const resumeText = await extractResumeText(resumeFile);
 
     if (!resumeText.trim()) {
@@ -81,7 +96,7 @@ export async function POST(request: Request) {
       tailoredEvaluation,
     });
 
-    const response = TailorResponseSchema.parse({
+    const response: TailorResponse = TailorResponseSchema.parse({
       tailoredResume,
       originalEvaluation,
       tailoredEvaluation,

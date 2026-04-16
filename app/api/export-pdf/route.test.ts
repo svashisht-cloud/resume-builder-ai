@@ -53,7 +53,10 @@ describe("POST /api/export-pdf", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("application/pdf");
     expect(response.headers.get("Content-Disposition")).toContain(
-      "alex-morgan-senior-product-engineer-tailored-resume.pdf",
+      "alex-morgan-senior-product-engineer-",
+    );
+    expect(response.headers.get("Content-Disposition")).toContain(
+      "tailored-resume.pdf",
     );
     expect(signature).toBe("%PDF");
   });

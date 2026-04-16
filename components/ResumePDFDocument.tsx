@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
   },
   // ── Section ─────────────────────────────────────────────────────────────
   section: {
-    marginTop: 6,
+    marginTop: 3,
   },
   sectionTitle: {
     fontSize: 12,
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
   },
   // ── Experience ───────────────────────────────────────────────────────────
   expBlock: {
-    marginBottom: 4,
+    marginBottom: 2,
   },
   twoColRow: {
     flexDirection: "row",
@@ -109,14 +109,14 @@ const styles = StyleSheet.create({
   // ── Skills ───────────────────────────────────────────────────────────────
   skillRow: {
     flexDirection: "row",
+    flexWrap: "nowrap",
     marginBottom: 1,
   },
   skillCategory: {
     fontSize: 11,
     fontFamily: "Times-Bold",
     color: BLACK,
-    flexShrink: 0,
-    marginRight: 8,
+    width: 150,
   },
   skillItems: {
     fontSize: 10.5,
@@ -219,57 +219,6 @@ export function ResumePDFDocument({
           )}
         </View>
 
-        {/* Experience */}
-        {hasExperience && (
-          <View style={styles.section}>
-            <PdfSectionHeader title="Work Experience" />
-            {resume.experience.map((exp) => (
-              <View key={exp.sourceExperienceId} style={styles.expBlock} wrap={false}>
-                {/* Company ←→ Location */}
-                <View style={styles.twoColRow}>
-                  <Text style={styles.companyText}>{exp.company}</Text>
-                  {present(exp.location) && (
-                    <Text style={styles.locationText}>{exp.location}</Text>
-                  )}
-                </View>
-                {/* Role ←→ Dates */}
-                <View style={styles.twoColRow}>
-                  <Text style={styles.roleText}>{exp.title}</Text>
-                  {present(exp.dates) && (
-                    <Text style={styles.datesText}>{exp.dates}</Text>
-                  )}
-                </View>
-                {exp.bullets.length > 0 && (
-                  <PdfBulletList items={exp.bullets.map((b) => b.text)} />
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Projects */}
-        {hasProjects && (
-          <View style={styles.section}>
-            <PdfSectionHeader title="Projects" />
-            {resume.projects.map((proj) => (
-              <View key={proj.name} style={styles.expBlock} wrap={false}>
-                <View style={styles.twoColRow}>
-                  <Text style={styles.projectName}>
-                    {proj.name}
-                    {present(proj.techStack) ? (
-                      <Text style={styles.projectTech}> ({proj.techStack})</Text>
-                    ) : ""}
-                  </Text>
-                  {present(proj.date) && (
-                    <Text style={styles.datesText}>{proj.date}</Text>
-                  )}
-                </View>
-                {proj.bullets.length > 0 && <PdfBulletList items={proj.bullets} />}
-              </View>
-            ))}
-          </View>
-        )}
-
         {/* Education */}
         {hasEducation && (
           <View style={styles.section}>
@@ -308,6 +257,57 @@ export function ResumePDFDocument({
               <View key={group.category} style={styles.skillRow}>
                 <Text style={styles.skillCategory}>{group.category}:</Text>
                 <Text style={styles.skillItems}>{group.items.join(", ")}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Experience */}
+        {hasExperience && (
+          <View style={styles.section}>
+            <PdfSectionHeader title="Work Experience" />
+            {resume.experience.map((exp) => (
+              <View key={exp.sourceExperienceId} style={styles.expBlock}>
+                {/* Company ←→ Location */}
+                <View style={styles.twoColRow}>
+                  <Text style={styles.companyText}>{exp.company}</Text>
+                  {present(exp.location) && (
+                    <Text style={styles.locationText}>{exp.location}</Text>
+                  )}
+                </View>
+                {/* Role ←→ Dates */}
+                <View style={styles.twoColRow}>
+                  <Text style={styles.roleText}>{exp.title}</Text>
+                  {present(exp.dates) && (
+                    <Text style={styles.datesText}>{exp.dates}</Text>
+                  )}
+                </View>
+                {exp.bullets.length > 0 && (
+                  <PdfBulletList items={exp.bullets.map((b) => b.text)} />
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Projects */}
+        {hasProjects && (
+          <View style={styles.section}>
+            <PdfSectionHeader title="Projects" />
+            {resume.projects.map((proj) => (
+              <View key={proj.name} style={styles.expBlock}>
+                <View style={styles.twoColRow}>
+                  <Text style={styles.projectName}>
+                    {proj.name}
+                    {present(proj.techStack) ? (
+                      <Text style={styles.projectTech}> ({proj.techStack})</Text>
+                    ) : ""}
+                  </Text>
+                  {present(proj.date) && (
+                    <Text style={styles.datesText}>{proj.date}</Text>
+                  )}
+                </View>
+                {proj.bullets.length > 0 && <PdfBulletList items={proj.bullets} />}
               </View>
             ))}
           </View>

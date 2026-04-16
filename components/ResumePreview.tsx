@@ -13,9 +13,9 @@ function capitalize(s: string): string {
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <div className="mb-1 mt-3.5">
+    <div className="mb-1 mt-2">
       <h2
-        className="text-[12px] font-bold uppercase text-black"
+        className="text-[12pt] font-bold uppercase text-black"
         style={{ fontFamily: TIMES }}
       >
         {title}
@@ -30,7 +30,7 @@ function BulletList({ items }: { items: string[] }) {
     <ul className="ml-4 list-disc">
       {items.map((item, i) => (
         <li
-          className="text-[10.5px] leading-[1.4] text-black"
+          className="text-[10.5pt] leading-[1.3] text-black"
           key={`${item}-${i}`}
           style={{ fontFamily: TIMES }}
         >
@@ -62,20 +62,20 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
 
   return (
     <article
-      className="resume-document min-h-[11in] w-full max-w-[816px] bg-white px-[0.5in] py-[0.45in] text-black print:min-h-0 print:max-w-none print:px-0 print:py-0 print:shadow-none"
+      className="resume-document min-h-[11in] w-full max-w-[816px] bg-white px-[42px] py-[40px] text-black print:min-h-0 print:max-w-none print:px-0 print:py-0 print:shadow-none"
       style={{ fontFamily: TIMES }}
     >
       {/* ── Header ── */}
       <header className="mb-0.5 text-center">
         <h1
-          className="text-[20px] font-bold leading-tight text-black"
+          className="text-[20pt] font-bold leading-tight text-black"
           style={{ fontFamily: TIMES }}
         >
           {name}
         </h1>
         {infoItems.length > 0 && (
           <p
-            className="mt-2 text-[10.5px] leading-snug text-black"
+            className="mt-2 text-[10.5pt] leading-snug text-black"
             style={{ fontFamily: TIMES }}
           >
             {infoItems.join("  |  ")}
@@ -83,13 +83,79 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
         )}
         {linkItems.length > 0 && (
           <p
-            className="mt-0.5 text-[10.5px] leading-snug text-black"
+            className="mt-0.5 text-[10.5pt] leading-snug text-black"
             style={{ fontFamily: TIMES }}
           >
             {linkItems.join("  |  ")}
           </p>
         )}
       </header>
+
+      {/* ── Education ── */}
+      {hasEducation && (
+        <>
+          <SectionHeader title="Education" />
+          <div className="space-y-1.5">
+            {resume.education.map((edu) => (
+              <div className="break-inside-avoid" key={`${edu.institution}-${edu.degree}`}>
+                {/* Institution ←→ Date */}
+                <div className="flex items-baseline justify-between gap-2">
+                  <span
+                    className="text-[11pt] font-bold leading-snug text-black"
+                    style={{ fontFamily: TIMES }}
+                  >
+                    {edu.institution}
+                    {present(edu.location) ? (
+                      <span className="italic">{`, ${edu.location}`}</span>
+                    ) : ""}
+                  </span>
+                  {present(edu.date) && (
+                    <span
+                      className="shrink-0 text-[10.5pt] font-bold leading-snug text-black"
+                      style={{ fontFamily: TIMES }}
+                    >
+                      {edu.date}
+                    </span>
+                  )}
+                </div>
+                {/* Degree + GPA */}
+                <p
+                  className="text-[10.5pt] italic leading-snug text-black"
+                  style={{ fontFamily: TIMES }}
+                >
+                  {edu.degree}
+                  {present(edu.gpa) ? `, GPA: ${edu.gpa}` : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ── Technical Skills ── */}
+      {hasSkills && (
+        <>
+          <SectionHeader title="Technical Skills" />
+          <div className="space-y-0.5">
+            {resume.skills.map((group) => (
+              <div className="flex items-baseline" key={group.category}>
+                <span
+                  className="shrink-0 w-[170px] text-[11pt] font-bold leading-[1.3] text-black"
+                  style={{ fontFamily: TIMES }}
+                >
+                  {group.category}:
+                </span>
+                <span
+                  className="text-[10.5pt] leading-[1.3] text-black"
+                  style={{ fontFamily: TIMES }}
+                >
+                  {group.items.join(", ")}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* ── Experience ── */}
       {hasExperience && (
@@ -101,14 +167,14 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
                 {/* Company ←→ Location */}
                 <div className="flex items-baseline justify-between gap-2">
                   <span
-                    className="text-[11px] font-bold leading-snug text-black"
+                    className="text-[11pt] font-bold leading-snug text-black"
                     style={{ fontFamily: TIMES }}
                   >
                     {exp.company}
                   </span>
                   {present(exp.location) && (
                     <span
-                      className="shrink-0 text-[10.5px] italic leading-snug text-black"
+                      className="shrink-0 text-[10.5pt] italic leading-snug text-black"
                       style={{ fontFamily: TIMES }}
                     >
                       {exp.location}
@@ -118,14 +184,14 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
                 {/* Role ←→ Dates */}
                 <div className="flex items-baseline justify-between gap-2">
                   <span
-                    className="text-[11px] italic leading-snug text-black"
+                    className="text-[11pt] italic leading-snug text-black"
                     style={{ fontFamily: TIMES }}
                   >
                     {exp.title}
                   </span>
                   {present(exp.dates) && (
                     <span
-                      className="shrink-0 text-[10.5px] font-bold leading-snug text-black"
+                      className="shrink-0 text-[10.5pt] font-bold leading-snug text-black"
                       style={{ fontFamily: TIMES }}
                     >
                       {exp.dates}
@@ -151,7 +217,7 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
                 {/* Name (tech stack) ←→ Date */}
                 <div className="flex items-baseline justify-between gap-2">
                   <span
-                    className="text-[11px] font-bold italic leading-snug text-black"
+                    className="text-[11pt] font-bold italic leading-snug text-black"
                     style={{ fontFamily: TIMES }}
                   >
                     {proj.name}
@@ -161,7 +227,7 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
                   </span>
                   {present(proj.date) && (
                     <span
-                      className="shrink-0 text-[10.5px] font-bold leading-snug text-black"
+                      className="shrink-0 text-[10.5pt] font-bold leading-snug text-black"
                       style={{ fontFamily: TIMES }}
                     >
                       {proj.date}
@@ -169,72 +235,6 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
                   )}
                 </div>
                 {proj.bullets.length > 0 && <BulletList items={proj.bullets} />}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* ── Education ── */}
-      {hasEducation && (
-        <>
-          <SectionHeader title="Education" />
-          <div className="space-y-1.5">
-            {resume.education.map((edu) => (
-              <div className="break-inside-avoid" key={`${edu.institution}-${edu.degree}`}>
-                {/* Institution ←→ Date */}
-                <div className="flex items-baseline justify-between gap-2">
-                  <span
-                    className="text-[11px] font-bold leading-snug text-black"
-                    style={{ fontFamily: TIMES }}
-                  >
-                    {edu.institution}
-                    {present(edu.location) ? (
-                      <span className="italic">{`, ${edu.location}`}</span>
-                    ) : ""}
-                  </span>
-                  {present(edu.date) && (
-                    <span
-                      className="shrink-0 text-[10.5px] font-bold leading-snug text-black"
-                      style={{ fontFamily: TIMES }}
-                    >
-                      {edu.date}
-                    </span>
-                  )}
-                </div>
-                {/* Degree + GPA */}
-                <p
-                  className="text-[10.5px] italic leading-snug text-black"
-                  style={{ fontFamily: TIMES }}
-                >
-                  {edu.degree}
-                  {present(edu.gpa) ? `, GPA: ${edu.gpa}` : ""}
-                </p>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* ── Technical Skills ── */}
-      {hasSkills && (
-        <>
-          <SectionHeader title="Technical Skills" />
-          <div className="space-y-0.5">
-            {resume.skills.map((group) => (
-              <div className="flex gap-4" key={group.category}>
-                <span
-                  className="w-28 shrink-0 text-[11px] font-bold leading-[1.4] text-black"
-                  style={{ fontFamily: TIMES }}
-                >
-                  {group.category}:
-                </span>
-                <span
-                  className="text-[10.5px] leading-[1.4] text-black"
-                  style={{ fontFamily: TIMES }}
-                >
-                  {group.items.join(", ")}
-                </span>
               </div>
             ))}
           </div>

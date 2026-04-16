@@ -15,9 +15,11 @@ export function buildResumePdfFilename({
   resume: TailoredResume;
   role?: string | null;
 }) {
+  const date = new Date().toISOString().slice(0, 10);
   const parts = [
     resume.contact.name ? slugify(resume.contact.name) : "",
     role ? slugify(role) : "",
+    date,
     "tailored-resume",
   ].filter(Boolean);
 

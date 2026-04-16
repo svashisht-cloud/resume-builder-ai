@@ -6,6 +6,14 @@ import {
   getOpenAIClient,
 } from "@/lib/ai/client";
 import {
+  buildEvalUserPrompt,
+  buildTailoredEvalUserPrompt,
+  buildTailorUserPrompt,
+  EVAL_SYSTEM_PROMPT,
+  TAILORED_EVAL_SYSTEM_PROMPT,
+  TAILOR_SYSTEM_PROMPT,
+} from "@/lib/ai/prompts";
+import {
   ChangeLogSchema,
   ResumeEvaluationSchema,
   TailoredResumeSchema,
@@ -324,9 +332,8 @@ export async function evaluateResumeAgainstJDRaw(
     schemaName: "resume_evaluation",
     stage: "evaluateResumeAgainstJDRaw",
     validationLabel: "AI response failed ResumeEvaluation validation",
-    systemPrompt:
-      "You are an expert recruiter and resume evaluator. Judge the resume's fit for the job using only the raw resume text and raw job description text. Score realistically from 0 to 100 like a careful ChatGPT-style review: reward clear semantic alignment even when wording differs, but do not assume unstated skills, experience, tools, metrics, titles, credentials, or projects. Consider summary, skills, experience, projects, education, clarity, and ATS readability. Weak resumes should score weakly, strong partial matches should get meaningful credit, and strong evidence-backed matches should score highly.",
-    userPrompt: `Evaluate this resume against this job description.\n\nScoring guidance:\n- Use the raw resume text as the only source of truth for candidate evidence.\n- Use the raw job description text as the only source of truth for role expectations.\n- Prefer human-realistic fit judgment over exact keyword counting.\n- Credit synonymous or semantically equivalent evidence when it is clearly supported.\n- Penalize missing must-have experience, unclear evidence, weak relevance, and poor readability.\n- Do not make the score automatically generous; calibrate it to the actual evidence.\n- matchedAreas and missingAreas should be concise role-fit areas, not raw keyword dumps.\n\nRESUME TEXT:\n${resumeText}\n\nJOB DESCRIPTION TEXT:\n${jobDescriptionText}`,
+    systemPrompt: EVAL_SYSTEM_PROMPT,
+    userPrompt: buildEvalUserPrompt(resumeText, jobDescriptionText),
   });
 }
 
@@ -340,9 +347,8 @@ export async function evaluateTailoredResumeAgainstJDRaw(
     schemaName: "resume_evaluation",
     stage: "evaluateResumeAgainstJDRaw",
     validationLabel: "AI response failed ResumeEvaluation validation",
-    systemPrompt:
-      "You are an expert recruiter and resume evaluator. Judge the resume's fit for the job using only the raw resume text and raw job description text. Score realistically from 0 to 100 like a careful ChatGPT-style review: reward clear semantic alignment even when wording differs, but do not assume unstated skills, experience, tools, metrics, titles, credentials, or projects. Consider summary, skills, experience, projects, education, clarity, and ATS readability. Weak resumes should score weakly, strong partial matches should get meaningful credit, and strong evidence-backed matches should score highly. This is a tailored version of the resume — give additional credit for exact JD keyword matches, improved ATS readability, and tighter phrasing alignment with the job description.",
-    userPrompt: `Evaluate this tailored resume against this job description.\n\nScoring guidance:\n- Use the raw resume text as the only source of truth for candidate evidence.\n- Use the raw job description text as the only source of truth for role expectations.\n- Prefer human-realistic fit judgment over exact keyword counting.\n- Credit synonymous or semantically equivalent evidence when it is clearly supported.\n- Give extra credit when the resume uses exact JD terminology, leads bullets with the most JD-relevant content, and has a summary that directly addresses the role requirements.\n- Penalize missing must-have experience, unclear evidence, weak relevance, and poor readability.\n- Do not make the score automatically generous; calibrate it to the actual evidence.\n- matchedAreas and missingAreas should be concise role-fit areas, not raw keyword dumps.\n\nRESUME TEXT:\n${resumeText}\n\nJOB DESCRIPTION TEXT:\n${jobDescriptionText}`,
+    systemPrompt: TAILORED_EVAL_SYSTEM_PROMPT,
+    userPrompt: buildTailoredEvalUserPrompt(resumeText, jobDescriptionText),
   });
 }
 
@@ -377,30 +383,14 @@ export async function generateTailoredResumeFromRaw({
     stage: "generateTailoredResume",
     validationLabel: "AI response failed TailoredResume validation",
     temperature: 0.2,
-    systemPrompt:
-      "You are an expert resume writer. Your job is to produce a meaningfully rewritten, ATS-optimized version of the source resume that is tightly aligned with the target job description. You must never fabricate skills, tools, companies, titles, dates, metrics, credentials, or projects — all claims must be grounded in the source resume. Return structured JSON for rendering. Use stable sourceExperienceId values such as exp-1, exp-2 for source jobs in order of appearance. For evidenceIds, use short semantic labels that identify which source experience or bullet you drew from (e.g. 'exp-1-bullet-2', 'exp-2-lead-bullet'). For the skills field, preserve the exact category names and groupings from the source resume (e.g. Languages, Frontend, Backend, Tools). If the source has no categories, infer reasonable ones — never flatten all skills into a single group. For the projects field, each project is an object with: name (string), techStack (comma-separated tech string or null), date (string or null), and bullets (string array of accomplishments). For the education field, each entry is an object with: institution, degree, location (or null), date (or null), gpa (or null). All fields are required; use null for missing scalar values and [] for missing lists.",
-    userPrompt: `Your PRIMARY goal is to maximize ATS keyword alignment and recruiter clarity for the target role. Every bullet in the most relevant experience entries must be meaningfully rewritten — not just 1–2 words changed, but restructured to lead with the JD's exact terminology where the source resume supports it.
-
-RULES:
-- Rewrite bullets to open with the most JD-relevant action verb and keyword from the job description, when the source experience supports it.
-- Reorder bullets within each experience to lead with the most JD-relevant one.
-- Rewrite the summary to open with the exact role title (or closest match from source), then address the top 2–3 JD requirements using language from the source resume.
-- Within each skill group, reorder items to list those that appear verbatim in the JD first.
-- Do NOT fabricate: do not add any skill, tool, company, title, date, metric, credential, or project that is not in the source resume.
-- Keep all substantive sections (experience, projects, education, certifications) present in the source resume.
-- evidenceIds are semantic traceability labels (e.g. 'exp-1-bullet-3') — they are NOT required to be verbatim quotes.
-
-${matchedBlock}
-
-${gapsBlock}
-
-${suggestionsBlock}
-
-RAW RESUME TEXT:
-${resumeText}
-
-RAW JOB DESCRIPTION TEXT:
-${jobDescriptionText}`,
+    systemPrompt: TAILOR_SYSTEM_PROMPT,
+    userPrompt: buildTailorUserPrompt({
+      matchedBlock,
+      gapsBlock,
+      suggestionsBlock,
+      resumeText,
+      jobDescriptionText,
+    }),
   });
 
   return result;
