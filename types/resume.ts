@@ -2,8 +2,18 @@ import { z } from "zod";
 
 const EvidenceIdSchema = z.string().min(1);
 
+export const SectionKeySchema = z.enum([
+  "summary",
+  "education",
+  "skills",
+  "experience",
+  "projects",
+  "certifications",
+]);
+
 export const ContactInfoSchema = z.object({
   name: z.string().nullable(),
+  roleSubtitle: z.string().nullable(),
   email: z.string().email().nullable(),
   phone: z.string().nullable(),
   location: z.string().nullable(),
@@ -33,6 +43,7 @@ export const ResumeProjectSchema = z.object({
   name: z.string().min(1),
   techStack: z.string().nullable(),
   date: z.string().nullable(),
+  url: z.string().nullable(),
   bullets: z.array(z.string().min(1)),
 });
 
@@ -52,17 +63,11 @@ export const TailoredResumeSchema = z.object({
   education: z.array(ResumeEducationSchema),
   projects: z.array(ResumeProjectSchema),
   certifications: z.array(z.string()),
+  sectionOrder: z.array(SectionKeySchema).nullable(),
 });
 
 export const ChangeLogEntrySchema = z.object({
-  section: z.enum([
-    "summary",
-    "skills",
-    "experience",
-    "education",
-    "projects",
-    "certifications",
-  ]),
+  section: SectionKeySchema,
   originalText: z.string().nullable(),
   tailoredText: z.string().min(1),
   reason: z.string().min(1),
@@ -107,6 +112,7 @@ export type TailoredResumeExperience = z.infer<
   typeof TailoredResumeExperienceSchema
 >;
 export type TailoredResume = z.infer<typeof TailoredResumeSchema>;
+export type SectionKey = z.infer<typeof SectionKeySchema>;
 export type ChangeLogEntry = z.infer<typeof ChangeLogEntrySchema>;
 export type ChangeLog = z.infer<typeof ChangeLogSchema>;
 export type ResumeEvaluationRubric = z.infer<

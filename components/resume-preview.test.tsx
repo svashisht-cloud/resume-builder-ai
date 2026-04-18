@@ -10,6 +10,7 @@ const baseResume: TailoredResume = {
     location: "New York, NY",
     name: "Alex Morgan",
     phone: "555-0100",
+    roleSubtitle: null,
   },
   certifications: ["AWS Certified Cloud Practitioner"],
   education: [{ institution: "State University", degree: "B.S. Computer Science", location: null, date: null, gpa: null }],
@@ -28,9 +29,10 @@ const baseResume: TailoredResume = {
       title: "Software Engineer",
     },
   ],
-  projects: [{ name: "Resume Parser", techStack: null, date: null, bullets: ["Resume parser with structured extraction and validation."] }],
+  projects: [{ name: "Resume Parser", techStack: null, date: null, url: null, bullets: ["Resume parser with structured extraction and validation."] }],
   skills: [{ category: "Skills", items: ["TypeScript", "Next.js", "Supabase"] }],
   summary: "Software engineer focused on reliable product workflows.",
+  sectionOrder: null,
 };
 
 describe("ResumePreview", () => {
@@ -89,7 +91,7 @@ describe("ResumePreview", () => {
           ],
         },
       ],
-      projects: [{ name: "Analytics Project", techStack: null, date: null, bullets: [longProjectBullet] }],
+      projects: [{ name: "Analytics Project", techStack: null, date: null, url: null, bullets: [longProjectBullet] }],
     };
     const html = renderToStaticMarkup(<ResumePreview resume={resume} />);
 

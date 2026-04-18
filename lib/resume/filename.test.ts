@@ -9,6 +9,7 @@ const resume: TailoredResume = {
     location: null,
     name: "Alex Morgan",
     phone: null,
+    roleSubtitle: null,
   },
   certifications: [],
   education: [],
@@ -16,6 +17,7 @@ const resume: TailoredResume = {
   projects: [],
   skills: [],
   summary: "Summary",
+  sectionOrder: null,
 };
 
 describe("buildResumePdfFilename", () => {

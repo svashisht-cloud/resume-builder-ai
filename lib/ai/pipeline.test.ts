@@ -40,6 +40,7 @@ const evaluation: ResumeEvaluation = {
 const tailoredResume: TailoredResume = {
   contact: {
     name: "Alex Engineer",
+    roleSubtitle: null,
     email: "alex@example.com",
     phone: null,
     location: null,
@@ -66,8 +67,9 @@ const tailoredResume: TailoredResume = {
     },
   ],
   education: [{ institution: "State University", degree: "BS Computer Science", location: null, date: null, gpa: null }],
-  projects: [{ name: "Developer Platform", techStack: "Backstage, Node.js", date: null, bullets: ["Developer platform project using Backstage and Node.js SDKs."] }],
+  projects: [{ name: "Developer Platform", techStack: "Backstage, Node.js", date: null, url: null, bullets: ["Developer platform project using Backstage and Node.js SDKs."] }],
   certifications: ["AWS Certified Developer"],
+  sectionOrder: null,
 };
 
 function mockStructuredOpenAIResponse(json: unknown) {

@@ -9,6 +9,7 @@ const tailoredResume: TailoredResume = {
     location: "New York, NY",
     name: "Alex Morgan",
     phone: "555-0100",
+    roleSubtitle: null,
   },
   certifications: ["AWS Certified Cloud Practitioner"],
   education: [{ institution: "State University", degree: "B.S. Computer Science", location: null, date: "May 2020", gpa: null }],
@@ -27,9 +28,10 @@ const tailoredResume: TailoredResume = {
       title: "Software Engineer",
     },
   ],
-  projects: [{ name: "Resume Parser", techStack: "TypeScript, Node.js", date: null, bullets: ["Built structured extraction and validation pipeline."] }],
+  projects: [{ name: "Resume Parser", techStack: "TypeScript, Node.js", date: null, url: null, bullets: ["Built structured extraction and validation pipeline."] }],
   skills: [{ category: "Skills", items: ["TypeScript", "Next.js", "Supabase"] }],
   summary: "Software engineer focused on reliable product workflows.",
+  sectionOrder: null,
 };
 
 describe("POST /api/export-pdf", () => {

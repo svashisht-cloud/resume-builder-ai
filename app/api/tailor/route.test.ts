@@ -29,6 +29,7 @@ vi.mock("@/lib/ai/pipeline", async () => {
 const tailoredResume: TailoredResume = {
   contact: {
     name: "Alex Engineer",
+    roleSubtitle: null,
     email: "alex@example.com",
     phone: null,
     location: null,
@@ -52,8 +53,9 @@ const tailoredResume: TailoredResume = {
     },
   ],
   education: [{ institution: "State University", degree: "BS Computer Science", location: null, date: null, gpa: null }],
-  projects: [{ name: "Backend API Project", techStack: null, date: null, bullets: ["Built backend API project."] }],
+  projects: [{ name: "Backend API Project", techStack: null, date: null, url: null, bullets: ["Built backend API project."] }],
   certifications: [],
+  sectionOrder: null,
 };
 
 function makeEvaluation(score: number): ResumeEvaluation {

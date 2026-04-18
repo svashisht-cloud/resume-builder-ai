@@ -21,6 +21,10 @@ import {
   type ScoreComparison,
   type TailoredResume,
 } from "@/types";
+import {
+  DEFAULT_SECTION_ORDER,
+  detectSectionOrder,
+} from "@/lib/resume/detect-section-order";
 
 const TailoringResultSchema = z.object({
   tailoredResume: TailoredResumeSchema,
@@ -255,68 +259,78 @@ export function renderTailoredResumeText(resume: TailoredResume) {
   if (contact.length > 0) {
     lines.push(contact.join(" | "));
   }
-
-  if (resume.summary.trim()) {
-    lines.push("", "SUMMARY", resume.summary);
+  if (resume.contact.roleSubtitle?.trim()) {
+    lines.push(resume.contact.roleSubtitle.trim());
   }
 
-  if (resume.skills.length > 0) {
-    lines.push("", "SKILLS");
-    for (const group of resume.skills) {
-      lines.push(`${group.category}: ${group.items.join(", ")}`);
+  for (const key of resume.sectionOrder ?? DEFAULT_SECTION_ORDER) {
+    switch (key) {
+      case "summary":
+        if (resume.summary.trim()) {
+          lines.push("", "SUMMARY", resume.summary);
+        }
+        break;
+      case "education":
+        if (resume.education.length > 0) {
+          lines.push("", "EDUCATION");
+          for (const edu of resume.education) {
+            const header = [edu.institution, edu.location].filter(Boolean).join(", ");
+            const datePart = edu.date ? ` (${edu.date})` : "";
+            lines.push(`${header}${datePart}`);
+            const degreePart = [edu.degree, edu.gpa ? `GPA: ${edu.gpa}` : null]
+              .filter(Boolean)
+              .join(", ");
+            if (degreePart) lines.push(degreePart);
+          }
+        }
+        break;
+      case "skills":
+        if (resume.skills.length > 0) {
+          lines.push("", "SKILLS");
+          for (const group of resume.skills) {
+            lines.push(`${group.category}: ${group.items.join(", ")}`);
+          }
+        }
+        break;
+      case "experience":
+        if (resume.experience.length > 0) {
+          lines.push("", "EXPERIENCE");
+          for (const experience of resume.experience) {
+            lines.push(
+              [experience.title, experience.company, experience.location, experience.dates]
+                .filter(Boolean)
+                .join(" | "),
+            );
+            for (const bullet of experience.bullets) {
+              lines.push(`- ${bullet.text}`);
+            }
+          }
+        }
+        break;
+      case "projects":
+        if (resume.projects.length > 0) {
+          lines.push("", "PROJECTS");
+          for (const project of resume.projects) {
+            const header = [project.name, project.techStack].filter(Boolean).join(" | ");
+            const datePart = project.date ? ` (${project.date})` : "";
+            const urlPart = project.url ? ` [${project.url}]` : "";
+            lines.push(`${header}${datePart}${urlPart}`);
+            for (const bullet of project.bullets) {
+              lines.push(`- ${bullet}`);
+            }
+          }
+        }
+        break;
+      case "certifications":
+        if (resume.certifications.length > 0) {
+          lines.push(
+            "",
+            "CERTIFICATIONS",
+            ...resume.certifications.map((c) => `- ${c}`),
+          );
+        }
+        break;
     }
-  }
-
-  if (resume.experience.length > 0) {
-    lines.push("", "EXPERIENCE");
-    for (const experience of resume.experience) {
-      lines.push(
-        [
-          experience.title,
-          experience.company,
-          experience.location,
-          experience.dates,
-        ]
-          .filter(Boolean)
-          .join(" | "),
-      );
-      for (const bullet of experience.bullets) {
-        lines.push(`- ${bullet.text}`);
-      }
-    }
-  }
-
-  if (resume.projects.length > 0) {
-    lines.push("", "PROJECTS");
-    for (const project of resume.projects) {
-      const header = [project.name, project.techStack].filter(Boolean).join(" | ");
-      const datePart = project.date ? ` (${project.date})` : "";
-      lines.push(`${header}${datePart}`);
-      for (const bullet of project.bullets) {
-        lines.push(`- ${bullet}`);
-      }
-    }
-  }
-
-  if (resume.education.length > 0) {
-    lines.push("", "EDUCATION");
-    for (const edu of resume.education) {
-      const header = [edu.institution, edu.location].filter(Boolean).join(", ");
-      const datePart = edu.date ? ` (${edu.date})` : "";
-      lines.push(`${header}${datePart}`);
-      const degreePart = [edu.degree, edu.gpa ? `GPA: ${edu.gpa}` : null]
-        .filter(Boolean)
-        .join(", ");
-      if (degreePart) lines.push(degreePart);
-    }
-  }
-
-  if (resume.certifications.length > 0) {
-    lines.push(
-      "",
-      "CERTIFICATIONS",
-      ...resume.certifications.map((certification) => `- ${certification}`),
-    );
   }
 
   return lines.join("\n").trim();
@@ -393,5 +407,11 @@ export async function generateTailoredResumeFromRaw({
     }),
   });
 
-  return result;
+  return {
+    ...result,
+    tailoredResume: {
+      ...result.tailoredResume,
+      sectionOrder: detectSectionOrder(resumeText),
+    },
+  };
 }
