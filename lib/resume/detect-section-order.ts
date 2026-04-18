@@ -29,7 +29,7 @@ const SECTION_PATTERNS: Array<{ key: SectionKey; patterns: RegExp[] }> = [
   {
     key: "skills",
     patterns: [
-      /^(skills|technical skills|technologies|core competencies|competencies|expertise|technical expertise|core skills|key skills|languages? (and|&) frameworks?)$/i,
+      /^(skills|technical skills|technologies|core competencies|competencies|expertise|technical expertise|core skills|key skills|languages? (and|&) frameworks?|technical knowledge|knowledge|tools? (and|&) technologies?|technical tools?|tools|programming languages?|languages? (and|&) tools?)$/i,
     ],
   },
   {

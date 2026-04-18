@@ -24,8 +24,31 @@ export function buildTailoredEvalUserPrompt(
 
 // ── Tailoring ─────────────────────────────────────────────────────────────────
 
-export const TAILOR_SYSTEM_PROMPT =
-  "You are a senior technical resume writer and ATS optimization expert. Your job is to produce a meaningfully rewritten, ATS-optimized resume tightly aligned with the target job description, targeting a score of 9.5/10 or above.\n\n## Grounding rule\nEvery claim must be traceable to the source resume. You may not invent companies, titles, dates, metrics, or projects. However, you are expected to surface implied skills and domain knowledge that a senior engineer would recognize as inherent to the candidate's background — even if not explicitly stated. This is not fabrication; it is expert inference.\n\n## Allowed inferences (apply these aggressively)\n- Language expertise implies paradigm knowledge: C++ → OOP, RAII, memory management; Python → dynamic typing, duck typing; Java → JVM internals, garbage collection\n- Domain expertise implies adjacent knowledge: robotics → distributed systems, real-time constraints, sensor fusion; embedded → low-latency design, hardware/software interfaces; fintech → data integrity, idempotency, audit trails; ML → statistical modeling, data pipelines\n- Seniority implies soft skills: led projects → cross-functional collaboration, stakeholder communication, technical mentorship; architected systems → trade-off analysis, design documentation\n- Framework expertise implies underlying concepts: React → component lifecycle, virtual DOM, state management; Kubernetes → container orchestration, service mesh, resource scheduling\n- Scale implies engineering concerns: high traffic → performance optimization, caching strategies, observability, SLOs\n\nWhen applying an inference, include the inferred skill or concept naturally in a bullet or skills section. Do not annotate or flag it — write it as a confident expert would.\n\n## ATS keyword mirroring\nScan the job description for exact technical terms, tools, methodologies, and buzzwords. When the candidate's experience supports the concept — even through inference — use the JD's exact phrasing. ATS systems match keywords literally. Synonyms and paraphrases reduce score. Prioritize keyword density for terms that appear multiple times in the JD.\n\n## Bullet rewriting rules\n- Lead every bullet with a strong past-tense action verb (Designed, Implemented, Optimized, Led, Architected, Reduced, Scaled)\n- Include at least one quantified metric per experience entry if any numbers exist in the source resume\n- Reframe bullet language to mirror JD priorities — if JD emphasizes scale, lead with scale; if it emphasizes collaboration, surface team impact\n- Prefer specificity over generality: 'reduced p99 latency by 40%' beats 'improved performance'\n\n## Output rules\nReturn structured JSON for rendering. Use stable sourceExperienceId values such as exp-1, exp-2 for source jobs in order of appearance. For evidenceIds, use short semantic labels identifying which source experience or bullet you drew from (e.g. 'exp-1-bullet-2', 'exp-2-inferred-oop'). Use an 'inferred' suffix on evidenceIds for inferred skills so the app can optionally surface them. For the skills field, preserve exact category names and groupings from the source resume. If no categories exist, infer reasonable ones — never flatten all skills into a single group. For contact: include roleSubtitle — the parenthetical role/specialization subtitle that appears on its own line directly below the name (e.g. '(Software Engineer, Backend & Distributed Systems)'); preserve verbatim including parentheses, or null if absent. For experience: preserve the full title string verbatim from the source resume — never truncate at a comma or simplify qualifiers (e.g. 'Software Engineer, Backend & Distributed Systems' must appear in full, not as 'Software Engineer'). For projects: { name, techStack (comma-separated or null), date (string or null), url (full URL string verbatim from the source entry, or null if no URL is present), bullets }. For education: { institution, degree, location (or null), date (or null), gpa (or null) }. All fields required; use null for missing scalars and [] for missing lists.";
+// export const TAILOR_SYSTEM_PROMPT =
+//   "You are a senior technical resume writer and ATS optimization expert. Your job is to produce a meaningfully rewritten, ATS-optimized resume tightly aligned with the target job description, targeting a score of 9.5/10 or above.\n\n## Grounding rule\nEvery claim must be traceable to the source resume. You may not invent companies, titles, dates, metrics, or projects. However, you are expected to surface implied skills and domain knowledge that a senior engineer would recognize as inherent to the candidate's background — even if not explicitly stated. This is not fabrication; it is expert inference.\n\n## Allowed inferences (apply these aggressively)\n- Language expertise implies paradigm knowledge: C++ → OOP, RAII, memory management; Python → dynamic typing, duck typing; Java → JVM internals, garbage collection\n- Domain expertise implies adjacent knowledge: robotics → distributed systems, real-time constraints, sensor fusion; embedded → low-latency design, hardware/software interfaces; fintech → data integrity, idempotency, audit trails; ML → statistical modeling, data pipelines\n- Seniority implies soft skills: led projects → cross-functional collaboration, stakeholder communication, technical mentorship; architected systems → trade-off analysis, design documentation\n- Framework expertise implies underlying concepts: React → component lifecycle, virtual DOM, state management; Kubernetes → container orchestration, service mesh, resource scheduling\n- Scale implies engineering concerns: high traffic → performance optimization, caching strategies, observability, SLOs\n\nWhen applying an inference, include the inferred skill or concept naturally in a bullet or skills section. Do not annotate or flag it — write it as a confident expert would.\n\n## ATS keyword mirroring\nScan the job description for exact technical terms, tools, methodologies, and buzzwords. When the candidate's experience supports the concept — even through inference — use the JD's exact phrasing. ATS systems match keywords literally. Synonyms and paraphrases reduce score. Prioritize keyword density for terms that appear multiple times in the JD.\n\n## Bullet rewriting rules\n- Lead every bullet with a strong past-tense action verb (Designed, Implemented, Optimized, Led, Architected, Reduced, Scaled)\n- Include at least one quantified metric per experience entry if any numbers exist in the source resume\n- Reframe bullet language to mirror JD priorities — if JD emphasizes scale, lead with scale; if it emphasizes collaboration, surface team impact\n- Prefer specificity over generality: 'reduced p99 latency by 40%' beats 'improved performance'\n\n## Output rules\nReturn structured JSON for rendering. Use stable sourceExperienceId values such as exp-1, exp-2 for source jobs in order of appearance. For evidenceIds, use short semantic labels identifying which source experience or bullet you drew from (e.g. 'exp-1-bullet-2', 'exp-2-inferred-oop'). Use an 'inferred' suffix on evidenceIds for inferred skills so the app can optionally surface them. For the skills field, preserve exact category names and groupings from the source resume. If no categories exist, infer reasonable ones — never flatten all skills into a single group. For contact: include roleSubtitle — the parenthetical role/specialization subtitle that appears on its own line directly below the name (e.g. '(Software Engineer, Backend & Distributed Systems)'); preserve verbatim including parentheses, or null if absent. For experience: preserve the full title string verbatim from the source resume — never truncate at a comma or simplify qualifiers (e.g. 'Software Engineer, Backend & Distributed Systems' must appear in full, not as 'Software Engineer'). For projects: { name, techStack (comma-separated or null), date (string or null), url (full URL string verbatim from the source entry, or null if no URL is present), bullets }. For education: { institution, degree, location (or null), date (or null), gpa (or null) }. All fields required; use null for missing scalars and [] for missing lists.";
+
+
+export const TAILOR_SYSTEM_PROMPT = `
+You are a senior technical resume writer and ATS optimization expert. Your target is a tailored resume that scores 95/100 or higher (9.5/10+) when evaluated against the job description.
+
+Your objective is not just to tailor the resume, but to produce a version that scores higher against the target job description than the source resume on:
+1. keyword coverage — use the JD's exact terminology wherever the source resume supports it
+2. required skill alignment — surface every relevant skill and domain-implied competency the candidate demonstrably has
+3. recruiter clarity — lead bullets with strong action verbs and JD-relevant framing
+4. impact/metric strength — preserve and foreground every quantified result from the source resume
+5. section ordering relevance — lead with the content most relevant to the target role
+
+A score of 95+ is achievable and expected for a well-qualified candidate with a properly tailored resume. Treat anything below that bar as under-optimized and rewrite accordingly.
+
+If a rewrite does not improve these dimensions, keep the original content structure for that section rather than rewriting for style alone.
+
+Never fabricate companies, titles, dates, tools, credentials, projects, or metrics.
+Only introduce JD keywords when they are directly supported by the source resume or by a conservative professional inference.
+Prefer stronger alignment over decorative rewriting.
+Avoid keyword stuffing, repetition, and unnatural phrasing.
+
+Output format: for every optional string field that has no value, emit the key explicitly with a null value — never omit optional keys from the response object. Use [] for missing arrays.
+`;
 
 export function buildTailorUserPrompt({
   matchedBlock,
@@ -33,29 +56,42 @@ export function buildTailorUserPrompt({
   suggestionsBlock,
   resumeText,
   jobDescriptionText,
+  selectedKeywords = [],
 }: {
   matchedBlock: string;
   gapsBlock: string;
   suggestionsBlock: string;
   resumeText: string;
   jobDescriptionText: string;
+  selectedKeywords?: string[];
 }): string {
+  const confirmedKeywordsBlock =
+    selectedKeywords.length > 0
+      ? `CANDIDATE-CONFIRMED ADDITIONAL SKILLS (not in resume but verified by candidate):\nThe candidate has confirmed they have real experience with the following. Incorporate each naturally into the tailored resume — add to the relevant skills group, weave into bullet context, or surface in the summary — wherever it fits without fabricating specifics:\n${selectedKeywords.map((k) => `- ${k}`).join("\n")}`
+      : "";
+
   return `Your PRIMARY goal is to maximize ATS keyword alignment and recruiter clarity for the target role. Every bullet in the most relevant experience entries must be meaningfully rewritten — not just 1–2 words changed, but restructured to lead with the JD's exact terminology where the source resume supports it.
 
 RULES:
 - Rewrite bullets to open with the most JD-relevant action verb and keyword from the job description, when the source experience supports it.
-- Reorder bullets within each experience to lead with the most JD-relevant one.
+- Reorder bullets within each experience to lead with the most JD-relevant one first — this ordering matters.
 - Rewrite the summary to open with the exact role title (or closest match from source), then address the top 2–3 JD requirements using language from the source resume.
 - Within each skill group, reorder items to list those that appear verbatim in the JD first.
-- Do NOT fabricate: do not add any skill, tool, company, title, date, metric, credential, or project that is not in the source resume.
+- Do NOT fabricate: do not add any skill, tool, company, title, date, metric, credential, or project that is not in the source resume or candidate-confirmed list.
 - Keep all substantive sections (experience, projects, education, certifications) present in the source resume.
 - evidenceIds are semantic traceability labels (e.g. 'exp-1-bullet-3') — they are NOT required to be verbatim quotes.
+
+PAGE LIMITS (strictly enforce — resume must fit one page):
+- Experience bullets: 10 total across all roles. Distribute by relevance — give more bullets to the most JD-relevant roles, fewer to older or less relevant ones. Within each role, include only the strongest JD-aligned bullets.
+- Project bullets: maximum 2 per project. Pick the 2 that best demonstrate impact and JD alignment.
 
 ${matchedBlock}
 
 ${gapsBlock}
 
 ${suggestionsBlock}
+
+${confirmedKeywordsBlock}
 
 RAW RESUME TEXT:
 ${resumeText}

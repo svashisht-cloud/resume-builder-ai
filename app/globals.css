@@ -35,11 +35,6 @@ a {
   cursor: pointer;
 }
 
-@keyframes slide {
-  0%   { transform: translateX(-150%); }
-  100% { transform: translateX(450%); }
-}
-
 @media print {
   @page {
     margin: 0.4in;

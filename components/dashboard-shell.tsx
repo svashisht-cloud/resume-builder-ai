@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ResumePreview } from "@/components/ResumePreview";
 import { buildResumePdfFilename } from "@/lib/resume/filename";
 import type { TailorResponse } from "@/types/api";
+import type { ResumeEvaluation } from "@/types";
 
 const RESUME_PAGE_WIDTH_PX = 816; // LETTER at 96 DPI
 const PREVIEW_CARD_SCALE = 400 / RESUME_PAGE_WIDTH_PX; // ≈ 0.49, maps 816px resume → ~400px card
@@ -40,21 +41,29 @@ export function DashboardShell() {
   const [result, setResult] = useState<TailorResponse | null>(null);
   const [error, setError] = useState("");
   const [pdfError, setPdfError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState<0 | 1 | 2 | 3>(0);
+  const [initialScore, setInitialScore] = useState<number | null>(null);
+  const [pendingEvalData, setPendingEvalData] = useState<{
+    resumeText: string;
+    originalEvaluation: ResumeEvaluation;
+  } | null>(null);
+  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  const [noTransition, setNoTransition] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const hasResumeFile = resumeFileName.length > 0;
   const hasJobDescription = jobDescription.trim().length > 0;
-  const canTailor = hasResumeFile && hasJobDescription && !isLoading;
+  const canTailor = hasResumeFile && hasJobDescription && loadingStep === 0 && !pendingEvalData;
 
   async function handleTailorResume() {
-    if (!canTailor || !resumeFile) {
-      return;
-    }
+    if (!canTailor || !resumeFile) return;
 
-    setIsLoading(true);
+    setLoadingStep(1);
+    setInitialScore(null);
+    setPendingEvalData(null);
+    setSelectedKeywords([]);
     setError("");
     setPdfError("");
     setResult(null);
@@ -64,27 +73,100 @@ export function DashboardShell() {
       formData.append("resumeFile", resumeFile);
       formData.append("jobDescriptionText", jobDescription);
 
-      const response = await fetch("/api/tailor", {
+      const step1Res = await fetch("/api/tailor/step1", {
         method: "POST",
         body: formData,
       });
+      const step1Data = await step1Res.json();
+      if (!step1Res.ok) throw new Error(step1Data.error ?? "Step 1 failed.");
 
-      const data = await response.json();
+      const { resumeText, originalEvaluation } = step1Data as {
+        resumeText: string;
+        originalEvaluation: ResumeEvaluation;
+      };
 
-      if (!response.ok) {
-        throw new Error(data.error ?? "Tailoring request failed.");
+      setInitialScore(originalEvaluation.score);
+
+      // Collect chips: missingAreas first, fall back to gaps if empty
+      const chips =
+        originalEvaluation.missingAreas.length > 0
+          ? originalEvaluation.missingAreas
+          : originalEvaluation.gaps;
+
+      if (chips.length === 0) {
+        // No gaps to confirm — skip keyword screen and generate immediately
+        setPendingEvalData({ resumeText, originalEvaluation });
+        await runStep2And3(resumeText, originalEvaluation, []);
+      } else {
+        setPendingEvalData({ resumeText, originalEvaluation });
+        setLoadingStep(0); // show keyword-selection view
       }
-
-      setResult(data as TailorResponse);
     } catch (requestError) {
       setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Tailoring request failed.",
+        requestError instanceof Error ? requestError.message : "Tailoring request failed.",
+      );
+      setLoadingStep(0);
+    }
+  }
+
+  async function runStep2And3(
+    resumeText: string,
+    originalEvaluation: ResumeEvaluation,
+    keywords: string[],
+  ) {
+    try {
+      setLoadingStep(2);
+
+      const step2Res = await fetch("/api/tailor/step2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resumeText,
+          jobDescriptionText: jobDescription,
+          originalEvaluation,
+          selectedKeywords: keywords,
+        }),
+      });
+      const step2Data = await step2Res.json();
+      if (!step2Res.ok) throw new Error(step2Data.error ?? "Step 2 failed.");
+      const { tailoredResume, changeLog } = step2Data;
+
+      setLoadingStep(3);
+
+      const step3Res = await fetch("/api/tailor/step3", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tailoredResume,
+          jobDescriptionText: jobDescription,
+          originalEvaluation,
+          changeLog,
+        }),
+      });
+      const step3Data = await step3Res.json();
+      if (!step3Res.ok) throw new Error(step3Data.error ?? "Step 3 failed.");
+
+      setResult(step3Data as TailorResponse);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error ? requestError.message : "Tailoring request failed.",
       );
     } finally {
-      setIsLoading(false);
+      setLoadingStep(0);
+      setPendingEvalData(null);
     }
+  }
+
+  function handleGenerateResume(keywords: string[]) {
+    if (!pendingEvalData) return;
+    const { resumeText, originalEvaluation } = pendingEvalData;
+    void runStep2And3(resumeText, originalEvaluation, keywords);
+  }
+
+  function toggleKeyword(kw: string) {
+    setSelectedKeywords((prev) =>
+      prev.includes(kw) ? prev.filter((k) => k !== kw) : [...prev, kw],
+    );
   }
 
   async function handleDownloadPdf() {
@@ -192,11 +274,12 @@ export function DashboardShell() {
   }
 
   function handleReset() {
+    setNoTransition(true);
     setResult(null);
     setError("");
     setPdfError("");
     setIsModalOpen(false);
-    window.scrollTo(0, 0);
+    setTimeout(() => setNoTransition(false), 50);
   }
 
   useEffect(() => {
@@ -208,289 +291,427 @@ export function DashboardShell() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isModalOpen]);
 
-  const viewState = isLoading ? "loading" : result ? "result" : "idle";
+  const viewState =
+    loadingStep > 0 ? "loading"
+    : pendingEvalData ? "keyword-selection"
+    : result ? "result"
+    : "idle";
 
   return (
     <>
-      {/* ── Idle: input form ── */}
-      {viewState === "idle" && (
-        <main className="min-h-screen bg-[#0a0f1e] px-4 py-8 text-white sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-2xl">
-            <header>
-              <p className="text-sm font-medium text-[#06b6d4]">Resume Builder</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-normal sm:text-4xl">
-                Tailor a resume to a job description.
-              </h1>
-              <p className="mt-3 text-base leading-7 text-[#94a3b8]">
-                Add your source resume and target job description. Tailoring will
-                stay grounded in the experience you provide.
-              </p>
-            </header>
+      {/* ── 3-panel sliding container ── */}
+      <div className="fixed inset-0 overflow-hidden">
+        <div
+          className={noTransition ? "flex h-full" : "flex h-full transition-transform duration-[350ms] ease-in-out"}
+          style={{
+            width: "300vw",
+            transform:
+              viewState === "idle"
+                ? "translateX(0)"
+                : viewState === "result"
+                  ? "translateX(-200vw)"
+                  : "translateX(-100vw)",
+          }}
+        >
 
-            {error && (
-              <div className="mt-6 rounded-lg border border-red-800 bg-red-950/50 p-4 text-sm text-red-400">
-                {error}
-              </div>
-            )}
-
-            <section className="mt-6 rounded-xl border border-[#1e293b] bg-[#0f1629] p-5 sm:p-6">
-              <div className="space-y-6">
-                <div>
-                  <label
-                    className="block text-sm font-semibold text-white"
-                    htmlFor="resume-upload"
-                  >
-                    Resume
-                  </label>
-                  <p className="mt-1 text-sm text-[#94a3b8]">
-                    Upload a .txt, .pdf, or .docx resume file.
+          {/* ── Panel 1: Dashboard ── */}
+          <div className="h-full w-screen flex-shrink-0 overflow-y-auto bg-[#0a0f1e]">
+            <main className="min-h-full px-4 py-8 text-white sm:px-6 lg:px-8">
+              <div className="mx-auto w-full max-w-2xl">
+                <header>
+                  <p className="text-sm font-medium text-[#06b6d4]">Resume Builder</p>
+                  <h1 className="mt-2 text-3xl font-semibold tracking-normal sm:text-4xl">
+                    Tailor a resume to a job description.
+                  </h1>
+                  <p className="mt-3 text-base leading-7 text-[#94a3b8]">
+                    Add your source resume and target job description. Tailoring will
+                    stay grounded in the experience you provide.
                   </p>
-                  <input
-                    accept=".pdf,.docx,.txt"
-                    className="mt-3 block w-full rounded-lg border border-[#1e293b] bg-[#0a0f1e] px-3 py-2 text-sm text-white file:mr-4 file:rounded-md file:border-0 file:bg-[#1e293b] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#94a3b8] hover:file:bg-[#263347] hover:file:text-white"
-                    id="resume-upload"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] ?? null;
-                      setResumeFile(file);
-                      setResumeFileName(file?.name ?? "");
-                    }}
-                    type="file"
-                  />
-                  {resumeFileName && (
-                    <p className="mt-2 text-sm text-[#94a3b8]">
-                      Selected file:{" "}
-                      <span className="font-medium text-white">{resumeFileName}</span>
-                    </p>
-                  )}
-                </div>
+                </header>
 
-                <div>
-                  <label
-                    className="block text-sm font-semibold text-white"
-                    htmlFor="job-description"
-                  >
-                    Job description
-                  </label>
-                  <textarea
-                    className="mt-3 min-h-56 w-full resize-y rounded-lg border border-[#1e293b] bg-[#0a0f1e] px-3 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[#4a5568] focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4]"
-                    id="job-description"
-                    onChange={(event) => setJobDescription(event.target.value)}
-                    placeholder="Paste the target job description here..."
-                    value={jobDescription}
-                  />
-                </div>
+                {error && (
+                  <div className="mt-6 rounded-lg border border-red-800 bg-red-950/50 p-4 text-sm text-red-400">
+                    {error}
+                  </div>
+                )}
 
-                <button
-                  className="h-11 w-full rounded-lg bg-[#06b6d4] px-4 text-sm font-semibold text-[#0a0f1e] shadow-sm transition hover:bg-[#22d3ee] disabled:cursor-not-allowed disabled:bg-[#1e293b] disabled:text-[#4a5568] sm:w-auto"
-                  disabled={!canTailor}
-                  onClick={handleTailorResume}
-                  type="button"
-                >
-                  Tailor Resume
-                </button>
-              </div>
-            </section>
-          </div>
-        </main>
-      )}
-
-      {/* ── Loading: full-page ── */}
-      {viewState === "loading" && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0a0f1e] px-4">
-          <div className="w-full max-w-sm text-center">
-            <p className="text-xl font-semibold text-white">Tailoring your resume…</p>
-            <p className="mt-2 text-sm text-[#94a3b8]">
-              Analyzing the job description and optimizing for ATS keywords.
-            </p>
-            <div className="mt-8 h-1.5 w-full overflow-hidden rounded-full bg-[#1e293b]">
-              <div
-                className="h-full w-1/3 rounded-full bg-[#06b6d4]"
-                style={{ animation: "slide 1.4s linear infinite" }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Result ── */}
-      {viewState === "result" && result && (
-        <main className="min-h-screen bg-[#0a0f1e] px-4 py-8 text-white sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-6xl">
-            <button
-              className="text-sm font-medium text-[#94a3b8] transition hover:text-white"
-              onClick={handleReset}
-              type="button"
-            >
-              ← Back to Dashboard
-            </button>
-
-            {pdfError && (
-              <div className="mt-4 rounded-lg border border-red-800 bg-red-950/50 p-4 text-sm text-red-400">
-                {pdfError}
-              </div>
-            )}
-
-            <div className="mt-6 grid gap-6 lg:grid-cols-[3fr_2fr]">
-              {/* ── LEFT: Score + Changelog ── */}
-              <div className="space-y-6">
-                <section className="rounded-xl border border-[#1e293b] bg-[#0f1629] p-5 sm:p-6">
-                  <h2 className="text-xl font-semibold text-white">Fit score comparison</h2>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <section className="mt-6 rounded-xl border border-[#1e293b] bg-[#0f1629] p-5 sm:p-6">
+                  <div className="space-y-6">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-[#4a5568]">Before</p>
-                      <p className="mt-1 text-3xl font-semibold text-white">
-                        {result.scoreComparison.before}
-                        <span className="text-sm font-medium text-[#4a5568]">/100</span>
+                      <label className="block text-sm font-semibold text-white" htmlFor="resume-upload">
+                        Resume
+                      </label>
+                      <p className="mt-1 text-sm text-[#94a3b8]">
+                        Upload a .txt, .pdf, or .docx resume file.
                       </p>
+                      <input
+                        accept=".pdf,.docx,.txt"
+                        className="mt-3 block w-full rounded-lg border border-[#1e293b] bg-[#0a0f1e] px-3 py-2 text-sm text-white file:mr-4 file:rounded-md file:border-0 file:bg-[#1e293b] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#94a3b8] hover:file:bg-[#263347] hover:file:text-white"
+                        id="resume-upload"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null;
+                          setResumeFile(file);
+                          setResumeFileName(file?.name ?? "");
+                        }}
+                        type="file"
+                      />
+                      {resumeFileName && (
+                        <p className="mt-2 text-sm text-[#94a3b8]">
+                          Selected file:{" "}
+                          <span className="font-medium text-white">{resumeFileName}</span>
+                        </p>
+                      )}
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-[#4a5568]">After</p>
-                      <p className="mt-1 text-3xl font-semibold text-white">
-                        {result.scoreComparison.after}
-                        <span className="text-sm font-medium text-[#4a5568]">/100</span>
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-[#4a5568]">Delta</p>
-                      <p className={`mt-1 text-3xl font-semibold ${result.scoreComparison.delta >= 0 ? "text-[#06b6d4]" : "text-red-400"}`}>
-                        {formatScoreDelta(result.scoreComparison.delta)}
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="mt-5 rounded-lg border border-[#1e293b] bg-[#0a0f1e] p-4">
-                    <p className="text-sm font-semibold text-white">Overall assessment</p>
-                    <p className="mt-1 text-sm leading-6 text-[#94a3b8]">
-                      {result.tailoredEvaluation.summary}
-                    </p>
-                  </div>
-
-                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
                     <div>
-                      <p className="text-sm font-semibold text-white">Matched areas</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {result.tailoredEvaluation.matchedAreas.length > 0 ? (
-                          result.tailoredEvaluation.matchedAreas.map((area) => (
-                            <span
-                              className="rounded-full border border-[#06b6d4]/30 bg-[#06b6d4]/10 px-2 py-1 text-xs font-medium text-[#06b6d4]"
-                              key={area}
-                            >
-                              {area}
-                            </span>
-                          ))
-                        ) : (
-                          <p className="text-sm text-[#4a5568]">No matched areas generated.</p>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">Missing areas</p>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {result.tailoredEvaluation.missingAreas.length > 0 ? (
-                          result.tailoredEvaluation.missingAreas.map((area) => (
-                            <span
-                              className="rounded-full border border-[#1e293b] bg-[#131c35] px-2 py-1 text-xs font-medium text-[#94a3b8]"
-                              key={area}
-                            >
-                              {area}
-                            </span>
-                          ))
-                        ) : (
-                          <p className="text-sm text-[#4a5568]">No missing areas generated.</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <p className="text-sm font-semibold text-white">Strengths</p>
-                      <div className="mt-2">
-                        <FeedbackList
-                          emptyText="No strengths generated."
-                          items={result.tailoredEvaluation.strengths}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white">Gaps</p>
-                      <div className="mt-2">
-                        <FeedbackList
-                          emptyText="No major gaps generated."
-                          items={result.tailoredEvaluation.gaps}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-5">
-                    <p className="text-sm font-semibold text-white">Improvement suggestions</p>
-                    <div className="mt-2">
-                      <FeedbackList
-                        emptyText="No improvements generated."
-                        items={result.tailoredEvaluation.improvementSuggestions}
+                      <label className="block text-sm font-semibold text-white" htmlFor="job-description">
+                        Job description
+                      </label>
+                      <textarea
+                        className="mt-3 min-h-56 w-full resize-y rounded-lg border border-[#1e293b] bg-[#0a0f1e] px-3 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[#4a5568] focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4]"
+                        id="job-description"
+                        onChange={(event) => setJobDescription(event.target.value)}
+                        placeholder="Paste the target job description here..."
+                        value={jobDescription}
                       />
                     </div>
+
+                    <button
+                      className="h-11 w-full rounded-lg bg-[#06b6d4] px-4 text-sm font-semibold text-[#0a0f1e] shadow-sm transition hover:bg-[#22d3ee] disabled:cursor-not-allowed disabled:bg-[#1e293b] disabled:text-[#4a5568] sm:w-auto"
+                      disabled={!canTailor}
+                      onClick={handleTailorResume}
+                      type="button"
+                    >
+                      Tailor Resume
+                    </button>
                   </div>
                 </section>
-
-                <section className="rounded-xl border border-[#1e293b] bg-[#0f1629] p-5 sm:p-6">
-                  <h2 className="text-xl font-semibold text-white">Change log</h2>
-                  <ul className="mt-4 space-y-3 text-sm leading-6 text-[#94a3b8]">
-                    {result.changeLog.changes.map((change) => (
-                      <li key={`${change.section}-${change.tailoredText}`}>
-                        <span className="font-semibold text-white">{change.section}:</span>{" "}
-                        {change.reason}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
               </div>
+            </main>
+          </div>
 
-              {/* ── RIGHT: Resume preview card ── */}
-              <div>
-                <div className="sticky top-8">
-                  <p className="mb-3 text-sm font-semibold text-white">Tailored resume</p>
-                  <button
-                    aria-label="Preview tailored resume"
-                    className="relative w-full cursor-pointer overflow-hidden rounded-xl bg-white shadow-2xl"
-                    onClick={() => setIsModalOpen(true)}
-                    style={{ height: PREVIEW_CARD_HEIGHT }}
-                    type="button"
-                  >
-                    {/* Scaled + blurred resume — centered horizontally */}
-                    <div
-                      className="absolute top-0 blur-[3px]"
-                      style={{
-                        left: "50%",
-                        transform: `translateX(-50%) scale(${PREVIEW_CARD_SCALE})`,
-                        transformOrigin: "top center",
-                        width: RESUME_PAGE_WIDTH_PX,
-                      }}
-                    >
-                      <ResumePreview resume={result.tailoredResume} />
-                    </div>
-                    {/* White gradient — fades in from 45% */}
-                    <div
-                      className="absolute inset-0"
-                      style={{ background: "linear-gradient(to bottom, transparent 45%, white 100%)" }}
-                    />
-                    {/* CTA pill */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="rounded-full bg-[#06b6d4] px-6 py-2.5 text-sm font-semibold text-[#0a0f1e] shadow-lg">
-                        Preview & Download →
+          {/* ── Panel 2: Working Area (Loading + Keywords split) ── */}
+          <div className="relative h-full w-screen flex-shrink-0 overflow-hidden bg-[#0a0f1e]">
+
+            {/* Loading sub-panel — right edge slides to 50% when keywords are shown */}
+            <div
+              className="absolute bottom-0 left-0 top-0 flex flex-col items-center justify-center px-4"
+              style={{
+                right: viewState === "keyword-selection" ? "50%" : "0",
+                transition: "right 350ms ease-in-out",
+              }}
+            >
+              <div className="w-full max-w-xs text-center">
+                {/* Hero: score (steps 2–3 or keyword-selection) or title (step 1) */}
+                {loadingStep === 1 ? (
+                  <p className="mb-6 text-2xl font-semibold tracking-tight text-white">
+                    Tailoring your resume…
+                  </p>
+                ) : initialScore !== null ? (
+                  <div className="mb-6">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#475569]">
+                      Initial ATS Score
+                    </p>
+                    <div className="mt-3 flex items-end justify-center gap-1.5">
+                      <span className="text-8xl font-bold leading-none tracking-tight text-[#06b6d4]">
+                        {initialScore}
                       </span>
+                      <span className="mb-2 text-2xl font-light text-[#475569]">/100</span>
                     </div>
-                  </button>
+                  </div>
+                ) : null}
+
+                {/* Status message */}
+                <p className="mb-6 text-sm font-medium text-[#64748b]">
+                  {loadingStep === 1 && "Analyzing your resume against the job description…"}
+                  {loadingStep === 2 && "Generating your tailored resume…"}
+                  {loadingStep === 3 && "Getting your final ATS rating…"}
+                  {loadingStep === 0 && pendingEvalData && "Review the skills on the right, then generate."}
+                </p>
+
+                {/* Spinner — only while actively loading */}
+                {loadingStep > 0 && (
+                  <div className="mb-8 flex justify-center">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#1e293b] border-t-[#06b6d4]" />
+                  </div>
+                )}
+
+                {/* Progress bar */}
+                <div className="h-1 w-full overflow-hidden rounded-full bg-[#1e293b]">
+                  <div
+                    className="h-full rounded-full bg-[#06b6d4]"
+                    style={{
+                      width:
+                        loadingStep === 1 ? "10%"
+                        : loadingStep === 2 ? "33%"
+                        : loadingStep === 3 ? "66%"
+                        : "33%",
+                      transition: "width 700ms ease-in-out",
+                    }}
+                  />
+                </div>
+
+                {/* Step labels */}
+                <div className="mt-2.5 flex justify-between text-[10px] font-semibold uppercase tracking-widest text-[#334155]">
+                  <span>Analyze</span>
+                  <span>Generate</span>
+                  <span>Score</span>
                 </div>
               </div>
             </div>
-          </div>
-        </main>
-      )}
 
-      {/* ── Resume modal ── */}
+            {/* Keywords sub-panel — slides in from right */}
+            <div
+              className={`absolute bottom-0 right-0 top-0 w-1/2 overflow-y-auto border-l border-[#1e293b] transition-transform duration-[350ms] ease-in-out ${
+                viewState === "keyword-selection" ? "translate-x-0" : "translate-x-full"
+              }`}
+            >
+              {pendingEvalData && (
+                <div className="flex min-h-full flex-col items-center justify-center px-6 py-12">
+                  <div className="w-full max-w-md">
+
+                    {/* Header */}
+                    <div className="mb-8 text-center">
+                      <h2 className="text-xl font-semibold tracking-tight text-white">
+                        Any hidden experience?
+                      </h2>
+                      <p className="mt-2 text-sm font-medium text-[#64748b]">
+                        These skills were flagged as missing. Select any you genuinely have — we&apos;ll weave them in.
+                      </p>
+                    </div>
+
+                    {/* Chips */}
+                    <div className="mb-8 flex flex-wrap justify-center gap-2">
+                      {(pendingEvalData.originalEvaluation.missingAreas.length > 0
+                        ? pendingEvalData.originalEvaluation.missingAreas
+                        : pendingEvalData.originalEvaluation.gaps
+                      ).map((kw) => {
+                        const selected = selectedKeywords.includes(kw);
+                        return (
+                          <button
+                            key={kw}
+                            type="button"
+                            onClick={() => toggleKeyword(kw)}
+                            className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                              selected
+                                ? "border-[#06b6d4] bg-[#06b6d4]/10 text-[#06b6d4]"
+                                : "border-[#1e293b] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]"
+                            }`}
+                          >
+                            {selected && <span className="mr-1.5">✓</span>}
+                            {kw}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateResume(selectedKeywords)}
+                        className="h-11 w-full rounded-lg bg-[#06b6d4] px-4 text-sm font-semibold text-[#0a0f1e] shadow-sm transition hover:bg-[#22d3ee]"
+                      >
+                        {selectedKeywords.length > 0
+                          ? `Generate with ${selectedKeywords.length} selected →`
+                          : "Generate Resume →"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleGenerateResume([])}
+                        className="text-sm font-medium text-[#475569] transition hover:text-[#64748b]"
+                      >
+                        Skip & generate without additions
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Panel 3: Result ── */}
+          <div className="h-full w-screen flex-shrink-0 overflow-y-auto bg-[#0a0f1e]">
+            {result && (
+              <main className="min-h-full px-4 py-8 text-white sm:px-6 lg:px-8">
+                <div className="mx-auto w-full max-w-6xl">
+                  <button
+                    className="text-sm font-medium text-[#94a3b8] transition hover:text-white"
+                    onClick={handleReset}
+                    type="button"
+                  >
+                    ← Back to Dashboard
+                  </button>
+
+                  {pdfError && (
+                    <div className="mt-4 rounded-lg border border-red-800 bg-red-950/50 p-4 text-sm text-red-400">
+                      {pdfError}
+                    </div>
+                  )}
+
+                  <div className="mt-6 grid gap-6 lg:grid-cols-[3fr_2fr]">
+                    {/* ── LEFT: Score + Changelog ── */}
+                    <div className="space-y-6">
+                      <section className="rounded-xl border border-[#1e293b] bg-[#0f1629] p-5 sm:p-6">
+                        <h2 className="text-xl font-semibold text-white">Fit score comparison</h2>
+
+                        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#4a5568]">Before</p>
+                            <p className="mt-1 text-3xl font-semibold text-white">
+                              {result.scoreComparison.before}
+                              <span className="text-sm font-medium text-[#4a5568]">/100</span>
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#4a5568]">After</p>
+                            <p className="mt-1 text-3xl font-semibold text-white">
+                              {result.scoreComparison.after}
+                              <span className="text-sm font-medium text-[#4a5568]">/100</span>
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-[#4a5568]">Delta</p>
+                            <p className={`mt-1 text-3xl font-semibold ${result.scoreComparison.delta >= 0 ? "text-[#06b6d4]" : "text-red-400"}`}>
+                              {formatScoreDelta(result.scoreComparison.delta)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-5 rounded-lg border border-[#1e293b] bg-[#0a0f1e] p-4">
+                          <p className="text-sm font-semibold text-white">Overall assessment</p>
+                          <p className="mt-1 text-sm leading-6 text-[#94a3b8]">
+                            {result.tailoredEvaluation.summary}
+                          </p>
+                        </div>
+
+                        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <p className="text-sm font-semibold text-white">Matched areas</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {result.tailoredEvaluation.matchedAreas.length > 0 ? (
+                                result.tailoredEvaluation.matchedAreas.map((area) => (
+                                  <span
+                                    className="rounded-full border border-[#06b6d4]/30 bg-[#06b6d4]/10 px-2 py-1 text-xs font-medium text-[#06b6d4]"
+                                    key={area}
+                                  >
+                                    {area}
+                                  </span>
+                                ))
+                              ) : (
+                                <p className="text-sm text-[#4a5568]">No matched areas generated.</p>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-white">Missing areas</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {result.tailoredEvaluation.missingAreas.length > 0 ? (
+                                result.tailoredEvaluation.missingAreas.map((area) => (
+                                  <span
+                                    className="rounded-full border border-[#1e293b] bg-[#131c35] px-2 py-1 text-xs font-medium text-[#94a3b8]"
+                                    key={area}
+                                  >
+                                    {area}
+                                  </span>
+                                ))
+                              ) : (
+                                <p className="text-sm text-[#4a5568]">No missing areas generated.</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <p className="text-sm font-semibold text-white">Strengths</p>
+                            <div className="mt-2">
+                              <FeedbackList
+                                emptyText="No strengths generated."
+                                items={result.tailoredEvaluation.strengths}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-white">Gaps</p>
+                            <div className="mt-2">
+                              <FeedbackList
+                                emptyText="No major gaps generated."
+                                items={result.tailoredEvaluation.gaps}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-5">
+                          <p className="text-sm font-semibold text-white">Improvement suggestions</p>
+                          <div className="mt-2">
+                            <FeedbackList
+                              emptyText="No improvements generated."
+                              items={result.tailoredEvaluation.improvementSuggestions}
+                            />
+                          </div>
+                        </div>
+                      </section>
+
+                      <section className="rounded-xl border border-[#1e293b] bg-[#0f1629] p-5 sm:p-6">
+                        <h2 className="text-xl font-semibold text-white">Change log</h2>
+                        <ul className="mt-4 space-y-3 text-sm leading-6 text-[#94a3b8]">
+                          {result.changeLog.changes.map((change) => (
+                            <li key={`${change.section}-${change.tailoredText}`}>
+                              <span className="font-semibold text-white">{change.section}:</span>{" "}
+                              {change.reason}
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    </div>
+
+                    {/* ── RIGHT: Resume preview card ── */}
+                    <div>
+                      <div className="sticky top-8">
+                        <p className="mb-3 text-sm font-semibold text-white">Tailored resume</p>
+                        <button
+                          aria-label="Preview tailored resume"
+                          className="relative w-full cursor-pointer overflow-hidden rounded-xl bg-white shadow-2xl"
+                          onClick={() => setIsModalOpen(true)}
+                          style={{ height: PREVIEW_CARD_HEIGHT }}
+                          type="button"
+                        >
+                          <div
+                            className="absolute top-0 blur-[3px]"
+                            style={{
+                              left: "50%",
+                              transform: `translateX(-50%) scale(${PREVIEW_CARD_SCALE})`,
+                              transformOrigin: "top center",
+                              width: RESUME_PAGE_WIDTH_PX,
+                            }}
+                          >
+                            <ResumePreview resume={result.tailoredResume} />
+                          </div>
+                          <div
+                            className="absolute inset-0"
+                            style={{ background: "linear-gradient(to bottom, transparent 45%, white 100%)" }}
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="rounded-full bg-[#06b6d4] px-6 py-2.5 text-sm font-semibold text-[#0a0f1e] shadow-lg">
+                              Preview & Download →
+                            </span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </main>
+            )}
+          </div>
+
+        </div>
+      </div>
+
+      {/* ── Resume modal (outside sliding container) ── */}
       {isModalOpen && result && (
         <div
           className="fixed inset-0 z-50 overflow-x-auto overflow-y-auto bg-black/75"

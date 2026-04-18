@@ -12,11 +12,11 @@ export const SectionKeySchema = z.enum([
 ]);
 
 export const ContactInfoSchema = z.object({
-  name: z.string().nullable(),
-  roleSubtitle: z.string().nullable(),
-  email: z.string().email().nullable(),
-  phone: z.string().nullable(),
-  location: z.string().nullable(),
+  name: z.string().nullish(),
+  roleSubtitle: z.string().nullish(),
+  email: z.string().email().nullish(),
+  phone: z.string().nullish(),
+  location: z.string().nullish(),
   links: z.array(z.string()),
 });
 
@@ -29,8 +29,8 @@ export const TailoredResumeExperienceSchema = z.object({
   sourceExperienceId: EvidenceIdSchema,
   company: z.string().min(1),
   title: z.string().min(1),
-  location: z.string().nullable(),
-  dates: z.string().nullable(),
+  location: z.string().nullish(),
+  dates: z.string().nullish(),
   bullets: z.array(TailoredResumeBulletSchema),
 });
 
@@ -41,18 +41,18 @@ export const SkillGroupSchema = z.object({
 
 export const ResumeProjectSchema = z.object({
   name: z.string().min(1),
-  techStack: z.string().nullable(),
-  date: z.string().nullable(),
-  url: z.string().nullable(),
+  techStack: z.string().nullish(),
+  date: z.string().nullish(),
+  url: z.string().nullish(),
   bullets: z.array(z.string().min(1)),
 });
 
 export const ResumeEducationSchema = z.object({
   institution: z.string().min(1),
   degree: z.string().min(1),
-  location: z.string().nullable(),
-  date: z.string().nullable(),
-  gpa: z.string().nullable(),
+  location: z.string().nullish(),
+  date: z.string().nullish(),
+  gpa: z.string().nullish(),
 });
 
 export const TailoredResumeSchema = z.object({

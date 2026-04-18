@@ -370,10 +370,12 @@ export async function generateTailoredResumeFromRaw({
   resumeText,
   jobDescriptionText,
   originalEvaluation,
+  selectedKeywords = [],
 }: {
   resumeText: string;
   jobDescriptionText: string;
   originalEvaluation: ResumeEvaluation;
+  selectedKeywords?: string[];
 }): Promise<TailoringResult> {
   const matchedBlock =
     originalEvaluation.matchedAreas.length > 0
@@ -404,6 +406,7 @@ export async function generateTailoredResumeFromRaw({
       suggestionsBlock,
       resumeText,
       jobDescriptionText,
+      selectedKeywords,
     }),
   });
 

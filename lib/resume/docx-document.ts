@@ -14,8 +14,10 @@ import type { TailoredResume, SectionKey } from "@/types";
 import { DEFAULT_SECTION_ORDER } from "@/lib/resume/detect-section-order";
 
 const FONT = "Times New Roman";
-// Content width for LETTER (8.5") with 0.5" margins: 7.5" = 7.5 * 1440 = 10800 twips
-const RIGHT_TAB = 10800;
+// Content width for LETTER (8.5") with 32pt (640 twip) side margins: 8.5" - 0.444"×2 = 7.611" = 10960 twips
+const RIGHT_TAB = 10960;
+// Skills category column width: 150 PDF pt = 150 × 20 twips = 3000 twips (matches PDF fixed-width column)
+const SKILL_TAB = 3000;
 const LINE_HEIGHT = 264; // 240 × 1.1, tighter than PDF for Word's renderer
 
 function present(v: string | null | undefined): string | null {
@@ -41,8 +43,12 @@ function sectionHeader(title: string): Paragraph {
 
 function bulletParagraph(text: string): Paragraph {
   return new Paragraph({
-    children: [new TextRun({ text: capitalize(text), size: 21, font: FONT })],
-    bullet: { level: 0 },
+    children: [
+      new TextRun({ text: "•  ", size: 21, font: FONT }),
+      new TextRun({ text: capitalize(text), size: 21, font: FONT }),
+    ],
+    // hanging indent: bullet at 80 twips (4pt), text body at 240 twips (12pt) — matches PDF paddingLeft:4 + marker width:8
+    indent: { left: 240, hanging: 160 },
     spacing: { before: 0, after: 60, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
   });
 }
@@ -116,7 +122,7 @@ export async function buildResumeDocxBuffer(resume: TailoredResume): Promise<Buf
             ];
             if (present(edu.location)) {
               institutionRuns.push(
-                new TextRun({ text: `, ${edu.location}`, italics: true, size: 22, font: FONT }),
+                new TextRun({ text: `, ${edu.location}`, italics: true, size: 21, font: FONT }),
               );
             }
             if (present(edu.date)) {
@@ -152,9 +158,11 @@ export async function buildResumeDocxBuffer(resume: TailoredResume): Promise<Buf
             children.push(
               new Paragraph({
                 children: [
-                  new TextRun({ text: `${group.category}: `, bold: true, size: 22, font: FONT }),
+                  new TextRun({ text: `${group.category}:`, bold: true, size: 22, font: FONT }),
+                  new TextRun({ text: "\t", size: 22, font: FONT }),
                   new TextRun({ text: group.items.join(", "), size: 21, font: FONT }),
                 ],
+                tabStops: [{ type: TabStopType.LEFT, position: SKILL_TAB }],
                 spacing: { before: 0, after: 20, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
               }),
             );
@@ -279,7 +287,8 @@ export async function buildResumeDocxBuffer(resume: TailoredResume): Promise<Buf
       {
         properties: {
           page: {
-            margin: { top: 720, right: 720, bottom: 720, left: 720 },
+            // 30pt top/bottom, 32pt sides — matches PDF paddingTop:30 / paddingLeft:32 (in PDF points → twips ×20)
+            margin: { top: 600, right: 640, bottom: 600, left: 640 },
           },
         },
         children,
