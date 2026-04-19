@@ -9,8 +9,12 @@ AI-powered resume tailoring app. A user uploads their resume (PDF, DOCX, or TXT)
 ## High-Level Overview
 
 ```
-Browser (Next.js client)
-  └─ DashboardShell (form state) + useTailorResume (AI/fetch state)
+Browser (unauthenticated)
+  └─ / → LandingPage (marketing + Google OAuth sign-in)
+       └─ Google OAuth → Supabase → /auth/callback → /dashboard
+
+Browser (authenticated)
+  └─ /dashboard → AppNavbar + DashboardShell (form state) + useTailorResume (AI/fetch state)
        ├─ POST /api/tailor/step1  →  extract text + evaluate original
        ├─ User confirms/selects missing keywords
        ├─ POST /api/tailor/step2  →  generate tailored resume + changelog
@@ -20,6 +24,7 @@ Browser (Next.js client)
 
 All AI calls go through lib/ai/pipeline.ts → OpenAI API
 All resume parsing goes through lib/resume/extract-text.ts
+Auth state managed by Supabase (Google OAuth) + middleware.ts
 ```
 
 ---
@@ -31,8 +36,16 @@ resume-builder/
 ├── app/                        # Next.js App Router
 │   ├── layout.tsx              # Root HTML shell (Inter font, dark bg, metadata)
 │   ├── globals.css             # Tailwind base + print media styles
-│   ├── page.tsx                # Root page — renders <DashboardShell />
+│   ├── page.tsx                # Root — shows LandingPage or redirects to /dashboard if signed in
+│   ├── dashboard/
+│   │   └── page.tsx            # Protected dashboard — fetches profile, renders AppNavbar + DashboardShell
+│   ├── settings/
+│   │   └── page.tsx            # Protected settings — display name, plan, delete account
+│   ├── auth/
+│   │   └── callback/route.ts   # GET /auth/callback — exchanges OAuth code for session, redirects to /dashboard
 │   └── api/
+│       ├── auth/
+│       │   └── signout/route.ts# POST /api/auth/signout — signs out and redirects to /
 │       ├── tailor/
 │       │   ├── route.ts        # POST /api/tailor — full pipeline in one call (legacy/test path)
 │       │   ├── route.test.ts   # Vitest tests for the combined route
@@ -44,6 +57,11 @@ resume-builder/
 │
 ├── components/
 │   ├── DashboardShell.tsx      # PRIMARY UI: form state + renders result; delegates fetch/AI state to useTailorResume (~280 lines)
+│   ├── AppNavbar.tsx           # Authenticated top nav — avatar, dropdown with Settings + Sign Out
+│   ├── LandingPage.tsx         # Marketing page — hero, how-it-works, pricing, Google sign-in trigger
+│   ├── AuthModal.tsx           # Google OAuth sign-in modal (calls supabase.auth.signInWithOAuth)
+│   ├── EditableName.tsx        # Inline-editable display name field (used on settings page)
+│   ├── DeleteAccountButton.tsx # Danger zone delete button (used on settings page)
 │   ├── ResumePreview.tsx       # Web HTML resume renderer — canonical production component
 │   └── ResumePDFDocument.tsx   # React-PDF resume document (used by export-pdf route server-side)
 │
@@ -54,6 +72,9 @@ resume-builder/
 │   │   └── prompts.ts          # System prompts + user prompt builders for all 3 AI calls
 │   ├── hooks/
 │   │   └── useTailorResume.ts  # Custom React hook: all tailoring fetch logic, AbortController, all AI state
+│   ├── supabase/
+│   │   ├── client.ts           # Browser Supabase client (createBrowserClient via @supabase/ssr)
+│   │   └── server.ts           # Server Supabase client (createServerClient, cookie-based session)
 │   ├── errors.ts               # Shared isClientError() helper — used by tailor route.ts and step1/route.ts
 │   └── resume/
 │       ├── extract-text.ts     # Parse PDF/DOCX/TXT → plain text string
@@ -72,6 +93,11 @@ resume-builder/
 │   │   └── reviewer.md         # Claude Code sub-agent: audits changes
 │   └── plans/                  # Saved plan files from plan-mode sessions
 │
+├── supabase/
+│   └── migrations/
+│       └── 20260416000000_initial_schema.sql  # profiles table + RLS policies + triggers
+│
+├── middleware.ts               # Edge middleware — redirects unauthenticated requests away from /dashboard and /settings
 ├── CLAUDE.md                   # Instructions for Claude Code agents
 ├── architecture.md             # This file
 ├── TASKS.md                    # Active and completed work items
@@ -99,9 +125,9 @@ resume-builder/
 | `docx` | ^9.6.1 | DOCX generation (paragraphs, tabs, borders, hyperlinks) |
 | `mammoth` | ^1.12.0 | Extract raw text from .docx uploads |
 | `pdf-parse` | ^2.4.5 | Extract raw text from .pdf uploads (loaded dynamically due to Node.js 18 DOMMatrix issue) |
+| `@supabase/supabase-js` | ^2 | Supabase client SDK |
+| `@supabase/ssr` | ^0.6 | SSR-safe Supabase helpers for Next.js App Router (cookie-based sessions) |
 | `vitest` | ^4.1.4 | Unit test runner |
-
-**No database.** Despite Supabase being listed in older docs, it is not installed or used. All data is ephemeral per request.
 
 ---
 
@@ -124,6 +150,8 @@ resume-builder/
 | `OPENAI_API_KEY` | Yes | — | OpenAI credentials |
 | `OPENAI_EVAL_MODEL` | No | `gpt-4.1-mini` | Model for resume evaluation (steps 1 & 3) |
 | `OPENAI_TAILOR_MODEL` | No | `gpt-5-chat-latest` | Model for resume generation (step 2) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | — | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | — | Supabase anon/public key |
 
 ---
 
@@ -263,17 +291,21 @@ Scans raw resume text line-by-line with regex patterns to detect section headers
 
 ## Entry Points & Routing
 
-| Route | Method | Purpose |
-|-------|--------|---------|
-| `/` | GET | Renders `DashboardShell` |
-| `/api/tailor/step1` | POST | FormData: `resumeFile` (File) + `jobDescriptionText` (string) |
-| `/api/tailor/step2` | POST | JSON: `resumeText`, `jobDescriptionText`, `originalEvaluation`, `selectedKeywords?` |
-| `/api/tailor/step3` | POST | JSON: `tailoredResume`, `jobDescriptionText`, `originalEvaluation`, `changeLog` |
-| `/api/tailor` | POST | FormData (same as step1) — full pipeline in one call |
-| `/api/export-pdf` | POST | JSON: `tailoredResume`, `role?` → binary PDF |
-| `/api/export-docx` | POST | JSON: `tailoredResume`, `role?` → binary DOCX |
+| Route | Method | Auth | Purpose |
+|-------|--------|------|---------|
+| `/` | GET | Public | Landing page; redirects to `/dashboard` if signed in |
+| `/dashboard` | GET | Required | Main app — AppNavbar + DashboardShell |
+| `/settings` | GET | Required | Profile settings |
+| `/auth/callback` | GET | Public | OAuth code exchange → session → redirect to `/dashboard` |
+| `/api/auth/signout` | POST | Public | Signs out, redirects to `/` |
+| `/api/tailor/step1` | POST | Public | FormData: `resumeFile` (File) + `jobDescriptionText` (string) |
+| `/api/tailor/step2` | POST | Public | JSON: `resumeText`, `jobDescriptionText`, `originalEvaluation`, `selectedKeywords?` |
+| `/api/tailor/step3` | POST | Public | JSON: `tailoredResume`, `jobDescriptionText`, `originalEvaluation`, `changeLog` |
+| `/api/tailor` | POST | Public | FormData (same as step1) — full pipeline in one call |
+| `/api/export-pdf` | POST | Public | JSON: `tailoredResume`, `role?` → binary PDF |
+| `/api/export-docx` | POST | Public | JSON: `tailoredResume`, `role?` → binary DOCX |
 
-All API routes use `export const runtime = "nodejs"` (not Edge) because resume parsing libraries and React-PDF require Node.js APIs.
+All AI/export API routes use `export const runtime = "nodejs"` (not Edge) because resume parsing libraries and React-PDF require Node.js APIs. Auth routes use the default Edge runtime.
 
 ---
 
@@ -287,7 +319,13 @@ All API routes use `export const runtime = "nodejs"` (not Edge) because resume p
 - Cost logging: `logOpenAICost()` logs token usage and estimated USD cost to stdout after every call. Pricing table is hardcoded for `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`. Unknown models fall back to `gpt-4.1` pricing.
 - Temperature: 0 for evaluations (deterministic), 0.2 for tailoring (slight variation)
 
-No other external services. No database. No auth.
+### Supabase
+
+- Auth: Google OAuth via `supabase.auth.signInWithOAuth({ provider: 'google' })` in `AuthModal.tsx`
+- Session management: cookie-based via `@supabase/ssr` — `lib/supabase/server.ts` for server components/routes, `lib/supabase/client.ts` for client components
+- Database: `profiles` table (id, display_name, email, avatar_url, plan) — auto-populated on first sign-in via database trigger
+- Route protection: `middleware.ts` redirects unauthenticated requests to `/dashboard` or `/settings` back to `/`
+- Redirect flow: Google → `https://<project>.supabase.co/auth/v1/callback` → `/auth/callback` → `/dashboard`
 
 ---
 
@@ -319,6 +357,8 @@ No other external services. No database. No auth.
 
 8. **AbortController for concurrent submissions**: `useTailorResume` holds an `AbortController` ref. Each new tailor submission calls `abort()` on the previous controller before creating a new one. AbortErrors are silently swallowed in all catch blocks.
 
-9. **No rate limiting, auth, or CORS**: The API is open. Any caller with network access can use all endpoints freely.
+9. **API routes are unauthenticated**: The tailor/export API routes have no auth check — any caller with network access can use them. Route protection is at the page level only (middleware + server component redirect). This is intentional for now but means the AI endpoints are open.
 
-10. **`maxDuration = 60` on all AI routes**: All four tailor routes (`/api/tailor`, step1, step2, step3) export `maxDuration = 60`. Requires Vercel Pro plan for the override to take effect (Hobby plan hard-caps at 10s regardless).
+10. **Dashboard layout uses flex column**: `app/dashboard/page.tsx` wraps everything in `flex h-screen flex-col overflow-hidden`. `AppNavbar` is `flex-shrink-0`; `DashboardShell` is `flex-1 overflow-hidden`. This ensures the navbar sits solidly at the top and the 3-panel sliding layout fills the remaining viewport height without overlap.
+
+11. **`maxDuration = 60` on all AI routes**: All four tailor routes (`/api/tailor`, step1, step2, step3) export `maxDuration = 60`. Requires Vercel Pro plan for the override to take effect (Hobby plan hard-caps at 10s regardless).

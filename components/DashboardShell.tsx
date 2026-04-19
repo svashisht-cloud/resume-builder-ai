@@ -70,7 +70,7 @@ export function DashboardShell() {
   return (
     <>
       {/* ── 3-panel sliding container ── */}
-      <div className="fixed inset-0 overflow-hidden">
+      <div className="relative flex-1 overflow-hidden">
         <div
           className={noTransition ? "flex h-full" : "flex h-full transition-transform duration-[350ms] ease-in-out"}
           style={{
