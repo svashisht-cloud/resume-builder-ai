@@ -2,11 +2,16 @@ import { generateTailoredResumeFromRaw } from "@/lib/ai/pipeline";
 import { ResumeEvaluationSchema } from "@/types";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { resumeText, jobDescriptionText, originalEvaluation, selectedKeywords } = body;
+    const body: unknown = await request.json();
+    if (typeof body !== "object" || body === null) {
+      return Response.json({ error: "Request body must be a JSON object." }, { status: 400 });
+    }
+    const { resumeText, jobDescriptionText, originalEvaluation, selectedKeywords } =
+      body as Record<string, unknown>;
 
     if (typeof resumeText !== "string" || !resumeText.trim()) {
       return Response.json({ error: "resumeText is required." }, { status: 400 });

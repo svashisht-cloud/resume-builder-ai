@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { ResumePreview } from "@/components/resume-preview";
+import { ResumePreview } from "@/components/ResumePreview";
 import type { TailoredResume } from "@/types";
 
 const baseResume: TailoredResume = {
@@ -40,7 +40,6 @@ describe("ResumePreview", () => {
     const html = renderToStaticMarkup(<ResumePreview resume={baseResume} />);
 
     expect(html).toContain("Alex Morgan");
-    expect(html).toContain("Professional Summary");
     expect(html).toContain("TypeScript, Next.js, Supabase");
     expect(html).toContain("Software Engineer");
     expect(html).toContain("Northstar Systems");

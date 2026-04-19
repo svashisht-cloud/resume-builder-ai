@@ -1,18 +1,9 @@
-import {
-  evaluateResumeAgainstJDRaw,
-} from "@/lib/ai/pipeline";
+import { evaluateResumeAgainstJDRaw } from "@/lib/ai/pipeline";
 import { extractResumeText } from "@/lib/resume/extract-text";
+import { isClientError } from "@/lib/errors";
 
 export const runtime = "nodejs";
-
-function isClientError(error: unknown) {
-  return (
-    error instanceof Error &&
-    (error.message.includes("Unsupported resume format") ||
-      error.message.includes("Legacy .doc") ||
-      error.message.includes("empty"))
-  );
-}
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {

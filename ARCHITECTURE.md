@@ -1,34 +1,324 @@
-# ARCHITECTURE.md
+# Architecture — Resume Builder
 
-## Product goal
-Generate ATS-optimized resumes from an existing resume + JD while preserving truthfulness. The system should maximize match quality without inventing skills, tools, metrics, titles, or experience.
+## Purpose
 
-## Pipeline
-1. Parse resume
-2. Parse JD
-3. Gap analysis
-4. Safe tailoring
-5. Score output
-6. Render preview
-7. Export PDF
+AI-powered resume tailoring app. A user uploads their resume (PDF, DOCX, or TXT) and pastes a job description. The app runs a 3-step AI pipeline — evaluate → tailor → re-evaluate — and returns an ATS-optimized resume grounded strictly in the original. No content is invented; all tailoring must be traceable to the source resume.
 
-## Safety model
-- supported keywords can be surfaced
-- unsupported keywords cannot be introduced
-- all edits should be traceable to source content
-- the system should optimize toward the highest truthful score, not guarantee a fixed score
+---
 
-## Core entities
-- ResumeSession
-- ParsedResume
-- ParsedJD
-- TailoredResume
-- ChangeLog
-- ATSScore
+## High-Level Overview
 
-## API contracts
-- POST /api/parse-resume
-- POST /api/parse-jd
-- POST /api/tailor
-- POST /api/score
-- POST /api/export-pdf
+```
+Browser (Next.js client)
+  └─ DashboardShell (form state) + useTailorResume (AI/fetch state)
+       ├─ POST /api/tailor/step1  →  extract text + evaluate original
+       ├─ User confirms/selects missing keywords
+       ├─ POST /api/tailor/step2  →  generate tailored resume + changelog
+       ├─ POST /api/tailor/step3  →  evaluate tailored resume + score delta
+       ├─ POST /api/export-pdf    →  download PDF (React-PDF)
+       └─ POST /api/export-docx   →  download DOCX (docx library)
+
+All AI calls go through lib/ai/pipeline.ts → OpenAI API
+All resume parsing goes through lib/resume/extract-text.ts
+```
+
+---
+
+## Folder Structure
+
+```
+resume-builder/
+├── app/                        # Next.js App Router
+│   ├── layout.tsx              # Root HTML shell (Inter font, dark bg, metadata)
+│   ├── globals.css             # Tailwind base + print media styles
+│   ├── page.tsx                # Root page — renders <DashboardShell />
+│   └── api/
+│       ├── tailor/
+│       │   ├── route.ts        # POST /api/tailor — full pipeline in one call (legacy/test path)
+│       │   ├── route.test.ts   # Vitest tests for the combined route
+│       │   ├── step1/route.ts  # POST /api/tailor/step1 — extract + evaluate original
+│       │   ├── step2/route.ts  # POST /api/tailor/step2 — generate tailored resume
+│       │   └── step3/route.ts  # POST /api/tailor/step3 — evaluate tailored + score
+│       ├── export-pdf/route.ts # POST /api/export-pdf — render PDF via React-PDF
+│       └── export-docx/route.ts# POST /api/export-docx — render DOCX via docx library
+│
+├── components/
+│   ├── DashboardShell.tsx      # PRIMARY UI: form state + renders result; delegates fetch/AI state to useTailorResume (~280 lines)
+│   ├── ResumePreview.tsx       # Web HTML resume renderer — canonical production component
+│   └── ResumePDFDocument.tsx   # React-PDF resume document (used by export-pdf route server-side)
+│
+├── lib/
+│   ├── ai/
+│   │   ├── client.ts           # Lazy OpenAI singleton + model name constants (AI_EVAL_MODEL, AI_TAILOR_MODEL)
+│   │   ├── pipeline.ts         # Core AI functions: evaluate, tailor, re-evaluate, render text; includes project preservation
+│   │   └── prompts.ts          # System prompts + user prompt builders for all 3 AI calls
+│   ├── hooks/
+│   │   └── useTailorResume.ts  # Custom React hook: all tailoring fetch logic, AbortController, all AI state
+│   ├── errors.ts               # Shared isClientError() helper — used by tailor route.ts and step1/route.ts
+│   └── resume/
+│       ├── extract-text.ts     # Parse PDF/DOCX/TXT → plain text string
+│       ├── detect-section-order.ts  # Regex scan of raw resume text → ordered SectionKey[]
+│       ├── docx-document.ts    # Build DOCX file from TailoredResume using docx library
+│       └── filename.ts         # Generate slugified export filename (name-role-date-tailored-resume)
+│
+├── types/
+│   ├── resume.ts               # All Zod schemas + inferred TypeScript types (source of truth)
+│   ├── api.ts                  # TailorResponse API response type
+│   └── index.ts                # Re-exports from resume.ts and api.ts
+│
+├── .claude/
+│   ├── agents/
+│   │   ├── implementer.md      # Claude Code sub-agent: writes features
+│   │   └── reviewer.md         # Claude Code sub-agent: audits changes
+│   └── plans/                  # Saved plan files from plan-mode sessions
+│
+├── CLAUDE.md                   # Instructions for Claude Code agents
+├── architecture.md             # This file
+├── TASKS.md                    # Active and completed work items
+├── package.json
+├── tsconfig.json
+├── next.config.ts
+├── postcss.config.mjs
+├── eslint.config.mjs
+└── vitest.config.ts
+```
+
+---
+
+## Tech Stack & Key Dependencies
+
+| Package | Version | Role |
+|---------|---------|------|
+| `next` | 16.2.3 | App Router framework — API routes + React server/client components |
+| `react` / `react-dom` | 19.2.4 | UI rendering |
+| `typescript` | ^5 | Language |
+| `tailwindcss` | ^4 | Utility CSS (PostCSS plugin, no tailwind.config.ts needed in v4) |
+| `openai` | ^6.34.0 | OpenAI SDK — structured outputs via `zodResponseFormat` |
+| `zod` | 4.3.6 | Schema validation for all AI responses and API payloads |
+| `@react-pdf/renderer` | 4.3.3 | Server-side PDF generation from React components |
+| `docx` | ^9.6.1 | DOCX generation (paragraphs, tabs, borders, hyperlinks) |
+| `mammoth` | ^1.12.0 | Extract raw text from .docx uploads |
+| `pdf-parse` | ^2.4.5 | Extract raw text from .pdf uploads (loaded dynamically due to Node.js 18 DOMMatrix issue) |
+| `vitest` | ^4.1.4 | Unit test runner |
+
+**No database.** Despite Supabase being listed in older docs, it is not installed or used. All data is ephemeral per request.
+
+---
+
+## Configuration Files
+
+| File | Controls |
+|------|---------|
+| `next.config.ts` | Minimal Next.js config — no custom settings currently |
+| `tsconfig.json` | TypeScript: `target: ES2017`, strict mode, `@/*` → root path alias, `allowJs: true` |
+| `eslint.config.mjs` | ESLint with `eslint-config-next` |
+| `postcss.config.mjs` | Tailwind v4 PostCSS plugin |
+| `vitest.config.ts` | Node.js test environment, `@` path alias mirroring tsconfig |
+| `.env.local` | Runtime secrets (not committed) |
+| `.env.local.example` | Template showing required env vars |
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OPENAI_API_KEY` | Yes | — | OpenAI credentials |
+| `OPENAI_EVAL_MODEL` | No | `gpt-4.1-mini` | Model for resume evaluation (steps 1 & 3) |
+| `OPENAI_TAILOR_MODEL` | No | `gpt-5-chat-latest` | Model for resume generation (step 2) |
+
+---
+
+## Data Flow
+
+### 3-Step Pipeline (production path)
+
+```
+1. User uploads resume file + pastes JD text
+   │
+   ▼
+POST /api/tailor/step1
+   ├─ extractResumeText(file)         → plain text string
+   ├─ evaluateResumeAgainstJDRaw()    → ResumeEvaluation (score, gaps, matchedAreas, missingAreas)
+   └─ Response: { resumeText, originalEvaluation }
+   │
+   ▼ Frontend shows initial ATS score + keyword chips (missingAreas or gaps)
+   │
+   User selects any confirmed missing skills → selectedKeywords[]
+   │
+   ▼
+POST /api/tailor/step2
+   ├─ generateTailoredResumeFromRaw() → TailoredResume + ChangeLog
+   │    ├─ builds matchedBlock / gapsBlock / suggestionsBlock from evaluation
+   │    ├─ appends confirmedKeywordsBlock if selectedKeywords present
+   │    ├─ calls OpenAI with TAILOR_SYSTEM_PROMPT + buildTailorUserPrompt()
+   │    └─ overrides sectionOrder via detectSectionOrder(resumeText)
+   └─ Response: { tailoredResume, changeLog }
+   │
+   ▼
+POST /api/tailor/step3
+   ├─ renderTailoredResumeText(tailoredResume)         → plain text for re-evaluation
+   ├─ evaluateTailoredResumeAgainstJDRaw()             → tailoredEvaluation
+   ├─ buildScoreComparison(original, tailored)         → { before, after, delta }
+   └─ Response: full TailorResponse
+   │
+   ▼ Frontend renders score comparison, changelog, resume preview card
+   │
+   User downloads:
+   ├─ POST /api/export-pdf  → renderToBuffer(ResumePDFDocument) → binary PDF
+   └─ POST /api/export-docx → buildDocxDocument(tailoredResume) → binary DOCX
+```
+
+### Combined route
+
+`POST /api/tailor` runs the same pipeline in a single request. Used for the Vitest tests and as a fallback. The 3-step routes are what the browser calls.
+
+---
+
+## Key Modules & How They Interact
+
+### `lib/ai/pipeline.ts`
+
+Central orchestrator. Exports:
+
+| Function | What it does |
+|----------|-------------|
+| `evaluateResumeAgainstJDRaw(text, jd)` | Calls OpenAI with EVAL_SYSTEM_PROMPT → returns `ResumeEvaluation` |
+| `evaluateTailoredResumeAgainstJDRaw(text, jd)` | Same but with TAILORED_EVAL_SYSTEM_PROMPT (calibrated for tailored resumes) |
+| `generateTailoredResumeFromRaw({...})` | Calls OpenAI with TAILOR_SYSTEM_PROMPT → returns `{ tailoredResume, changeLog }`, then overwrites `sectionOrder` |
+| `renderTailoredResumeText(resume)` | Converts `TailoredResume` → plain text string for re-evaluation |
+| `buildScoreComparison({...})` | Simple arithmetic: `{ before, after, delta }` |
+| `runStructuredCall({...})` | Internal: calls OpenAI, logs cost, strips markdown fences, parses JSON, validates with Zod |
+
+All OpenAI calls use `zodResponseFormat(schema, name)` for structured outputs. Parsing pipeline:
+1. Strip markdown fences (case-insensitive regex)
+2. `JSON.parse` directly
+3. If fails: sanitize control chars, retry
+4. If fails: extract first `{...}` object, retry
+5. Validate with `schema.safeParse()` — throw on failure
+
+### `lib/ai/prompts.ts`
+
+Three system prompts + three user prompt builders:
+
+| Symbol | Role |
+|--------|------|
+| `EVAL_SYSTEM_PROMPT` | "Expert recruiter" — score 0–100, credit domain inferences, don't penalize implied skills |
+| `TAILORED_EVAL_SYSTEM_PROMPT` | Same but calibrated to expect 90–100 for well-tailored resumes |
+| `TAILOR_SYSTEM_PROMPT` | "Senior technical resume writer" — ATS keyword mirroring, no fabrication, page-limit rules |
+| `buildEvalUserPrompt(resume, jd)` | Injects resume + JD text |
+| `buildTailoredEvalUserPrompt(resume, jd)` | Same, gives extra credit for exact keyword matches |
+| `buildTailorUserPrompt({...})` | Injects matched areas, gaps, suggestions, confirmed keywords, raw texts |
+
+### `types/resume.ts` — schema definitions (source of truth)
+
+All Zod schemas live here. Key types:
+
+- `TailoredResumeSchema` → the tailored resume object (contact, summary, skills[], experience[], education[], projects[], certifications[], sectionOrder)
+- `ResumeEvaluationSchema` → score, summary, strengths, gaps, improvementSuggestions, matchedAreas, missingAreas, rubric
+- `ChangeLogSchema` → array of `{ section, originalText, tailoredText, reason, evidenceIds[] }`
+- `ScoreComparisonSchema` → `{ before, after, delta }`
+
+All shared — never redefine inline.
+
+### `components/DashboardShell.tsx`
+
+Client-side UI shell (~280 lines). Manages only form state (`resumeFile`, `resumeFileName`, `jobDescription`). All fetch/AI state is delegated to `useTailorResume`. Uses a **3-panel sliding layout** (300vw container, CSS `translateX`):
+
+- Panel 1 (idle): file upload + JD textarea + submit button
+- Panel 2 (working): loading progress bar + keyword chip panel (slides in from right)
+- Panel 3 (result): score cards + changelog + resume preview thumbnail → opens fullscreen modal
+
+State machine via `viewState` derived from `loadingStep`, `pendingEvalData`, and `result`:
+```
+idle → loading (step1 running)
+     → keyword-selection (step1 done, gaps exist)
+     → loading (step2/3 running)
+     → result
+```
+
+### `lib/hooks/useTailorResume.ts`
+
+Custom hook holding all tailoring logic extracted from `DashboardShell`. Contains: `AbortController` ref (aborts previous request on each new submission), all AI state (`result`, `error`, `downloadError`, `loadingStep`, `initialScore`, `pendingEvalData`, `selectedKeywords`, `isDownloadingPdf`, `isDownloadingDocx`, `isModalOpen`, `noTransition`), derived `viewState`, ESC-key effect, `runStep2And3`, `handleTailorResume` (validates step1 response with Zod), `handleGenerateResume`, `toggleKeyword`, `handleDownloadPdf`, `handleDownloadDocx`, `handlePrintResume`, `handleReset` (double rAF for CSS transition suppression), `openModal`, `closeModal`.
+
+### `lib/errors.ts`
+
+Exports `isClientError(error: unknown): boolean` — shared helper used by `/api/tailor/route.ts` and `/api/tailor/step1/route.ts` to distinguish 4xx user errors (unsupported format, empty file) from 5xx server errors.
+
+### `components/ResumePreview.tsx`
+
+Web HTML rendering of `TailoredResume`. Times New Roman, 816px wide (LETTER at 96 DPI). Used in the preview card (scaled down) and fullscreen modal. Also used by `window.print()`. Does **not** render the summary section (intentional — summary goes only in the tailoring prompt).
+
+### `components/ResumePDFDocument.tsx`
+
+React-PDF version of the same layout. Rendered server-side in the export-pdf route via `renderToBuffer()`. Times New Roman, 32pt margins. Used only on the server.
+
+### `lib/resume/extract-text.ts`
+
+Handles PDF, DOCX, TXT. Key implementation detail: `pdf-parse` is loaded **dynamically** (not statically imported) because `pdfjs-dist` references `DOMMatrix` at module evaluation time, which doesn't exist in Node.js 18. A minimal stub is polyfilled before the dynamic import.
+
+### `lib/resume/detect-section-order.ts`
+
+Scans raw resume text line-by-line with regex patterns to detect section headers. Returns a `SectionKey[]` in the order they appear, with any undetected sections appended at the end. Result is assigned to `tailoredResume.sectionOrder` in the pipeline, so the tailored output mirrors the original resume's structure.
+
+---
+
+## Entry Points & Routing
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/` | GET | Renders `DashboardShell` |
+| `/api/tailor/step1` | POST | FormData: `resumeFile` (File) + `jobDescriptionText` (string) |
+| `/api/tailor/step2` | POST | JSON: `resumeText`, `jobDescriptionText`, `originalEvaluation`, `selectedKeywords?` |
+| `/api/tailor/step3` | POST | JSON: `tailoredResume`, `jobDescriptionText`, `originalEvaluation`, `changeLog` |
+| `/api/tailor` | POST | FormData (same as step1) — full pipeline in one call |
+| `/api/export-pdf` | POST | JSON: `tailoredResume`, `role?` → binary PDF |
+| `/api/export-docx` | POST | JSON: `tailoredResume`, `role?` → binary DOCX |
+
+All API routes use `export const runtime = "nodejs"` (not Edge) because resume parsing libraries and React-PDF require Node.js APIs.
+
+---
+
+## External Integrations
+
+### OpenAI
+
+- SDK: `openai` v6 (new v2-style API)
+- Client initialized lazily in `lib/ai/client.ts` (singleton, checked against `OPENAI_API_KEY`)
+- Structured outputs: `zodResponseFormat(schema, name)` enforces JSON shape at the API level
+- Cost logging: `logOpenAICost()` logs token usage and estimated USD cost to stdout after every call. Pricing table is hardcoded for `gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`. Unknown models fall back to `gpt-4.1` pricing.
+- Temperature: 0 for evaluations (deterministic), 0.2 for tailoring (slight variation)
+
+No other external services. No database. No auth.
+
+---
+
+## Architecture Patterns
+
+- **API Route per pipeline step** — each step is independently callable, making the flow debuggable and testable in isolation
+- **Zod-first types** — all types are inferred from Zod schemas (`z.infer<typeof Schema>`), never defined separately
+- **Structured outputs** — OpenAI's `zodResponseFormat` enforces schema at the API boundary; fallback parsing handles edge cases
+- **Server-side document generation** — both PDF (React-PDF) and DOCX are rendered on the server, never in the browser
+- **Hook-extracted UI orchestration** — `DashboardShell.tsx` holds only form state and rendering; all fetch/AI logic lives in `useTailorResume` hook. Avoids prop drilling while keeping the component testable and the 3-panel layout readable.
+
+---
+
+## Non-Obvious Implementation Details
+
+1. **PDF parsing dynamic import**: `pdf-parse` / `pdfjs-dist` is never statically imported. If imported at module load time in Node.js 18, it crashes because `DOMMatrix` is undefined. The workaround patches `globalThis.DOMMatrix` before the dynamic `import()`.
+
+2. **Section order preservation**: `detectSectionOrder(resumeText)` scans the *original* resume text and the result overwrites the model's `sectionOrder` field, ensuring the tailored resume maintains the same section sequence the candidate originally used.
+
+3. **Summary excluded from rendering**: `TailoredResume` carries a `summary` field, but neither `ResumePreview.tsx` nor `ResumePDFDocument.tsx` renders it. It exists for the tailoring prompt context only.
+
+4. **Evidence IDs are semantic labels, not verbatim quotes**: `evidenceIds` (e.g. `"exp-1-bullet-2"`) are traceability labels for the change log. They are not validated against the source resume.
+
+5. **Keyword chip fallback**: The keyword chip panel shows `missingAreas` (genuine gaps the candidate can't cover) first. If that array is empty, it falls back to `gaps` (broader weaknesses). This means the user always sees something to confirm.
+
+6. **Project preservation fallback**: After `generateTailoredResumeFromRaw` returns, the pipeline scans the original resume text with `extractProjectsFromRawText()` and fuzzy-matches project names against the tailored output. Any dropped projects are re-appended. This enforces the CLAUDE.md guarantee programmatically rather than relying solely on the prompt instruction.
+
+7. **Raw model response logging**: `runStructuredCall` logs the raw OpenAI response string before any parsing (`[pipeline] raw model response (label): ...`). This makes Zod validation failures and malformed output debuggable in production server logs.
+
+8. **AbortController for concurrent submissions**: `useTailorResume` holds an `AbortController` ref. Each new tailor submission calls `abort()` on the previous controller before creating a new one. AbortErrors are silently swallowed in all catch blocks.
+
+9. **No rate limiting, auth, or CORS**: The API is open. Any caller with network access can use all endpoints freely.
+
+10. **`maxDuration = 60` on all AI routes**: All four tailor routes (`/api/tailor`, step1, step2, step3) export `maxDuration = 60`. Requires Vercel Pro plan for the override to take effect (Hobby plan hard-caps at 10s regardless).

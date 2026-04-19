@@ -11,12 +11,16 @@ import {
 import type { TailorResponse } from "@/types/api";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
+    if (typeof body !== "object" || body === null) {
+      return Response.json({ error: "Request body must be a JSON object." }, { status: 400 });
+    }
     const { tailoredResume, jobDescriptionText, originalEvaluation, changeLog } =
-      body;
+      body as Record<string, unknown>;
 
     if (typeof jobDescriptionText !== "string" || !jobDescriptionText.trim()) {
       return Response.json(

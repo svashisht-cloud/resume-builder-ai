@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ResumePreview } from "@/components/ResumePreview";
-import { buildResumePdfFilename } from "@/lib/resume/filename";
-import type { TailorResponse } from "@/types/api";
-import type { ResumeEvaluation } from "@/types";
+import { useTailorResume } from "@/lib/hooks/useTailorResume";
 
 const RESUME_PAGE_WIDTH_PX = 816; // LETTER at 96 DPI
 const PREVIEW_CARD_SCALE = 400 / RESUME_PAGE_WIDTH_PX; // ≈ 0.49, maps 816px resume → ~400px card
@@ -38,264 +36,36 @@ export function DashboardShell() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeFileName, setResumeFileName] = useState("");
   const [jobDescription, setJobDescription] = useState("");
-  const [result, setResult] = useState<TailorResponse | null>(null);
-  const [error, setError] = useState("");
-  const [pdfError, setPdfError] = useState("");
-  const [loadingStep, setLoadingStep] = useState<0 | 1 | 2 | 3>(0);
-  const [initialScore, setInitialScore] = useState<number | null>(null);
-  const [pendingEvalData, setPendingEvalData] = useState<{
-    resumeText: string;
-    originalEvaluation: ResumeEvaluation;
-  } | null>(null);
-  const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
-  const [noTransition, setNoTransition] = useState(false);
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
-  const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const hasResumeFile = resumeFileName.length > 0;
-  const hasJobDescription = jobDescription.trim().length > 0;
-  const canTailor = hasResumeFile && hasJobDescription && loadingStep === 0 && !pendingEvalData;
+  const {
+    result,
+    error,
+    downloadError,
+    loadingStep,
+    initialScore,
+    pendingEvalData,
+    selectedKeywords,
+    isDownloadingPdf,
+    isDownloadingDocx,
+    isModalOpen,
+    noTransition,
+    viewState,
+    handleTailorResume,
+    handleGenerateResume,
+    toggleKeyword,
+    handleDownloadPdf,
+    handleDownloadDocx,
+    handlePrintResume,
+    handleReset,
+    openModal,
+    closeModal,
+  } = useTailorResume({ resumeFile, jobDescription });
 
-  async function handleTailorResume() {
-    if (!canTailor || !resumeFile) return;
-
-    setLoadingStep(1);
-    setInitialScore(null);
-    setPendingEvalData(null);
-    setSelectedKeywords([]);
-    setError("");
-    setPdfError("");
-    setResult(null);
-
-    try {
-      const formData = new FormData();
-      formData.append("resumeFile", resumeFile);
-      formData.append("jobDescriptionText", jobDescription);
-
-      const step1Res = await fetch("/api/tailor/step1", {
-        method: "POST",
-        body: formData,
-      });
-      const step1Data = await step1Res.json();
-      if (!step1Res.ok) throw new Error(step1Data.error ?? "Step 1 failed.");
-
-      const { resumeText, originalEvaluation } = step1Data as {
-        resumeText: string;
-        originalEvaluation: ResumeEvaluation;
-      };
-
-      setInitialScore(originalEvaluation.score);
-
-      // Collect chips: missingAreas first, fall back to gaps if empty
-      const chips =
-        originalEvaluation.missingAreas.length > 0
-          ? originalEvaluation.missingAreas
-          : originalEvaluation.gaps;
-
-      if (chips.length === 0) {
-        // No gaps to confirm — skip keyword screen and generate immediately
-        setPendingEvalData({ resumeText, originalEvaluation });
-        await runStep2And3(resumeText, originalEvaluation, []);
-      } else {
-        setPendingEvalData({ resumeText, originalEvaluation });
-        setLoadingStep(0); // show keyword-selection view
-      }
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error ? requestError.message : "Tailoring request failed.",
-      );
-      setLoadingStep(0);
-    }
-  }
-
-  async function runStep2And3(
-    resumeText: string,
-    originalEvaluation: ResumeEvaluation,
-    keywords: string[],
-  ) {
-    try {
-      setLoadingStep(2);
-
-      const step2Res = await fetch("/api/tailor/step2", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resumeText,
-          jobDescriptionText: jobDescription,
-          originalEvaluation,
-          selectedKeywords: keywords,
-        }),
-      });
-      const step2Data = await step2Res.json();
-      if (!step2Res.ok) throw new Error(step2Data.error ?? "Step 2 failed.");
-      const { tailoredResume, changeLog } = step2Data;
-
-      setLoadingStep(3);
-
-      const step3Res = await fetch("/api/tailor/step3", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tailoredResume,
-          jobDescriptionText: jobDescription,
-          originalEvaluation,
-          changeLog,
-        }),
-      });
-      const step3Data = await step3Res.json();
-      if (!step3Res.ok) throw new Error(step3Data.error ?? "Step 3 failed.");
-
-      setResult(step3Data as TailorResponse);
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error ? requestError.message : "Tailoring request failed.",
-      );
-    } finally {
-      setLoadingStep(0);
-      setPendingEvalData(null);
-    }
-  }
-
-  function handleGenerateResume(keywords: string[]) {
-    if (!pendingEvalData) return;
-    const { resumeText, originalEvaluation } = pendingEvalData;
-    void runStep2And3(resumeText, originalEvaluation, keywords);
-  }
-
-  function toggleKeyword(kw: string) {
-    setSelectedKeywords((prev) =>
-      prev.includes(kw) ? prev.filter((k) => k !== kw) : [...prev, kw],
-    );
-  }
-
-  async function handleDownloadPdf() {
-    if (!result || isDownloadingPdf) {
-      return;
-    }
-
-    setIsDownloadingPdf(true);
-    setPdfError("");
-
-    let url: string | null = null;
-    try {
-      const filename = buildResumePdfFilename({
-        resume: result.tailoredResume,
-      });
-      const response = await fetch("/api/export-pdf", {
-        body: JSON.stringify({
-          tailoredResume: result.tailoredResume,
-        }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.error ?? "PDF download failed.");
-      }
-
-      const blob = await response.blob();
-      url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (downloadError) {
-      setPdfError(
-        downloadError instanceof Error
-          ? downloadError.message
-          : "PDF download failed.",
-      );
-    } finally {
-      if (url) URL.revokeObjectURL(url);
-      setIsDownloadingPdf(false);
-    }
-  }
-
-  async function handleDownloadDocx() {
-    if (!result || isDownloadingDocx) {
-      return;
-    }
-
-    setIsDownloadingDocx(true);
-    setPdfError("");
-
-    let url: string | null = null;
-    try {
-      const response = await fetch("/api/export-docx", {
-        body: JSON.stringify({
-          tailoredResume: result.tailoredResume,
-        }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.error ?? "DOCX download failed.");
-      }
-
-      const blob = await response.blob();
-      url = URL.createObjectURL(blob);
-      const filename = buildResumePdfFilename({
-        resume: result.tailoredResume,
-      }).replace(/\.pdf$/, ".docx");
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (downloadError) {
-      setPdfError(
-        downloadError instanceof Error
-          ? downloadError.message
-          : "DOCX download failed.",
-      );
-    } finally {
-      if (url) URL.revokeObjectURL(url);
-      setIsDownloadingDocx(false);
-    }
-  }
-
-  function handlePrintResume() {
-    if (!result) {
-      return;
-    }
-
-    window.print();
-  }
-
-  function handleReset() {
-    setNoTransition(true);
-    setResult(null);
-    setError("");
-    setPdfError("");
-    setIsModalOpen(false);
-    setTimeout(() => setNoTransition(false), 50);
-  }
-
-  useEffect(() => {
-    if (!isModalOpen) return;
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setIsModalOpen(false);
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isModalOpen]);
-
-  const viewState =
-    loadingStep > 0 ? "loading"
-    : pendingEvalData ? "keyword-selection"
-    : result ? "result"
-    : "idle";
+  const canTailor =
+    resumeFileName.length > 0 &&
+    jobDescription.trim().length > 0 &&
+    loadingStep === 0 &&
+    !pendingEvalData;
 
   return (
     <>
@@ -544,9 +314,9 @@ export function DashboardShell() {
                     ← Back to Dashboard
                   </button>
 
-                  {pdfError && (
+                  {downloadError && (
                     <div className="mt-4 rounded-lg border border-red-800 bg-red-950/50 p-4 text-sm text-red-400">
-                      {pdfError}
+                      {downloadError}
                     </div>
                   )}
 
@@ -675,7 +445,7 @@ export function DashboardShell() {
                         <button
                           aria-label="Preview tailored resume"
                           className="relative w-full cursor-pointer overflow-hidden rounded-xl bg-white shadow-2xl"
-                          onClick={() => setIsModalOpen(true)}
+                          onClick={openModal}
                           style={{ height: PREVIEW_CARD_HEIGHT }}
                           type="button"
                         >
@@ -715,7 +485,7 @@ export function DashboardShell() {
       {isModalOpen && result && (
         <div
           className="fixed inset-0 z-50 overflow-x-auto overflow-y-auto bg-black/75"
-          onClick={() => setIsModalOpen(false)}
+          onClick={closeModal}
         >
           <div
             className="sticky top-0 z-10 flex items-center justify-between gap-4 bg-black/60 px-6 py-3 backdrop-blur-sm"
@@ -749,7 +519,7 @@ export function DashboardShell() {
             <button
               aria-label="Close"
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#1e293b] bg-[#0f1629] text-[#94a3b8] transition hover:bg-[#1e293b] hover:text-white"
-              onClick={() => setIsModalOpen(false)}
+              onClick={closeModal}
               type="button"
             >
               ✕

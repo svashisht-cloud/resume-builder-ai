@@ -14,10 +14,7 @@ export function getOpenAIClient() {
   return openai;
 }
 
-const DEFAULT_AI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5-chat-latest";
 export const AI_EVAL_MODEL =
   process.env.OPENAI_EVAL_MODEL ?? "gpt-4.1-mini";
 export const AI_TAILOR_MODEL =
   process.env.OPENAI_TAILOR_MODEL ?? "gpt-5-chat-latest";
-export const AI_PARSE_MODEL =
-  process.env.OPENAI_PARSE_MODEL ?? "gpt-4.1-mini";

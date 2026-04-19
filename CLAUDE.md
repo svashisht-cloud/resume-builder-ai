@@ -1,5 +1,11 @@
 # CLAUDE.md
 
+## Architecture awareness — always follow these steps
+
+- **Before any command or change**: read `architecture.md` to understand the current project state.
+- **After every change** (file edit, creation, deletion, refactor, config update): update `architecture.md` to reflect what changed — keep it accurate and current at all times.
+- **Never skip either step**, even for small or single-line changes.
+
 ## Project overview
 AI resume tailoring app. Takes a resume + job description as input and produces an
 ATS-optimized (but truthful) tailored resume with before/after scoring and PDF export.

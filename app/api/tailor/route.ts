@@ -14,8 +14,10 @@ import {
   TailoredResumeSchema,
 } from "@/types";
 import type { TailorResponse } from "@/types/api";
+import { isClientError } from "@/lib/errors";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const TailorResponseSchema = z.object({
   tailoredResume: TailoredResumeSchema,
@@ -25,15 +27,6 @@ const TailorResponseSchema = z.object({
   evaluationMode: z.literal("llm"),
   changeLog: ChangeLogSchema,
 });
-
-function isClientError(error: unknown) {
-  return (
-    error instanceof Error &&
-    (error.message.includes("Unsupported resume format") ||
-      error.message.includes("Legacy .doc") ||
-      error.message.includes("empty"))
-  );
-}
 
 export async function POST(request: Request) {
   try {
