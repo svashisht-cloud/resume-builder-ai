@@ -1,10 +1,10 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Star, Quote } from 'lucide-react'
 
-const CARD_WIDTH = 340
-const GAP = 24 // gap-6
+const GAP = 24 // px — matches gap-6
+const VISIBLE = 3
 
 const testimonials = [
   {
@@ -57,68 +57,75 @@ const testimonials = [
   },
 ]
 
-export default function Testimonials() {
-  const trackRef = useRef<HTMLDivElement>(null)
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [atStart, setAtStart] = useState(true)
-  const [atEnd, setAtEnd] = useState(false)
+const MAX_INDEX = testimonials.length - VISIBLE // 3
 
-  const reducedMotion =
+export default function Testimonials() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [cardWidth, setCardWidth] = useState(0)
+
+  const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  function scrollByCard(direction: 1 | -1) {
-    const track = trackRef.current
-    if (!track) return
-    track.scrollBy({ left: direction * (CARD_WIDTH + GAP), behavior: reducedMotion ? 'instant' : 'smooth' })
+  // Measure container width and recompute card width on mount + resize
+  useEffect(() => {
+    function measure() {
+      if (containerRef.current) {
+        const w = containerRef.current.clientWidth
+        setCardWidth((w - GAP * (VISIBLE - 1)) / VISIBLE)
+      }
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+
+  function goTo(idx: number) {
+    setCurrentIndex(Math.max(0, Math.min(idx, MAX_INDEX)))
   }
 
-  function handleScroll() {
-    const track = trackRef.current
-    if (!track) return
-    const idx = Math.round(track.scrollLeft / (CARD_WIDTH + GAP))
-    setActiveIndex(Math.min(idx, testimonials.length - 1))
-    setAtStart(track.scrollLeft <= 4)
-    setAtEnd(track.scrollLeft >= track.scrollWidth - track.clientWidth - 4)
-  }
-
-  function scrollToIndex(i: number) {
-    const track = trackRef.current
-    if (!track) return
-    track.scrollTo({ left: i * (CARD_WIDTH + GAP), behavior: reducedMotion ? 'instant' : 'smooth' })
-  }
+  const canGoBack = currentIndex > 0
+  const canGoForward = currentIndex < MAX_INDEX
+  const offset = cardWidth > 0 ? currentIndex * (cardWidth + GAP) : 0
 
   return (
     <section id="testimonials" className="border-t border-border bg-surface py-20">
       <div className="mx-auto max-w-6xl px-6">
-        <h2 className="font-display mb-12 text-center text-2xl font-bold text-foreground">
+        <h2 className="font-display mb-3 text-center text-3xl font-bold text-foreground">
           What our users are saying
         </h2>
+        <p className="mb-12 text-center text-sm text-muted">Real results from real job seekers.</p>
 
-        <div className="relative">
+        <div className="flex items-center gap-4">
           {/* Left chevron */}
           <button
-            onClick={() => scrollByCard(-1)}
-            disabled={atStart}
+            type="button"
+            onClick={() => goTo(currentIndex - 1)}
+            disabled={!canGoBack}
             aria-label="Previous testimonials"
-            className="absolute -left-5 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-border bg-surface-raised p-2 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30 lg:flex"
+            className="hidden flex-shrink-0 rounded-full border border-border bg-surface-2 p-2 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30 lg:flex"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
 
-          {/* Track — overflow-hidden wrapper so cards don't spill out */}
-          <div className="overflow-hidden">
+          {/* Track */}
+          <div ref={containerRef} className="flex-1 overflow-hidden">
             <div
-              ref={trackRef}
-              onScroll={handleScroll}
-              className="flex gap-6 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="flex"
+              style={{
+                gap: `${GAP}px`,
+                transform: `translateX(-${offset}px)`,
+                transition: prefersReducedMotion ? 'none' : 'transform 300ms ease-out',
+              }}
             >
               {testimonials.map((t) => (
                 <div
                   key={t.name}
-                  className="relative w-[340px] flex-none snap-start overflow-hidden rounded-xl border border-border bg-surface p-6"
+                  className="relative flex-none overflow-hidden rounded-xl border border-border bg-surface p-6"
+                  style={{ width: cardWidth > 0 ? `${cardWidth}px` : 'calc(33.333% - 16px)' }}
                 >
                   {/* Decorative quote watermark */}
                   <Quote
@@ -151,17 +158,16 @@ export default function Testimonials() {
                   </div>
                 </div>
               ))}
-              {/* Phantom spacer so last card doesn't get cut off */}
-              <div className="w-1 flex-none" aria-hidden="true" />
             </div>
           </div>
 
           {/* Right chevron */}
           <button
-            onClick={() => scrollByCard(1)}
-            disabled={atEnd}
+            type="button"
+            onClick={() => goTo(currentIndex + 1)}
+            disabled={!canGoForward}
             aria-label="Next testimonials"
-            className="absolute -right-5 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-border bg-surface-raised p-2 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30 lg:flex"
+            className="hidden flex-shrink-0 rounded-full border border-border bg-surface-2 p-2 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30 lg:flex"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -169,15 +175,16 @@ export default function Testimonials() {
           </button>
         </div>
 
-        {/* Dots */}
+        {/* Dots — one per stop position */}
         <div className="mt-6 flex justify-center gap-2">
-          {testimonials.map((t, i) => (
+          {Array.from({ length: MAX_INDEX + 1 }).map((_, i) => (
             <button
-              key={t.name}
-              onClick={() => scrollToIndex(i)}
-              aria-label={`Go to testimonial ${i + 1}`}
+              key={i}
+              type="button"
+              onClick={() => goTo(i)}
+              aria-label={`Go to testimonials ${i + 1}`}
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === activeIndex ? 'w-6 bg-accent' : 'w-1.5 bg-border'
+                i === currentIndex ? 'w-6 bg-accent' : 'w-1.5 bg-border'
               }`}
             />
           ))}

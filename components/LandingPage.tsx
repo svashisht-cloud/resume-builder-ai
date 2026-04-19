@@ -70,7 +70,8 @@ export default function LandingPage() {
       {/* How It Works */}
       <section id="how-it-works" className="border-t border-border bg-surface py-20">
         <div className="mx-auto max-w-5xl px-6">
-          <h2 className="font-display mb-12 text-center text-2xl font-bold text-foreground">How It Works</h2>
+          <h2 className="font-display mb-3 text-center text-3xl font-bold text-foreground">How It Works</h2>
+          <p className="mb-12 text-center text-sm text-muted">From paste to polished in under a minute.</p>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {[
               {
@@ -116,7 +117,8 @@ export default function LandingPage() {
       {/* Pricing */}
       <section className="py-20">
         <div className="mx-auto max-w-5xl px-6">
-          <h2 className="font-display mb-12 text-center text-2xl font-bold text-foreground">Pricing</h2>
+          <h2 className="font-display mb-3 text-center text-3xl font-bold text-foreground">Pricing</h2>
+          <p className="mb-12 text-center text-sm text-muted">Start for free. No credit card required.</p>
           <PricingCards onCTAClick={() => openModal()} />
         </div>
       </section>

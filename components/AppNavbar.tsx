@@ -37,7 +37,7 @@ export default function AppNavbar({ user }: AppNavbarProps) {
   const initial = user.display_name?.[0] ?? user.email?.[0] ?? '?'
 
   return (
-    <nav className="flex-shrink-0 border-b border-border bg-background backdrop-blur-sm">
+    <nav className="z-10 flex-shrink-0 border-b border-border bg-background backdrop-blur-sm">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <div className="flex items-baseline gap-1.5">
           <span className="text-lg font-bold text-foreground">MockLoop</span>
@@ -64,7 +64,7 @@ export default function AppNavbar({ user }: AppNavbarProps) {
           </button>
 
           {open && (
-            <div className="absolute right-0 top-11 w-56 rounded-xl border border-border bg-surface shadow-xl">
+            <div className="absolute right-0 top-11 z-50 w-56 rounded-xl border border-border bg-surface shadow-xl">
               <div className="border-b border-border px-4 py-3">
                 <p className="text-sm font-medium text-foreground truncate">
                   {user.display_name ?? 'User'}

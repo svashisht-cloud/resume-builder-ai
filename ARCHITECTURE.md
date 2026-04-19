@@ -34,13 +34,13 @@ Auth state managed by Supabase (Google OAuth) + middleware.ts
 ```
 resume-builder/
 ├── app/                        # Next.js App Router
-│   ├── layout.tsx              # Root HTML shell (Inter font, dark bg, metadata)
-│   ├── globals.css             # Tailwind base + print media styles
+│   ├── layout.tsx              # Root HTML shell (Space Grotesk + Inter + JetBrains Mono fonts, CSS vars, metadata)
+│   ├── globals.css             # Tailwind v4 @theme inline tokens (bg, surface, surface-2, accent, accent-hover, accent-2, text, text-muted, text-dim, font-display/sans/mono) + print styles
 │   ├── page.tsx                # Root — shows LandingPage or redirects to /dashboard if signed in
 │   ├── dashboard/
 │   │   └── page.tsx            # Protected dashboard — fetches profile, renders AppNavbar + DashboardShell
 │   ├── settings/
-│   │   └── page.tsx            # Protected settings — display name, plan, delete account
+│   │   └── page.tsx            # Protected settings — vertical stack: profile (avatar+email+member-since), current plan, switch plan, usage, danger zone
 │   ├── auth/
 │   │   └── callback/route.ts   # GET /auth/callback — exchanges OAuth code for session, redirects to /dashboard
 │   └── api/
@@ -56,14 +56,22 @@ resume-builder/
 │       └── export-docx/route.ts# POST /api/export-docx — render DOCX via docx library
 │
 ├── components/
-│   ├── DashboardShell.tsx      # PRIMARY UI: form state + renders result; delegates fetch/AI state to useTailorResume (~280 lines)
-│   ├── AppNavbar.tsx           # Authenticated top nav — avatar, dropdown with Settings + Sign Out
-│   ├── LandingPage.tsx         # Marketing page — hero, how-it-works, pricing, Google sign-in trigger
-│   ├── AuthModal.tsx           # Google OAuth sign-in modal (calls supabase.auth.signInWithOAuth)
-│   ├── EditableName.tsx        # Inline-editable display name field (used on settings page)
+│   ├── DashboardShell.tsx      # PRIMARY UI: form state + renders result; delegates fetch/AI state to useTailorResume (~280 lines); all colors use design tokens
+│   ├── AppNavbar.tsx           # Authenticated top nav — avatar, z-10 nav (backdrop-blur stacking fix), dropdown with Settings + Sign Out
+│   ├── LandingPage.tsx         # Marketing page — two-col hero (HeroTrailer), How It Works (text-3xl + subtitle), Testimonials, Pricing (text-3xl + "Start for free" subtitle), footer
+│   ├── AuthModal.tsx           # Google OAuth modal — always mounted, data-state open/closed CSS transition (scale+fade), ToS line
+│   ├── EditableName.tsx        # Inline-editable display name field
 │   ├── DeleteAccountButton.tsx # Danger zone delete button (used on settings page)
 │   ├── ResumePreview.tsx       # Web HTML resume renderer — canonical production component
-│   └── ResumePDFDocument.tsx   # React-PDF resume document (used by export-pdf route server-side)
+│   ├── ResumePDFDocument.tsx   # React-PDF resume document (used by export-pdf route server-side)
+│   ├── landing/
+│   │   ├── HeroTrailer.tsx     # Animated product trailer: 8-step loop; step 6 two-col view: left=big ATS 62→94% with delta badge, right=buttons (h-9 reserved row so resume stays vertically centered in flex-1) + resume card with blurred Projects + gradient fade; tailor btn shown from step 3; prefersReducedMotion → static step 6
+│   │   └── Testimonials.tsx    # Snap carousel with 6 cards, stars, Quote watermark, chevrons, dots, clipping fix; heading text-3xl + subtitle
+│   ├── pricing/
+│   │   └── PricingCards.tsx    # Shared Free/Pack/Plus credit-tier cards (equal height flex-col, "Everything in X" pattern); used on landing + settings
+│   └── settings/
+│       ├── AvatarImage.tsx     # Client component — plain <img> with referrerPolicy + onError initials fallback
+│       └── SwitchPlanSection.tsx # Client wrapper for PricingCards on settings page (alert Coming soon)
 │
 ├── lib/
 │   ├── ai/
@@ -127,6 +135,7 @@ resume-builder/
 | `pdf-parse` | ^2.4.5 | Extract raw text from .pdf uploads (loaded dynamically due to Node.js 18 DOMMatrix issue) |
 | `@supabase/supabase-js` | ^2 | Supabase client SDK |
 | `@supabase/ssr` | ^0.6 | SSR-safe Supabase helpers for Next.js App Router (cookie-based sessions) |
+| `lucide-react` | latest | Icon library — used in landing (Upload, Target, Sparkles, Star, Quote) and HeroTrailer |
 | `vitest` | ^4.1.4 | Unit test runner |
 
 ---
@@ -362,3 +371,13 @@ All AI/export API routes use `export const runtime = "nodejs"` (not Edge) becaus
 10. **Dashboard layout uses flex column**: `app/dashboard/page.tsx` wraps everything in `flex h-screen flex-col overflow-hidden`. `AppNavbar` is `flex-shrink-0`; `DashboardShell` is `flex-1 overflow-hidden`. This ensures the navbar sits solidly at the top and the 3-panel sliding layout fills the remaining viewport height without overlap.
 
 11. **`maxDuration = 60` on all AI routes**: All four tailor routes (`/api/tailor`, step1, step2, step3) export `maxDuration = 60`. Requires Vercel Pro plan for the override to take effect (Hobby plan hard-caps at 10s regardless).
+
+12. **Tailwind v4 design tokens in CSS only**: No `tailwind.config.ts` exists. All named color and font tokens are declared in `app/globals.css` under `:root` and `@theme inline`. Colors: `bg`, `surface`, `surface-2`, `surface-raised`, `border`, `accent`, `accent-hover`, `accent-2`, `foreground`, `muted`, `text-dim`. Fonts: `display` (Space Grotesk), `sans` (Inter), `mono` (JetBrains Mono) — loaded via `next/font` in `layout.tsx` and exposed as CSS variables.
+
+13. **AppNavbar z-index stacking fix**: The `nav` element carries `z-10` so its `backdrop-blur-sm` stacking context renders above `DashboardShell`'s transform-based stacking contexts. The dropdown itself also carries `z-50`. Both are needed — z-10 on nav elevates the context, z-50 on the dropdown ensures it's on top within that context.
+
+14. **AuthModal always-mounted animation**: `AuthModal` no longer uses `if (!isOpen) return null`. Instead it uses `data-state="open|closed"` attributes with Tailwind `data-[state=closed]:opacity-0 data-[state=closed]:scale-95` transitions so the close animation plays before unmounting. `pointer-events-none` is applied when closed.
+
+15. **Avatar `referrerPolicy="no-referrer"`**: Google avatar URLs (`lh3.googleusercontent.com`) return 403 without this header. `AvatarImage` is a client component that renders a plain `<img>` (not Next `<Image>`) with `referrerPolicy="no-referrer"` and an `onError` handler that falls back to an initials div.
+
+16. **Settings page schema TODOs**: `profiles` table does not yet have `credits_remaining` (hardcoded 1/1) and there is no `resumes` table (usage hardcoded 0). The `plan` column only supports `'free'|'pro'` DB constraint. All three are marked with TODO comments in `app/settings/page.tsx` for later schema migration.
