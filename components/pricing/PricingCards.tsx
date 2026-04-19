@@ -20,7 +20,7 @@ const TIERS: Tier[] = [
       '1 resume credit',
       'Credit valid for 12 months',
       'Full tailored generation',
-      'Export included',
+      'Export to PDF',
       'ATS / match report',
     ],
     cta: 'Get Started',
@@ -32,12 +32,10 @@ const TIERS: Tier[] = [
     price: '$19',
     suffix: '/ one-time',
     features: [
+      'Everything in Free',
       '3 resume credits',
-      'Credits valid for 12 months',
-      'Full tailored generation',
-      'Export included',
-      'ATS / match report',
       'Minor edits & regenerations free',
+      'Priority email support',
     ],
     cta: 'Buy Pack',
     popular: true,
@@ -48,13 +46,10 @@ const TIERS: Tier[] = [
     price: '$49',
     suffix: '/ one-time',
     features: [
+      'Everything in Resume Pack',
       '10 resume credits',
-      'Credits valid for 12 months',
-      'Full tailored generation',
-      'Export included',
-      'ATS / match report',
-      'Minor edits & regenerations free',
-      'Priority generation',
+      'Priority generation queue',
+      'Version history across resumes',
     ],
     cta: 'Buy Plus',
     popular: false,
@@ -69,16 +64,14 @@ interface PricingCardsProps {
 export default function PricingCards({ onCTAClick, currentPlan }: PricingCardsProps) {
   return (
     <>
-      <div className="grid grid-cols-1 items-start gap-6 sm:grid-cols-3">
+      <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3">
         {TIERS.map((tier) => {
           const isCurrent = currentPlan === tier.id
           return (
             <div
               key={tier.id}
-              className={`relative rounded-xl border p-8 transition-transform ${
-                tier.popular
-                  ? '-translate-y-1 border-accent bg-surface'
-                  : 'border-border bg-surface'
+              className={`relative flex h-full flex-col rounded-xl border px-6 py-8 ${
+                tier.popular ? 'border-accent bg-surface' : 'border-border bg-surface'
               }`}
             >
               {tier.popular && (
@@ -98,28 +91,34 @@ export default function PricingCards({ onCTAClick, currentPlan }: PricingCardsPr
                 )}
               </div>
 
-              <ul className="mb-8 space-y-3">
+              {/* Feature list grows to fill — pushes CTA to bottom */}
+              <ul className="mb-8 flex-1 space-y-3">
                 {tier.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm">
                     <span className="mt-0.5 flex-shrink-0 text-accent">✓</span>
-                    <span className="text-muted">{f}</span>
+                    <span className={f.startsWith('Everything') ? 'font-medium text-foreground' : 'text-muted'}>
+                      {f}
+                    </span>
                   </li>
                 ))}
               </ul>
 
-              <button
-                onClick={() => !isCurrent && onCTAClick(tier.id)}
-                disabled={isCurrent}
-                className={`w-full rounded-lg py-2.5 text-sm font-medium transition-colors disabled:cursor-default ${
-                  isCurrent
-                    ? 'border border-border text-text-dim'
-                    : tier.popular
-                      ? 'bg-accent text-background hover:bg-accent-hover'
-                      : 'border border-accent text-accent hover:bg-accent/10'
-                }`}
-              >
-                {isCurrent ? 'Current Plan' : tier.cta}
-              </button>
+              {/* CTA always at the bottom */}
+              <div className="mt-auto">
+                <button
+                  onClick={() => !isCurrent && onCTAClick(tier.id)}
+                  disabled={isCurrent}
+                  className={`w-full rounded-lg py-2.5 text-sm font-medium transition-colors disabled:cursor-default ${
+                    isCurrent
+                      ? 'border border-border text-text-dim'
+                      : tier.popular
+                        ? 'bg-accent text-background hover:bg-accent-hover'
+                        : 'border border-accent text-accent hover:bg-accent/10'
+                  }`}
+                >
+                  {isCurrent ? 'Current Plan' : tier.cta}
+                </button>
+              </div>
             </div>
           )
         })}
