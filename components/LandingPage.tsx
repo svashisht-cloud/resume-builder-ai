@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import AuthModal from './AuthModal'
+import Testimonials from './landing/Testimonials'
 
 export default function LandingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -92,6 +93,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <Testimonials />
 
       {/* Pricing */}
       <section className="py-20">
