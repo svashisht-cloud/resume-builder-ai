@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Upload, Target, Sparkles } from 'lucide-react'
 import AuthModal from './AuthModal'
 import Testimonials from './landing/Testimonials'
 import HeroTrailer from './landing/HeroTrailer'
@@ -70,33 +71,40 @@ export default function LandingPage() {
       <section id="how-it-works" className="border-t border-border bg-surface py-20">
         <div className="mx-auto max-w-5xl px-6">
           <h2 className="font-display mb-12 text-center text-2xl font-bold text-foreground">How It Works</h2>
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {[
               {
-                step: '1',
-                title: 'Paste Your Resume',
-                description: 'Drop in your existing resume as plain text',
+                icon: <Upload className="text-accent" size={32} />,
+                step: 'STEP 01',
+                title: 'Upload your resume',
+                description:
+                  "Drop in your existing resume as a PDF or paste it as plain text. We'll parse every section — experience, skills, education — so nothing gets lost in translation.",
               },
               {
-                step: '2',
-                title: 'Add a Job Description',
-                description: 'Paste the JD for the role you\'re targeting',
+                icon: <Target className="text-accent" size={32} />,
+                step: 'STEP 02',
+                title: 'Add a job description',
+                description:
+                  "Paste the JD for the role you're chasing. The more detail the better — requirements, responsibilities, and tech stack all feed into the tailoring.",
               },
               {
-                step: '3',
-                title: 'Get Your Tailored Resume',
-                description: 'AI rewrites your resume to match, with a diff view showing every change',
+                icon: <Sparkles className="text-accent" size={32} />,
+                step: 'STEP 03',
+                title: 'Get your tailored resume',
+                description:
+                  'Get back a rewritten resume with a side-by-side diff showing exactly what changed and why — plus an ATS match score and a one-click PDF export.',
               },
-            ].map(({ step, title, description }) => (
+            ].map(({ icon, step, title, description }) => (
               <div
                 key={step}
-                className="rounded-xl border border-border bg-surface-2 p-6"
+                className="flex h-full flex-col rounded-xl border border-border bg-surface-2 p-6"
               >
-                <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-full bg-accent text-sm font-bold text-background">
-                  {step}
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-xl border border-accent/20 bg-accent/10">
+                  {icon}
                 </div>
-                <h3 className="mb-2 font-semibold text-foreground">{title}</h3>
-                <p className="text-sm text-muted">{description}</p>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">{step}</p>
+                <h3 className="font-display mb-2 text-lg font-semibold text-foreground">{title}</h3>
+                <p className="text-sm leading-6 text-muted">{description}</p>
               </div>
             ))}
           </div>
