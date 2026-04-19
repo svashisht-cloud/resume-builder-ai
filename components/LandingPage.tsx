@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import AuthModal from './AuthModal'
 import Testimonials from './landing/Testimonials'
+import HeroTrailer from './landing/HeroTrailer'
 
 export default function LandingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -34,26 +35,33 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="mx-auto max-w-3xl px-6 py-24 text-center">
-        <h1 className="font-display mb-4 text-4xl font-bold leading-tight text-foreground sm:text-5xl">
-          Tailor your resume to any job in seconds
-        </h1>
-        <p className="mx-auto mb-10 max-w-xl text-lg text-muted">
-          Paste your resume and a job description. Get a tailored, ATS-optimized version instantly — with a diff showing exactly what changed.
-        </p>
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-          <button
-            onClick={openModal}
-            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-accent-hover"
-          >
-            Get Started Free
-          </button>
-          <button
-            onClick={scrollToHowItWorks}
-            className="rounded-lg border border-accent px-5 py-2.5 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
-          >
-            See How It Works
-          </button>
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[45%_55%]">
+          {/* Left: copy + CTAs */}
+          <div>
+            <h1 className="font-display mb-4 text-4xl font-bold leading-tight text-foreground sm:text-5xl">
+              Tailor your resume to any job in seconds
+            </h1>
+            <p className="mb-10 max-w-xl text-lg text-muted">
+              Paste your resume and a job description. Get a tailored, ATS-optimized version instantly — with a diff showing exactly what changed.
+            </p>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <button
+                onClick={openModal}
+                className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-accent-hover"
+              >
+                Get Started Free
+              </button>
+              <button
+                onClick={scrollToHowItWorks}
+                className="rounded-lg border border-accent px-5 py-2.5 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
+              >
+                See How It Works
+              </button>
+            </div>
+          </div>
+          {/* Right: animated product trailer */}
+          <HeroTrailer />
         </div>
       </section>
 
