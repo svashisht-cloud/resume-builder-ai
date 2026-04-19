@@ -8,8 +8,6 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  if (!isOpen) return null
-
   async function handleGoogleSignIn() {
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
@@ -22,23 +20,25 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      data-state={isOpen ? 'open' : 'closed'}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-200 motion-reduce:transition-none data-[state=closed]:pointer-events-none data-[state=closed]:opacity-0 data-[state=open]:opacity-100"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-sm rounded-2xl bg-surface border border-border p-8 shadow-2xl"
+        data-state={isOpen ? 'open' : 'closed'}
+        className="relative w-full max-w-sm rounded-2xl border border-border bg-surface p-8 shadow-2xl transition-[opacity,transform] duration-[250ms] ease-out motion-reduce:transition-none data-[state=closed]:scale-95 data-[state=closed]:opacity-0 data-[state=open]:scale-100 data-[state=open]:opacity-100"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-muted hover:text-foreground transition-colors text-xl leading-none"
+          className="absolute right-4 top-4 text-xl leading-none text-muted transition-colors hover:text-foreground"
           aria-label="Close"
         >
           ×
         </button>
 
         <div className="mb-6 text-center">
-          <h2 className="text-xl font-bold text-foreground mb-1">
+          <h2 className="mb-1 font-display text-xl font-bold text-foreground">
             Welcome to MockLoop Resume Builder
           </h2>
           <p className="text-sm text-muted">Sign in to get started</p>
@@ -68,6 +68,17 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           </svg>
           Continue with Google
         </button>
+
+        <p className="mt-4 text-center text-xs text-text-dim">
+          By signing in, you agree to our{' '}
+          <a
+            href="#"
+            className="underline transition-colors hover:text-muted"
+          >
+            Terms of Service
+          </a>
+          .
+        </p>
       </div>
     </div>
   )
