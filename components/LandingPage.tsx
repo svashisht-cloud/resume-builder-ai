@@ -20,12 +20,12 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-lg font-bold text-foreground">MockLoop</span>
+            <span className="font-display text-lg font-bold text-foreground">MockLoop</span>
             <span className="text-lg font-light text-muted">Resume Builder</span>
           </div>
           <button
             onClick={openModal}
-            className="rounded-lg border border-border bg-surface-raised px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent"
+            className="rounded-lg border border-accent px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
           >
             Sign In
           </button>
@@ -34,7 +34,7 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="mx-auto max-w-3xl px-6 py-24 text-center">
-        <h1 className="mb-4 text-4xl font-bold leading-tight text-foreground sm:text-5xl">
+        <h1 className="font-display mb-4 text-4xl font-bold leading-tight text-foreground sm:text-5xl">
           Tailor your resume to any job in seconds
         </h1>
         <p className="mx-auto mb-10 max-w-xl text-lg text-muted">
@@ -43,13 +43,13 @@ export default function LandingPage() {
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <button
             onClick={openModal}
-            className="rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-background transition-opacity hover:opacity-90"
+            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-accent-hover"
           >
             Get Started Free
           </button>
           <button
             onClick={scrollToHowItWorks}
-            className="rounded-lg border border-border px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:border-accent hover:text-accent"
+            className="rounded-lg border border-accent px-5 py-2.5 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
           >
             See How It Works
           </button>
@@ -59,7 +59,7 @@ export default function LandingPage() {
       {/* How It Works */}
       <section id="how-it-works" className="border-t border-border bg-surface py-20">
         <div className="mx-auto max-w-5xl px-6">
-          <h2 className="mb-12 text-center text-2xl font-bold text-foreground">How It Works</h2>
+          <h2 className="font-display mb-12 text-center text-2xl font-bold text-foreground">How It Works</h2>
           <div className="grid gap-6 sm:grid-cols-3">
             {[
               {
@@ -80,7 +80,7 @@ export default function LandingPage() {
             ].map(({ step, title, description }) => (
               <div
                 key={step}
-                className="rounded-xl border border-border bg-surface-raised p-6"
+                className="rounded-xl border border-border bg-surface-2 p-6"
               >
                 <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-full bg-accent text-sm font-bold text-background">
                   {step}
@@ -96,7 +96,7 @@ export default function LandingPage() {
       {/* Pricing */}
       <section className="py-20">
         <div className="mx-auto max-w-4xl px-6">
-          <h2 className="mb-12 text-center text-2xl font-bold text-foreground">Pricing</h2>
+          <h2 className="font-display mb-12 text-center text-2xl font-bold text-foreground">Pricing</h2>
           <div className="grid gap-6 sm:grid-cols-2">
             {/* Free */}
             <div className="rounded-xl border border-border bg-surface p-8">

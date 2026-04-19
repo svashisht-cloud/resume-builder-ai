@@ -20,11 +20,11 @@ function FeedbackList({
   items: string[];
 }) {
   if (items.length === 0) {
-    return <p className="text-[#4a5568]">{emptyText}</p>;
+    return <p className="text-text-dim">{emptyText}</p>;
   }
 
   return (
-    <ul className="space-y-1 text-[#94a3b8]">
+    <ul className="space-y-1 text-muted">
       {items.map((item) => (
         <li key={item}>{item}</li>
       ))}
@@ -85,15 +85,15 @@ export function DashboardShell() {
         >
 
           {/* ── Panel 1: Dashboard ── */}
-          <div className="h-full w-screen flex-shrink-0 overflow-y-auto bg-[#0a0f1e]">
-            <main className="min-h-full px-4 py-8 text-white sm:px-6 lg:px-8">
+          <div className="h-full w-screen flex-shrink-0 overflow-y-auto bg-background">
+            <main className="min-h-full px-4 py-8 text-foreground sm:px-6 lg:px-8">
               <div className="mx-auto w-full max-w-2xl">
                 <header>
-                  <p className="text-sm font-medium text-[#06b6d4]">Resume Builder</p>
+                  <p className="text-sm font-medium text-accent">Resume Builder</p>
                   <h1 className="mt-2 text-3xl font-semibold tracking-normal sm:text-4xl">
                     Tailor a resume to a job description.
                   </h1>
-                  <p className="mt-3 text-base leading-7 text-[#94a3b8]">
+                  <p className="mt-3 text-base leading-7 text-muted">
                     Add your source resume and target job description. Tailoring will
                     stay grounded in the experience you provide.
                   </p>
@@ -105,18 +105,18 @@ export function DashboardShell() {
                   </div>
                 )}
 
-                <section className="mt-6 rounded-xl border border-[#1e293b] bg-[#0f1629] p-5 sm:p-6">
+                <section className="mt-6 rounded-xl border border-border bg-surface p-5 sm:p-6">
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-semibold text-white" htmlFor="resume-upload">
+                      <label className="block text-sm font-semibold text-foreground" htmlFor="resume-upload">
                         Resume
                       </label>
-                      <p className="mt-1 text-sm text-[#94a3b8]">
+                      <p className="mt-1 text-sm text-muted">
                         Upload a .txt, .pdf, or .docx resume file.
                       </p>
                       <input
                         accept=".pdf,.docx,.txt"
-                        className="mt-3 block w-full rounded-lg border border-[#1e293b] bg-[#0a0f1e] px-3 py-2 text-sm text-white file:mr-4 file:rounded-md file:border-0 file:bg-[#1e293b] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#94a3b8] hover:file:bg-[#263347] hover:file:text-white"
+                        className="mt-3 block w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground file:mr-4 file:rounded-md file:border-0 file:bg-border file:px-3 file:py-2 file:text-sm file:font-medium file:text-muted hover:file:bg-surface-raised hover:file:text-foreground"
                         id="resume-upload"
                         onChange={(event) => {
                           const file = event.target.files?.[0] ?? null;
@@ -126,19 +126,19 @@ export function DashboardShell() {
                         type="file"
                       />
                       {resumeFileName && (
-                        <p className="mt-2 text-sm text-[#94a3b8]">
+                        <p className="mt-2 text-sm text-muted">
                           Selected file:{" "}
-                          <span className="font-medium text-white">{resumeFileName}</span>
+                          <span className="font-medium text-foreground">{resumeFileName}</span>
                         </p>
                       )}
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-white" htmlFor="job-description">
+                      <label className="block text-sm font-semibold text-foreground" htmlFor="job-description">
                         Job description
                       </label>
                       <textarea
-                        className="mt-3 min-h-56 w-full resize-y rounded-lg border border-[#1e293b] bg-[#0a0f1e] px-3 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[#4a5568] focus:border-[#06b6d4] focus:ring-1 focus:ring-[#06b6d4]"
+                        className="mt-3 min-h-56 w-full resize-y rounded-lg border border-border bg-background px-3 py-3 text-sm leading-6 text-foreground outline-none transition placeholder:text-text-dim focus:border-accent focus:ring-1 focus:ring-accent"
                         id="job-description"
                         onChange={(event) => setJobDescription(event.target.value)}
                         placeholder="Paste the target job description here..."
@@ -147,7 +147,7 @@ export function DashboardShell() {
                     </div>
 
                     <button
-                      className="h-11 w-full rounded-lg bg-[#06b6d4] px-4 text-sm font-semibold text-[#0a0f1e] shadow-sm transition hover:bg-[#22d3ee] disabled:cursor-not-allowed disabled:bg-[#1e293b] disabled:text-[#4a5568] sm:w-auto"
+                      className="h-11 w-full rounded-lg bg-accent px-4 text-sm font-semibold text-background shadow-sm transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-border disabled:text-text-dim sm:w-auto"
                       disabled={!canTailor}
                       onClick={handleTailorResume}
                       type="button"
@@ -161,7 +161,7 @@ export function DashboardShell() {
           </div>
 
           {/* ── Panel 2: Working Area (Loading + Keywords split) ── */}
-          <div className="relative h-full w-screen flex-shrink-0 overflow-hidden bg-[#0a0f1e]">
+          <div className="relative h-full w-screen flex-shrink-0 overflow-hidden bg-background">
 
             {/* Loading sub-panel — right edge slides to 50% when keywords are shown */}
             <div
@@ -174,25 +174,25 @@ export function DashboardShell() {
               <div className="w-full max-w-xs text-center">
                 {/* Hero: score (steps 2–3 or keyword-selection) or title (step 1) */}
                 {loadingStep === 1 ? (
-                  <p className="mb-6 text-2xl font-semibold tracking-tight text-white">
+                  <p className="mb-6 text-2xl font-semibold tracking-tight text-foreground">
                     Tailoring your resume…
                   </p>
                 ) : initialScore !== null ? (
                   <div className="mb-6">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#475569]">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-text-dim">
                       Initial ATS Score
                     </p>
                     <div className="mt-3 flex items-end justify-center gap-1.5">
-                      <span className="text-8xl font-bold leading-none tracking-tight text-[#06b6d4]">
+                      <span className="text-8xl font-bold leading-none tracking-tight text-accent">
                         {initialScore}
                       </span>
-                      <span className="mb-2 text-2xl font-light text-[#475569]">/100</span>
+                      <span className="mb-2 text-2xl font-light text-text-dim">/100</span>
                     </div>
                   </div>
                 ) : null}
 
                 {/* Status message */}
-                <p className="mb-6 text-sm font-medium text-[#64748b]">
+                <p className="mb-6 text-sm font-medium text-text-dim">
                   {loadingStep === 1 && "Analyzing your resume against the job description…"}
                   {loadingStep === 2 && "Generating your tailored resume…"}
                   {loadingStep === 3 && "Getting your final ATS rating…"}
@@ -202,14 +202,14 @@ export function DashboardShell() {
                 {/* Spinner — only while actively loading */}
                 {loadingStep > 0 && (
                   <div className="mb-8 flex justify-center">
-                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#1e293b] border-t-[#06b6d4]" />
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-accent" />
                   </div>
                 )}
 
                 {/* Progress bar */}
-                <div className="h-1 w-full overflow-hidden rounded-full bg-[#1e293b]">
+                <div className="h-1 w-full overflow-hidden rounded-full bg-border">
                   <div
-                    className="h-full rounded-full bg-[#06b6d4]"
+                    className="h-full rounded-full bg-accent"
                     style={{
                       width:
                         loadingStep === 1 ? "10%"
@@ -222,7 +222,7 @@ export function DashboardShell() {
                 </div>
 
                 {/* Step labels */}
-                <div className="mt-2.5 flex justify-between text-[10px] font-semibold uppercase tracking-widest text-[#334155]">
+                <div className="mt-2.5 flex justify-between text-[10px] font-semibold uppercase tracking-widest text-text-dim">
                   <span>Analyze</span>
                   <span>Generate</span>
                   <span>Score</span>
@@ -232,7 +232,7 @@ export function DashboardShell() {
 
             {/* Keywords sub-panel — slides in from right */}
             <div
-              className={`absolute bottom-0 right-0 top-0 w-1/2 overflow-y-auto border-l border-[#1e293b] transition-transform duration-[350ms] ease-in-out ${
+              className={`absolute bottom-0 right-0 top-0 w-1/2 overflow-y-auto border-l border-border transition-transform duration-[350ms] ease-in-out ${
                 viewState === "keyword-selection" ? "translate-x-0" : "translate-x-full"
               }`}
             >
@@ -242,10 +242,10 @@ export function DashboardShell() {
 
                     {/* Header */}
                     <div className="mb-8 text-center">
-                      <h2 className="text-xl font-semibold tracking-tight text-white">
+                      <h2 className="text-xl font-semibold tracking-tight text-foreground">
                         Any hidden experience?
                       </h2>
-                      <p className="mt-2 text-sm font-medium text-[#64748b]">
+                      <p className="mt-2 text-sm font-medium text-text-dim">
                         These skills were flagged as missing. Select any you genuinely have — we&apos;ll weave them in.
                       </p>
                     </div>
@@ -264,8 +264,8 @@ export function DashboardShell() {
                             onClick={() => toggleKeyword(kw)}
                             className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                               selected
-                                ? "border-[#06b6d4] bg-[#06b6d4]/10 text-[#06b6d4]"
-                                : "border-[#1e293b] text-[#64748b] hover:border-[#334155] hover:text-[#94a3b8]"
+                                ? "border-accent bg-accent/10 text-accent"
+                                : "border-border text-text-dim hover:border-muted/40 hover:text-muted"
                             }`}
                           >
                             {selected && <span className="mr-1.5">✓</span>}
@@ -280,7 +280,7 @@ export function DashboardShell() {
                       <button
                         type="button"
                         onClick={() => handleGenerateResume(selectedKeywords)}
-                        className="h-11 w-full rounded-lg bg-[#06b6d4] px-4 text-sm font-semibold text-[#0a0f1e] shadow-sm transition hover:bg-[#22d3ee]"
+                        className="h-11 w-full rounded-lg bg-accent px-4 text-sm font-semibold text-background shadow-sm transition hover:bg-accent-hover"
                       >
                         {selectedKeywords.length > 0
                           ? `Generate with ${selectedKeywords.length} selected →`
@@ -289,7 +289,7 @@ export function DashboardShell() {
                       <button
                         type="button"
                         onClick={() => handleGenerateResume([])}
-                        className="text-sm font-medium text-[#475569] transition hover:text-[#64748b]"
+                        className="text-sm font-medium text-text-dim transition hover:text-muted"
                       >
                         Skip & generate without additions
                       </button>
@@ -302,12 +302,12 @@ export function DashboardShell() {
           </div>
 
           {/* ── Panel 3: Result ── */}
-          <div className="h-full w-screen flex-shrink-0 overflow-y-auto bg-[#0a0f1e]">
+          <div className="h-full w-screen flex-shrink-0 overflow-y-auto bg-background">
             {result && (
-              <main className="min-h-full px-4 py-8 text-white sm:px-6 lg:px-8">
+              <main className="min-h-full px-4 py-8 text-foreground sm:px-6 lg:px-8">
                 <div className="mx-auto w-full max-w-6xl">
                   <button
-                    className="text-sm font-medium text-[#94a3b8] transition hover:text-white"
+                    className="text-sm font-medium text-muted transition hover:text-foreground"
                     onClick={handleReset}
                     type="button"
                   >
@@ -323,71 +323,71 @@ export function DashboardShell() {
                   <div className="mt-6 grid gap-6 lg:grid-cols-[3fr_2fr]">
                     {/* ── LEFT: Score + Changelog ── */}
                     <div className="space-y-6">
-                      <section className="rounded-xl border border-[#1e293b] bg-[#0f1629] p-5 sm:p-6">
-                        <h2 className="text-xl font-semibold text-white">Fit score comparison</h2>
+                      <section className="rounded-xl border border-border bg-surface p-5 sm:p-6">
+                        <h2 className="text-xl font-semibold text-foreground">Fit score comparison</h2>
 
                         <div className="mt-4 grid gap-3 sm:grid-cols-3">
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[#4a5568]">Before</p>
-                            <p className="mt-1 text-3xl font-semibold text-white">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-text-dim">Before</p>
+                            <p className="mt-1 text-3xl font-semibold text-foreground">
                               {result.scoreComparison.before}
-                              <span className="text-sm font-medium text-[#4a5568]">/100</span>
+                              <span className="text-sm font-medium text-text-dim">/100</span>
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[#4a5568]">After</p>
-                            <p className="mt-1 text-3xl font-semibold text-white">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-text-dim">After</p>
+                            <p className="mt-1 text-3xl font-semibold text-foreground">
                               {result.scoreComparison.after}
-                              <span className="text-sm font-medium text-[#4a5568]">/100</span>
+                              <span className="text-sm font-medium text-text-dim">/100</span>
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[#4a5568]">Delta</p>
-                            <p className={`mt-1 text-3xl font-semibold ${result.scoreComparison.delta >= 0 ? "text-[#06b6d4]" : "text-red-400"}`}>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-text-dim">Delta</p>
+                            <p className={`mt-1 text-3xl font-semibold ${result.scoreComparison.delta >= 0 ? "text-accent" : "text-red-400"}`}>
                               {formatScoreDelta(result.scoreComparison.delta)}
                             </p>
                           </div>
                         </div>
 
-                        <div className="mt-5 rounded-lg border border-[#1e293b] bg-[#0a0f1e] p-4">
-                          <p className="text-sm font-semibold text-white">Overall assessment</p>
-                          <p className="mt-1 text-sm leading-6 text-[#94a3b8]">
+                        <div className="mt-5 rounded-lg border border-border bg-background p-4">
+                          <p className="text-sm font-semibold text-foreground">Overall assessment</p>
+                          <p className="mt-1 text-sm leading-6 text-muted">
                             {result.tailoredEvaluation.summary}
                           </p>
                         </div>
 
                         <div className="mt-5 grid gap-4 sm:grid-cols-2">
                           <div>
-                            <p className="text-sm font-semibold text-white">Matched areas</p>
+                            <p className="text-sm font-semibold text-foreground">Matched areas</p>
                             <div className="mt-2 flex flex-wrap gap-2">
                               {result.tailoredEvaluation.matchedAreas.length > 0 ? (
                                 result.tailoredEvaluation.matchedAreas.map((area) => (
                                   <span
-                                    className="rounded-full border border-[#06b6d4]/30 bg-[#06b6d4]/10 px-2 py-1 text-xs font-medium text-[#06b6d4]"
+                                    className="rounded-full border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-medium text-accent"
                                     key={area}
                                   >
                                     {area}
                                   </span>
                                 ))
                               ) : (
-                                <p className="text-sm text-[#4a5568]">No matched areas generated.</p>
+                                <p className="text-sm text-text-dim">No matched areas generated.</p>
                               )}
                             </div>
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-white">Missing areas</p>
+                            <p className="text-sm font-semibold text-foreground">Missing areas</p>
                             <div className="mt-2 flex flex-wrap gap-2">
                               {result.tailoredEvaluation.missingAreas.length > 0 ? (
                                 result.tailoredEvaluation.missingAreas.map((area) => (
                                   <span
-                                    className="rounded-full border border-[#1e293b] bg-[#131c35] px-2 py-1 text-xs font-medium text-[#94a3b8]"
+                                    className="rounded-full border border-border bg-surface-raised px-2 py-1 text-xs font-medium text-muted"
                                     key={area}
                                   >
                                     {area}
                                   </span>
                                 ))
                               ) : (
-                                <p className="text-sm text-[#4a5568]">No missing areas generated.</p>
+                                <p className="text-sm text-text-dim">No missing areas generated.</p>
                               )}
                             </div>
                           </div>
@@ -395,7 +395,7 @@ export function DashboardShell() {
 
                         <div className="mt-5 grid gap-4 sm:grid-cols-2">
                           <div>
-                            <p className="text-sm font-semibold text-white">Strengths</p>
+                            <p className="text-sm font-semibold text-foreground">Strengths</p>
                             <div className="mt-2">
                               <FeedbackList
                                 emptyText="No strengths generated."
@@ -404,7 +404,7 @@ export function DashboardShell() {
                             </div>
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-white">Gaps</p>
+                            <p className="text-sm font-semibold text-foreground">Gaps</p>
                             <div className="mt-2">
                               <FeedbackList
                                 emptyText="No major gaps generated."
@@ -415,7 +415,7 @@ export function DashboardShell() {
                         </div>
 
                         <div className="mt-5">
-                          <p className="text-sm font-semibold text-white">Improvement suggestions</p>
+                          <p className="text-sm font-semibold text-foreground">Improvement suggestions</p>
                           <div className="mt-2">
                             <FeedbackList
                               emptyText="No improvements generated."
@@ -425,12 +425,12 @@ export function DashboardShell() {
                         </div>
                       </section>
 
-                      <section className="rounded-xl border border-[#1e293b] bg-[#0f1629] p-5 sm:p-6">
-                        <h2 className="text-xl font-semibold text-white">Change log</h2>
-                        <ul className="mt-4 space-y-3 text-sm leading-6 text-[#94a3b8]">
+                      <section className="rounded-xl border border-border bg-surface p-5 sm:p-6">
+                        <h2 className="text-xl font-semibold text-foreground">Change log</h2>
+                        <ul className="mt-4 space-y-3 text-sm leading-6 text-muted">
                           {result.changeLog.changes.map((change) => (
                             <li key={`${change.section}-${change.tailoredText}`}>
-                              <span className="font-semibold text-white">{change.section}:</span>{" "}
+                              <span className="font-semibold text-foreground">{change.section}:</span>{" "}
                               {change.reason}
                             </li>
                           ))}
@@ -441,7 +441,7 @@ export function DashboardShell() {
                     {/* ── RIGHT: Resume preview card ── */}
                     <div>
                       <div className="sticky top-8">
-                        <p className="mb-3 text-sm font-semibold text-white">Tailored resume</p>
+                        <p className="mb-3 text-sm font-semibold text-foreground">Tailored resume</p>
                         <button
                           aria-label="Preview tailored resume"
                           className="relative w-full cursor-pointer overflow-hidden rounded-xl bg-white shadow-2xl"
@@ -465,7 +465,7 @@ export function DashboardShell() {
                             style={{ background: "linear-gradient(to bottom, transparent 45%, white 100%)" }}
                           />
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="rounded-full bg-[#06b6d4] px-6 py-2.5 text-sm font-semibold text-[#0a0f1e] shadow-lg">
+                            <span className="rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-background shadow-lg">
                               Preview & Download →
                             </span>
                           </div>
@@ -493,7 +493,7 @@ export function DashboardShell() {
           >
             <div className="flex flex-wrap gap-2">
               <button
-                className="h-9 rounded-lg bg-[#06b6d4] px-4 text-sm font-semibold text-[#0a0f1e] shadow-sm transition hover:bg-[#22d3ee] disabled:cursor-not-allowed disabled:bg-[#1e293b] disabled:text-[#4a5568]"
+                className="h-9 rounded-lg bg-accent px-4 text-sm font-semibold text-background shadow-sm transition hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-border disabled:text-text-dim"
                 disabled={isDownloadingPdf}
                 onClick={handleDownloadPdf}
                 type="button"
@@ -501,7 +501,7 @@ export function DashboardShell() {
                 {isDownloadingPdf ? "Preparing PDF..." : "Download PDF"}
               </button>
               <button
-                className="h-9 rounded-lg border border-[#06b6d4] bg-transparent px-4 text-sm font-semibold text-[#06b6d4] transition hover:bg-[#06b6d4]/10 disabled:cursor-not-allowed disabled:border-[#1e293b] disabled:text-[#4a5568]"
+                className="h-9 rounded-lg border border-accent bg-transparent px-4 text-sm font-semibold text-accent transition hover:bg-accent/10 disabled:cursor-not-allowed disabled:border-border disabled:text-text-dim"
                 disabled={isDownloadingDocx}
                 onClick={handleDownloadDocx}
                 type="button"
@@ -509,7 +509,7 @@ export function DashboardShell() {
                 {isDownloadingDocx ? "Preparing DOCX..." : "Download DOCX"}
               </button>
               <button
-                className="h-9 rounded-lg border border-[#1e293b] bg-transparent px-4 text-sm font-semibold text-[#94a3b8] transition hover:bg-[#1e293b] hover:text-white"
+                className="h-9 rounded-lg border border-border bg-transparent px-4 text-sm font-semibold text-muted transition hover:bg-border hover:text-foreground"
                 onClick={handlePrintResume}
                 type="button"
               >
@@ -518,7 +518,7 @@ export function DashboardShell() {
             </div>
             <button
               aria-label="Close"
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#1e293b] bg-[#0f1629] text-[#94a3b8] transition hover:bg-[#1e293b] hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-muted transition hover:bg-border hover:text-foreground"
               onClick={closeModal}
               type="button"
             >

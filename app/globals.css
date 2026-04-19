@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  /* existing tokens */
   --background: #0a0f1e;
   --surface: #0f1629;
   --surface-raised: #131c35;
@@ -9,9 +10,18 @@
   --foreground: #ffffff;
   --muted: #94a3b8;
   --border: #1e293b;
+  /* new design-system tokens */
+  --bg: #0a0f1e;
+  --surface-2: #111827;
+  --accent-hover: #0891b2;
+  --accent-2: #6366f1;
+  --text: #ffffff;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
 }
 
 @theme inline {
+  /* existing tokens */
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
@@ -20,14 +30,24 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  /* new tokens */
+  --color-bg: var(--bg);
+  --color-surface-2: var(--surface-2);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-2: var(--accent-2);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-dim: var(--text-dim);
+  /* fonts */
+  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), "SFMono-Regular", Consolas, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
 }
 
 button,
