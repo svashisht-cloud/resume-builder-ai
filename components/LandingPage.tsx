@@ -4,6 +4,7 @@ import { useState } from 'react'
 import AuthModal from './AuthModal'
 import Testimonials from './landing/Testimonials'
 import HeroTrailer from './landing/HeroTrailer'
+import PricingCards from './pricing/PricingCards'
 
 export default function LandingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -106,51 +107,9 @@ export default function LandingPage() {
 
       {/* Pricing */}
       <section className="py-20">
-        <div className="mx-auto max-w-4xl px-6">
+        <div className="mx-auto max-w-5xl px-6">
           <h2 className="font-display mb-12 text-center text-2xl font-bold text-foreground">Pricing</h2>
-          <div className="grid gap-6 sm:grid-cols-2">
-            {/* Free */}
-            <div className="rounded-xl border border-border bg-surface p-8">
-              <div className="mb-1 text-sm font-medium text-muted">Free</div>
-              <div className="mb-6 text-3xl font-bold text-foreground">
-                $0<span className="text-base font-normal text-muted">/mo</span>
-              </div>
-              <ul className="mb-8 space-y-3 text-sm text-muted">
-                {['3 tailoring sessions/month', 'Diff view', 'Copy output'].map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <span className="text-accent">✓</span> {f}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={openModal}
-                className="w-full rounded-lg border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:border-accent hover:text-accent"
-              >
-                Get Started
-              </button>
-            </div>
-
-            {/* Pro */}
-            <div className="rounded-xl border border-accent bg-surface p-8">
-              <div className="mb-1 text-sm font-medium text-accent">Pro</div>
-              <div className="mb-6 text-3xl font-bold text-foreground">
-                $9<span className="text-base font-normal text-muted">/mo</span>
-              </div>
-              <ul className="mb-8 space-y-3 text-sm text-muted">
-                {['Unlimited sessions', 'Resume history', 'Priority processing'].map((f) => (
-                  <li key={f} className="flex items-center gap-2">
-                    <span className="text-accent">✓</span> {f}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={openModal}
-                className="w-full rounded-lg bg-accent py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-90"
-              >
-                Get Pro
-              </button>
-            </div>
-          </div>
+          <PricingCards onCTAClick={() => openModal()} />
         </div>
       </section>
 
