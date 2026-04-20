@@ -90,12 +90,14 @@ export default function Testimonials() {
   const offset = cardWidth > 0 ? currentIndex * (cardWidth + GAP) : 0
 
   return (
-    <section id="testimonials" className="border-t border-border bg-surface py-20">
+    <section id="testimonials" className="border-t border-border/60 bg-surface py-20">
       <div className="mx-auto max-w-6xl px-6">
-        <h2 className="font-display mb-3 text-center text-3xl font-bold text-foreground">
-          What our users are saying
-        </h2>
-        <p className="mb-12 text-center text-sm text-muted">Real results from real job seekers.</p>
+        <div className="mb-12 text-center">
+          <h2 className="font-display mb-3 text-3xl font-bold text-foreground">
+            What our users are saying
+          </h2>
+          <p className="text-sm text-muted">Real results from real job seekers.</p>
+        </div>
 
         <div className="flex items-center gap-4">
           {/* Left chevron */}
@@ -124,30 +126,30 @@ export default function Testimonials() {
               {testimonials.map((t) => (
                 <div
                   key={t.name}
-                  className="relative flex-none overflow-hidden rounded-xl border border-border bg-surface p-6"
+                  className="relative flex-none overflow-hidden rounded-xl border border-border/60 bg-surface-2 p-6 transition-all hover:border-accent/20 hover:shadow-[0_4px_24px_rgba(0,0,0,0.3)]"
                   style={{ width: cardWidth > 0 ? `${cardWidth}px` : 'calc(33.333% - 16px)' }}
                 >
                   {/* Decorative quote watermark */}
                   <Quote
-                    className="absolute right-4 top-4 text-accent/20"
-                    size={32}
+                    className="absolute right-4 top-4 text-accent/15"
+                    size={28}
                     aria-hidden="true"
                   />
 
                   {/* Stars */}
                   <div className="mb-3 flex items-center gap-0.5">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} size={16} className="fill-yellow-400 text-yellow-400" />
+                      <Star key={i} size={14} className="fill-yellow-400 text-yellow-400" />
                     ))}
                   </div>
 
-                  <p className="mb-6 text-sm leading-7 text-foreground">
+                  <p className="mb-5 text-sm leading-[1.75] text-foreground/90">
                     &ldquo;{t.quote}&rdquo;
                   </p>
 
                   <div className="flex items-center gap-3">
                     <div
-                      className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-sm font-bold ${t.color}`}
+                      className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${t.color}`}
                     >
                       {t.initials}
                     </div>

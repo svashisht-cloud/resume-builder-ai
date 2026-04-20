@@ -234,72 +234,6 @@ async function runStructuredCall<TSchema extends z.ZodType>({
   return validation.data;
 }
 
-const PROJECTS_SECTION_RE =
-  /^(projects?|personal projects?|side projects?|portfolio|notable projects?|selected projects?)$/i;
-const OTHER_SECTION_RE =
-  /^(summary|objective|profile|experience|work experience|professional experience|employment|education|skills|technical skills|certifications?|languages?|tools?|volunteering|publications?)$/i;
-
-function extractProjectsFromRawText(resumeText: string): Array<{
-  name: string;
-  techStack: string | null;
-  date: string | null;
-  url: string | null;
-  bullets: string[];
-}> {
-  const lines = resumeText.split("\n");
-  const projects: Array<{
-    name: string;
-    techStack: string | null;
-    date: string | null;
-    url: string | null;
-    bullets: string[];
-  }> = [];
-  let inProjectsSection = false;
-  let current: { name: string; techStack: string | null; date: string | null; url: string | null; bullets: string[] } | null = null;
-
-  function pushCurrent() {
-    if (current && current.name.length > 2) projects.push(current);
-    current = null;
-  }
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-    const normalized = line.replace(/^[=\-#*_\s]+|[=\-#*_:\s]+$/g, "").trim();
-
-    if (!inProjectsSection) {
-      if (normalized && PROJECTS_SECTION_RE.test(normalized)) {
-        inProjectsSection = true;
-      }
-      continue;
-    }
-
-    if (normalized && line.length <= 80 && OTHER_SECTION_RE.test(normalized)) {
-      pushCurrent();
-      break;
-    }
-
-    if (!line) {
-      if (current && current.bullets.length > 0) pushCurrent();
-      continue;
-    }
-
-    const isBullet =
-      /^[-•*]\s/.test(rawLine.trimStart()) ||
-      /^\d+\.\s/.test(rawLine.trimStart());
-    if (isBullet) {
-      if (current) {
-        current.bullets.push(line.replace(/^[-•*\d.]\s*/, "").trim());
-      }
-    } else {
-      pushCurrent();
-      current = { name: line, techStack: null, date: null, url: null, bullets: [] };
-    }
-  }
-  pushCurrent();
-
-  return projects;
-}
-
 export function buildScoreComparison({
   originalEvaluation,
   tailoredEvaluation,
@@ -478,31 +412,10 @@ export async function generateTailoredResumeFromRaw({
     }),
   });
 
-  const originalProjects = extractProjectsFromRawText(resumeText);
-  const tailoredProjectNames = result.tailoredResume.projects.map((p) =>
-    p.name.toLowerCase().trim(),
-  );
-  const droppedProjects = originalProjects.filter(
-    (orig) =>
-      !tailoredProjectNames.some(
-        (name) =>
-          name.includes(orig.name.toLowerCase().trim().slice(0, 20)) ||
-          orig.name.toLowerCase().trim().includes(name.slice(0, 20)),
-      ),
-  );
-
-  if (droppedProjects.length > 0) {
-    console.log(
-      `[pipeline] restoring ${droppedProjects.length} dropped project(s):`,
-      droppedProjects.map((p) => p.name),
-    );
-  }
-
   return {
     ...result,
     tailoredResume: {
       ...result.tailoredResume,
-      projects: [...result.tailoredResume.projects, ...droppedProjects],
       sectionOrder: detectSectionOrder(resumeText),
     },
   };

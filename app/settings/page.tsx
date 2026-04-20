@@ -3,11 +3,13 @@
 // TODO: plan column only supports 'free'|'pro' — extend enum when billing tiers are wired
 
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import AppNavbar from '@/components/AppNavbar'
 import DeleteAccountButton from '@/components/DeleteAccountButton'
 import SwitchPlanSection from '@/components/settings/SwitchPlanSection'
 import AvatarImage from '@/components/settings/AvatarImage'
+import { ArrowLeft, CreditCard, BarChart2, User } from 'lucide-react'
 
 function formatMemberSince(isoDate: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(
@@ -18,8 +20,15 @@ function formatMemberSince(isoDate: string) {
 function PlanBadge({ plan }: { plan: string }) {
   const label =
     plan === 'pro' ? 'Pro' : plan === 'pack' ? 'Resume Pack' : plan === 'plus' ? 'Resume Pack Plus' : 'Free'
+  const isPaid = plan !== 'free'
   return (
-    <span className="inline-flex items-center rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
+    <span
+      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+        isPaid
+          ? 'bg-gradient-to-r from-accent/20 to-accent-secondary/20 text-accent border border-accent/30'
+          : 'bg-surface-raised text-muted border border-border'
+      }`}
+    >
       {label}
     </span>
   )
@@ -42,7 +51,6 @@ export default async function SettingsPage() {
     .single()
 
   const email = profile?.email ?? user.email ?? ''
-  // Check both avatar_url and picture (Supabase sometimes uses either)
   const avatarUrl =
     profile?.avatar_url ??
     (user.user_metadata?.avatar_url as string | undefined) ??
@@ -69,16 +77,29 @@ export default async function SettingsPage() {
         }}
       />
 
-      <main className="mx-auto max-w-3xl space-y-6 px-4 py-10">
+      <main className="mx-auto max-w-3xl space-y-5 px-4 py-8">
+        <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
+          >
+            <ArrowLeft size={14} />
+            Dashboard
+          </Link>
+        </div>
+
         <h1 className="font-display text-2xl font-bold text-foreground">Settings</h1>
 
         {/* Profile */}
-        <div className="rounded-xl border border-border bg-surface p-6">
-          <h2 className="font-display mb-5 text-lg font-semibold text-foreground">Profile</h2>
+        <div className="rounded-xl border border-border/60 bg-surface p-6">
+          <div className="mb-5 flex items-center gap-2">
+            <User size={15} className="text-muted" />
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Profile</h2>
+          </div>
           <div className="flex items-center gap-4">
             <AvatarImage src={avatarUrl} initial={initial} />
             <div className="flex flex-col">
-              <p className="text-sm text-foreground">{email}</p>
+              <p className="font-medium text-foreground">{email}</p>
               {memberSince && (
                 <p className="mt-0.5 text-xs text-muted">Member since {memberSince}</p>
               )}
@@ -87,10 +108,14 @@ export default async function SettingsPage() {
         </div>
 
         {/* Current Plan */}
-        <div className="rounded-xl border border-border bg-surface p-6">
-          <h2 className="font-display mb-5 text-lg font-semibold text-foreground">Current Plan</h2>
+        <div className="rounded-xl border border-border/60 bg-surface p-6">
+          <div className="mb-5 flex items-center gap-2">
+            <CreditCard size={15} className="text-muted" />
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Current Plan</h2>
+          </div>
           <div className="flex items-center gap-3">
             <PlanBadge plan={plan} />
+            <span className="text-border">·</span>
             <p className="text-sm text-muted">
               {creditsRemaining} of {creditsTotal} credit{creditsTotal !== 1 ? 's' : ''} remaining
             </p>
@@ -101,18 +126,21 @@ export default async function SettingsPage() {
         <SwitchPlanSection currentPlan={plan} />
 
         {/* Usage */}
-        <div className="rounded-xl border border-border bg-surface p-6">
-          <h2 className="font-display mb-5 text-lg font-semibold text-foreground">Usage</h2>
-          <div>
-            <p className="font-display text-3xl font-bold text-foreground">{resumesGenerated}</p>
-            <p className="text-sm text-muted">Resumes generated</p>
+        <div className="rounded-xl border border-border/60 bg-surface p-6">
+          <div className="mb-5 flex items-center gap-2">
+            <BarChart2 size={15} className="text-muted" />
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Usage</h2>
+          </div>
+          <div className="flex items-end gap-2">
+            <p className="font-display text-4xl font-bold text-foreground">{resumesGenerated}</p>
+            <p className="mb-1 text-sm text-muted">resumes generated</p>
           </div>
         </div>
 
         {/* Danger Zone */}
-        <div className="rounded-xl border border-red-900/50 bg-surface p-6">
+        <div className="rounded-xl border border-red-500/20 bg-red-950/20 p-6">
           <h2 className="mb-1 text-sm font-semibold text-red-400">Danger Zone</h2>
-          <p className="mb-4 text-sm text-muted">Permanently delete your account and all data.</p>
+          <p className="mb-4 text-sm text-muted">Permanently delete your account and all data. This cannot be undone.</p>
           <DeleteAccountButton />
         </div>
       </main>

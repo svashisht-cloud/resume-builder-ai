@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, Target, Sparkles } from 'lucide-react'
+import { Upload, Target, Sparkles, ArrowRight } from 'lucide-react'
 import AuthModal from './AuthModal'
 import Testimonials from './landing/Testimonials'
 import HeroTrailer from './landing/HeroTrailer'
@@ -21,15 +21,17 @@ export default function LandingPage() {
   return (
     <>
       {/* Navbar */}
-      <nav className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <nav className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <div className="flex items-baseline gap-1.5">
-            <span className="font-display text-lg font-bold text-foreground">MockLoop</span>
+            <span className="font-display bg-gradient-to-r from-accent to-accent-secondary bg-clip-text text-lg font-bold text-transparent">
+              MockLoop
+            </span>
             <span className="text-lg font-light text-muted">Resume Builder</span>
           </div>
           <button
             onClick={openModal}
-            className="rounded-lg border border-accent px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
+            className="rounded-lg border border-accent/60 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-all hover:bg-accent/20 hover:border-accent"
           >
             Sign In
           </button>
@@ -37,26 +39,38 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[45%_55%]">
+      <section className="relative mx-auto max-w-6xl px-6 py-20 overflow-hidden">
+        {/* Radial glow behind content */}
+        <div className="pointer-events-none absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-accent/5 blur-3xl" />
+        <div className="pointer-events-none absolute -top-20 right-1/4 h-[400px] w-[400px] rounded-full bg-accent-secondary/5 blur-3xl" />
+
+        <div className="relative grid grid-cols-1 items-center gap-12 lg:grid-cols-[9fr_11fr]">
           {/* Left: copy + CTAs */}
           <div>
-            <h1 className="font-display mb-4 text-4xl font-bold leading-tight text-foreground sm:text-5xl">
-              Tailor your resume to any job in seconds
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+              <span className="text-xs font-medium text-accent">AI-powered tailoring</span>
+            </div>
+            <h1 className="font-display mb-5 text-4xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem]">
+              Tailor your resume to{' '}
+              <span className="bg-gradient-to-r from-accent to-accent-secondary bg-clip-text text-transparent">
+                any job in seconds
+              </span>
             </h1>
-            <p className="mb-10 max-w-xl text-lg text-muted">
+            <p className="mb-10 max-w-xl text-lg leading-relaxed text-muted">
               Paste your resume and a job description. Get a tailored, ATS-optimized version instantly — with a diff showing exactly what changed.
             </p>
-            <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={openModal}
-                className="rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-background transition-colors hover:bg-accent-hover"
+                className="group flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-accent to-cyan-400 px-6 py-3 text-sm font-semibold text-background shadow-[0_4px_20px_rgba(6,182,212,0.3)] transition-all hover:shadow-[0_4px_28px_rgba(6,182,212,0.45)] hover:opacity-95 active:scale-[0.98]"
               >
                 Get Started Free
+                <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
               </button>
               <button
                 onClick={scrollToHowItWorks}
-                className="rounded-lg border border-accent px-5 py-2.5 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
+                className="rounded-xl border border-border bg-surface-raised px-6 py-3 text-sm font-medium text-muted transition-all hover:border-border/80 hover:text-foreground"
               >
                 See How It Works
               </button>
@@ -68,43 +82,48 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="border-t border-border bg-surface py-20">
+      <section id="how-it-works" className="border-t border-border/60 bg-surface py-20">
         <div className="mx-auto max-w-5xl px-6">
-          <h2 className="font-display mb-3 text-center text-3xl font-bold text-foreground">How It Works</h2>
-          <p className="mb-12 text-center text-sm text-muted">From paste to polished in under a minute.</p>
+          <div className="mb-12 text-center">
+            <h2 className="font-display mb-3 text-3xl font-bold text-foreground">How It Works</h2>
+            <p className="text-sm text-muted">From paste to polished in under a minute.</p>
+          </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {[
               {
-                icon: <Upload className="text-accent" size={32} />,
-                step: 'STEP 01',
+                icon: <Upload className="text-accent" size={24} />,
+                step: '01',
                 title: 'Upload your resume',
                 description:
-                  "Drop in your existing resume as a PDF or paste it as plain text. We'll parse every section — experience, skills, education — so nothing gets lost in translation.",
+                  "Drop in your existing resume as a PDF or paste it as plain text. We'll parse every section — experience, skills, education — so nothing gets lost.",
               },
               {
-                icon: <Target className="text-accent" size={32} />,
-                step: 'STEP 02',
+                icon: <Target className="text-accent" size={24} />,
+                step: '02',
                 title: 'Add a job description',
                 description:
-                  "Paste the JD for the role you're chasing. The more detail the better — requirements, responsibilities, and tech stack all feed into the tailoring.",
+                  "Paste the JD for the role you're targeting. Requirements, responsibilities, and tech stack all feed into the tailoring engine.",
               },
               {
-                icon: <Sparkles className="text-accent" size={32} />,
-                step: 'STEP 03',
+                icon: <Sparkles className="text-accent" size={24} />,
+                step: '03',
                 title: 'Get your tailored resume',
                 description:
-                  'Get back a rewritten resume with a side-by-side diff showing exactly what changed and why — plus an ATS match score and a one-click PDF export.',
+                  'Receive a rewritten resume with a diff showing what changed and why — plus an ATS match score and one-click PDF export.',
               },
             ].map(({ icon, step, title, description }) => (
               <div
                 key={step}
-                className="flex h-full flex-col rounded-xl border border-border bg-surface-2 p-6"
+                className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border/60 bg-surface-2 p-6 transition-all hover:border-accent/30 hover:shadow-[0_4px_24px_rgba(6,182,212,0.08)]"
               >
-                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-xl border border-accent/20 bg-accent/10">
+                {/* Step number watermark */}
+                <span className="absolute right-4 top-3 font-display text-5xl font-bold text-border/60 select-none">
+                  {step}
+                </span>
+                <div className="relative mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-accent/20 bg-accent/10 transition-colors group-hover:border-accent/40 group-hover:bg-accent/15">
                   {icon}
                 </div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">{step}</p>
-                <h3 className="font-display mb-2 text-lg font-semibold text-foreground">{title}</h3>
+                <h3 className="font-display mb-2 text-base font-semibold text-foreground">{title}</h3>
                 <p className="text-sm leading-6 text-muted">{description}</p>
               </div>
             ))}
@@ -115,21 +134,23 @@ export default function LandingPage() {
       <Testimonials />
 
       {/* Pricing */}
-      <section className="py-20">
+      <section className="border-t border-border/60 py-20">
         <div className="mx-auto max-w-5xl px-6">
-          <h2 className="font-display mb-3 text-center text-3xl font-bold text-foreground">Pricing</h2>
-          <p className="mb-12 text-center text-sm text-muted">Start for free. No credit card required.</p>
+          <div className="mb-12 text-center">
+            <h2 className="font-display mb-3 text-3xl font-bold text-foreground">Pricing</h2>
+            <p className="text-sm text-muted">Start for free. No credit card required.</p>
+          </div>
           <PricingCards onCTAClick={() => openModal()} />
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8">
+      <footer className="border-t border-border/60 py-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
-          <span className="text-sm text-muted">MockLoop Resume Builder</span>
+          <span className="text-sm text-muted">© 2025 MockLoop Resume Builder</span>
           <div className="flex gap-6 text-sm text-muted">
-            <a href="/privacy" className="hover:text-foreground transition-colors">Privacy</a>
-            <a href="/terms" className="hover:text-foreground transition-colors">Terms</a>
+            <a href="/privacy" className="transition-colors hover:text-foreground">Privacy</a>
+            <a href="/terms" className="transition-colors hover:text-foreground">Terms</a>
           </div>
         </div>
       </footer>

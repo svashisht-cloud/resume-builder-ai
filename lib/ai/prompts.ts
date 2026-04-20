@@ -13,13 +13,13 @@ export function buildEvalUserPrompt(
 // ── Tailored evaluation ───────────────────────────────────────────────────────
 
 export const TAILORED_EVAL_SYSTEM_PROMPT =
-  "You are an expert recruiter and senior engineer evaluating a tailored resume against a job description. Score from 0 to 100. This resume has been professionally rewritten to align with the role — evaluate it accordingly. Scoring must reflect: (1) Exact JD keyword coverage: reward resumes that use the precise terminology, tools, and methodologies named in the JD. ATS systems match literally — exact phrasing should score significantly higher than synonyms. (2) Domain inference credit: reward resumes that surface implied skills appropriate to the candidate's background (e.g. robotics → distributed systems, C++ → OOP). A tailored resume that correctly identifies and surfaces these inferences demonstrates expert alignment and should be rewarded. (3) Bullet quality: reward specificity, metrics, strong action verbs, and JD-relevant framing. Penalize generic bullets that could apply to any resume. (4) Summary alignment: reward summaries that directly address the role's core requirements using JD language. (5) ATS readability: reward clean structure, standard section headers, no tables or columns, keyword density without stuffing. Scores of 90–100 are achievable and expected for a well-tailored resume from a qualified candidate. Do not apply artificial ceilings. Penalize only for genuine gaps, fabricated claims, or poor execution.";
+  "You are an expert recruiter and senior engineer evaluating a tailored resume against a job description. Score from 0 to 100. This resume has been professionally rewritten to align with the role — evaluate it accordingly. Scoring must reflect: (1) Exact JD keyword coverage: reward resumes that use the precise terminology, tools, and methodologies named in the JD. ATS systems match literally — exact phrasing should score significantly higher than synonyms. (2) Domain inference credit: reward resumes that surface implied skills appropriate to the candidate's background (e.g. robotics → distributed systems, C++ → OOP). A tailored resume that correctly identifies and surfaces these inferences demonstrates expert alignment and should be rewarded. (3) Bullet quality: reward specificity, metrics, strong action verbs, and JD-relevant framing. Penalize generic bullets that could apply to any resume. (4) Summary alignment: reward summaries that directly address the role's core requirements using JD language. (5) ATS readability: reward clean structure, standard section headers, no tables or columns, keyword density without stuffing. Scores of 90–100 are achievable and expected for a well-tailored resume from a qualified candidate. Do not apply artificial ceilings. Score 96–100 when: all required JD keywords are present verbatim, every experience bullet leads with a JD-relevant term, the summary directly mirrors role requirements using JD language, skills are reordered to front-load JD matches, and no genuine gaps exist. Reserve 98–100 for resumes where alignment is essentially perfect and no material improvement is possible without fabrication. Penalize only for genuine gaps, fabricated claims, or poor execution.";
 
 export function buildTailoredEvalUserPrompt(
   resumeText: string,
   jobDescriptionText: string,
 ): string {
-  return `Evaluate this tailored resume against this job description.\n\nScoring guidance:\n- Use the raw resume text as the source of candidate evidence.\n- Use the raw job description text as the source of role expectations.\n- Give strong credit for exact JD keyword matches — literal terminology alignment is a primary ATS signal and should meaningfully improve the score.\n- Give credit for domain-implied skills that are surfaced correctly and are appropriate to the candidate's background and experience level.\n- Give extra credit when: bullets lead with JD-relevant content, the summary directly mirrors role requirements, and skills sections use JD terminology.\n- Penalize genuine gaps (experience the candidate cannot have given their background), vague or unsupported claims, and poor readability.\n- Scores above 90 are valid and expected for strong tailored matches — do not compress the upper range artificially.\n- matchedAreas: specific role-fit areas with strong explicit or inferred evidence. missingAreas: genuine gaps only — not implied skills the candidate reasonably has.\n\nRESUME TEXT:\n${resumeText}\n\nJOB DESCRIPTION TEXT:\n${jobDescriptionText}`;
+  return `Evaluate this tailored resume against this job description.\n\nScoring guidance:\n- Use the raw resume text as the source of candidate evidence.\n- Use the raw job description text as the source of role expectations.\n- Give strong credit for exact JD keyword matches — literal terminology alignment is a primary ATS signal and should meaningfully improve the score.\n- Give credit for domain-implied skills that are surfaced correctly and are appropriate to the candidate's background and experience level.\n- Give extra credit when: bullets lead with JD-relevant content, the summary directly mirrors role requirements, and skills sections use JD terminology.\n- Penalize genuine gaps (experience the candidate cannot have given their background), vague or unsupported claims, and poor readability.\n- Scores of 95–100 are valid and expected for strong tailored matches. Score 97+ when keyword coverage is near-complete, bullets are JD-led, and the summary mirrors role requirements. Score 99–100 when alignment is essentially perfect. Do not compress the upper range.\n- matchedAreas: specific role-fit areas with strong explicit or inferred evidence. missingAreas: genuine gaps only — not implied skills the candidate reasonably has.\n\nRESUME TEXT:\n${resumeText}\n\nJOB DESCRIPTION TEXT:\n${jobDescriptionText}`;
 }
 
 // ── Tailoring ─────────────────────────────────────────────────────────────────
@@ -29,7 +29,7 @@ export function buildTailoredEvalUserPrompt(
 
 
 export const TAILOR_SYSTEM_PROMPT = `
-You are a senior technical resume writer and ATS optimization expert. Your target is a tailored resume that scores 95/100 or higher (9.5/10+) when evaluated against the job description.
+You are a senior technical resume writer and ATS optimization expert. Your target is to maximize the ATS score for this resume against the job description — treat every point below 100 as an opportunity to improve alignment.
 
 Your objective is not just to tailor the resume, but to produce a version that scores higher against the target job description than the source resume on:
 1. keyword coverage — use the JD's exact terminology wherever the source resume supports it
@@ -38,7 +38,7 @@ Your objective is not just to tailor the resume, but to produce a version that s
 4. impact/metric strength — preserve and foreground every quantified result from the source resume
 5. section ordering relevance — lead with the content most relevant to the target role
 
-A score of 95+ is achievable and expected for a well-qualified candidate with a properly tailored resume. Treat anything below that bar as under-optimized and rewrite accordingly.
+Scores of 95–100 are achievable for a well-qualified candidate with a properly tailored resume. Push for the highest score possible — optimize until further changes would require fabrication.
 
 If a rewrite does not improve these dimensions, keep the original content structure for that section rather than rewriting for style alone.
 
@@ -83,7 +83,8 @@ RULES:
 
 PAGE LIMITS (strictly enforce — resume must fit one page):
 - Experience bullets: 10 total across all roles. Distribute by relevance — give more bullets to the most JD-relevant roles, fewer to older or less relevant ones. Within each role, include only the strongest JD-aligned bullets.
-- Project bullets: maximum 2 per project. Pick the 2 that best demonstrate impact and JD alignment.
+- Project bullets: maximum 2 per project. Pick the 2 that best demonstrate impact and JD alignment. Never drop a project entirely — if you must cut, reduce to 1 bullet, not 0.
+- Keep every project from the source resume. Do not omit any project entry, regardless of relevance.
 
 ${matchedBlock}
 

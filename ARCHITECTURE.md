@@ -65,7 +65,7 @@ resume-builder/
 │   ├── ResumePreview.tsx       # Web HTML resume renderer — canonical production component
 │   ├── ResumePDFDocument.tsx   # React-PDF resume document (used by export-pdf route server-side)
 │   ├── landing/
-│   │   ├── HeroTrailer.tsx     # Animated product trailer: 8-step loop; step 6 two-col view: left=big ATS 62→94% with delta badge, right=buttons (h-9 reserved row so resume stays vertically centered in flex-1) + resume card with blurred Projects + gradient fade; tailor btn shown from step 3; prefersReducedMotion → static step 6
+│   │   ├── HeroTrailer.tsx     # Animated product trailer: 9-step loop; step 6 full-width ATS 62→94% counter with delta badge; step 7 full-width resume card + download button (fades in at 600ms); file pill + JD textarea use text-sm for readability; prefersReducedMotion → static step 7
 │   │   └── Testimonials.tsx    # Snap carousel with 6 cards, stars, Quote watermark, chevrons, dots, clipping fix; heading text-3xl + subtitle
 │   ├── pricing/
 │   │   └── PricingCards.tsx    # Shared Free/Pack/Plus credit-tier cards (equal height flex-col, "Everything in X" pattern); used on landing + settings
@@ -360,7 +360,7 @@ All AI/export API routes use `export const runtime = "nodejs"` (not Edge) becaus
 
 5. **Keyword chip fallback**: The keyword chip panel shows `missingAreas` (genuine gaps the candidate can't cover) first. If that array is empty, it falls back to `gaps` (broader weaknesses). This means the user always sees something to confirm.
 
-6. **Project preservation fallback**: After `generateTailoredResumeFromRaw` returns, the pipeline scans the original resume text with `extractProjectsFromRawText()` and fuzzy-matches project names against the tailored output. Any dropped projects are re-appended. This enforces the CLAUDE.md guarantee programmatically rather than relying solely on the prompt instruction.
+6. **Project preservation**: Enforced via prompt rules in `buildTailorUserPrompt` — the model is instructed to keep every project from the source resume and reduce to 1 bullet rather than drop an entry entirely. The previous code-level fallback (`extractProjectsFromRawText` + fuzzy re-append) was removed because its line-by-line parser misidentified description fragments as project names.
 
 7. **Raw model response logging**: `runStructuredCall` logs the raw OpenAI response string before any parsing (`[pipeline] raw model response (label): ...`). This makes Zod validation failures and malformed output debuggable in production server logs.
 

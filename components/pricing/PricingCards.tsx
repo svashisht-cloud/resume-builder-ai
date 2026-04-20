@@ -1,5 +1,7 @@
 'use client'
 
+import { Check } from 'lucide-react'
+
 interface Tier {
   id: 'free' | 'pack' | 'plus'
   name: string
@@ -30,7 +32,7 @@ const TIERS: Tier[] = [
     id: 'pack',
     name: 'Resume Pack',
     price: '$19',
-    suffix: '/ one-time',
+    suffix: 'one-time',
     features: [
       'Everything in Free',
       '3 resume credits',
@@ -44,7 +46,7 @@ const TIERS: Tier[] = [
     id: 'plus',
     name: 'Resume Pack Plus',
     price: '$49',
-    suffix: '/ one-time',
+    suffix: 'one-time',
     features: [
       'Everything in Resume Pack',
       '10 resume credits',
@@ -70,32 +72,40 @@ export default function PricingCards({ onCTAClick, currentPlan }: PricingCardsPr
           return (
             <div
               key={tier.id}
-              className={`relative flex h-full flex-col rounded-xl border px-6 py-8 ${
-                tier.popular ? 'border-accent bg-surface' : 'border-border bg-surface'
+              className={`relative flex h-full flex-col rounded-xl px-6 py-8 transition-all ${
+                tier.popular
+                  ? 'border border-accent/40 bg-surface shadow-[0_0_40px_rgba(6,182,212,0.12),inset_0_0_0_1px_rgba(6,182,212,0.1)]'
+                  : 'border border-border/60 bg-surface hover:border-border'
               }`}
             >
               {tier.popular && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <span className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-background">
-                    Most Popular
-                  </span>
-                </div>
+                <>
+                  {/* Top gradient line */}
+                  <div className="absolute inset-x-0 top-0 h-px rounded-t-xl bg-gradient-to-r from-transparent via-accent/60 to-transparent" />
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="rounded-full bg-gradient-to-r from-accent to-cyan-400 px-3 py-1 text-xs font-semibold text-background shadow-[0_2px_8px_rgba(6,182,212,0.4)]">
+                      Most Popular
+                    </span>
+                  </div>
+                </>
               )}
 
-              <div className="mb-1 text-sm font-medium text-muted">{tier.name}</div>
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted">{tier.name}</div>
 
-              <div className="mb-6 flex items-baseline gap-1">
+              <div className="mb-6 flex items-baseline gap-1.5">
                 <span className="font-display text-4xl font-bold text-foreground">{tier.price}</span>
                 {tier.suffix && (
-                  <span className="text-sm text-muted">{tier.suffix}</span>
+                  <span className="text-sm text-text-dim">/ {tier.suffix}</span>
                 )}
               </div>
 
-              {/* Feature list grows to fill — pushes CTA to bottom */}
               <ul className="mb-8 flex-1 space-y-3">
                 {tier.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <span className="mt-0.5 flex-shrink-0 text-accent">✓</span>
+                  <li key={f} className="flex items-start gap-2.5 text-sm">
+                    <Check
+                      size={15}
+                      className={`mt-0.5 flex-shrink-0 ${f.startsWith('Everything') ? 'text-accent-secondary' : 'text-accent'}`}
+                    />
                     <span className={f.startsWith('Everything') ? 'font-medium text-foreground' : 'text-muted'}>
                       {f}
                     </span>
@@ -103,17 +113,16 @@ export default function PricingCards({ onCTAClick, currentPlan }: PricingCardsPr
                 ))}
               </ul>
 
-              {/* CTA always at the bottom */}
               <div className="mt-auto">
                 <button
                   onClick={() => !isCurrent && onCTAClick(tier.id)}
                   disabled={isCurrent}
-                  className={`w-full rounded-lg py-2.5 text-sm font-medium transition-colors disabled:cursor-default ${
+                  className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-all disabled:cursor-default ${
                     isCurrent
                       ? 'border border-border text-text-dim'
                       : tier.popular
-                        ? 'bg-accent text-background hover:bg-accent-hover'
-                        : 'border border-accent text-accent hover:bg-accent/10'
+                        ? 'bg-gradient-to-r from-accent to-cyan-400 text-background shadow-[0_2px_12px_rgba(6,182,212,0.3)] hover:shadow-[0_2px_16px_rgba(6,182,212,0.45)] hover:opacity-95 active:scale-[0.98]'
+                        : 'border border-accent/50 text-accent hover:bg-accent/10 hover:border-accent'
                   }`}
                 >
                   {isCurrent ? 'Current Plan' : tier.cta}
@@ -124,8 +133,7 @@ export default function PricingCards({ onCTAClick, currentPlan }: PricingCardsPr
         })}
       </div>
 
-      {/* What's a credit? */}
-      <div className="mt-10 rounded-xl border border-border bg-surface p-6">
+      <div className="mt-10 rounded-xl border border-border/60 bg-surface p-6">
         <p className="text-center text-sm text-muted">
           <span className="font-semibold text-foreground">What&rsquo;s a credit?</span>{' '}
           One credit = one full tailored resume generation for a target job. Includes export and ATS/match
