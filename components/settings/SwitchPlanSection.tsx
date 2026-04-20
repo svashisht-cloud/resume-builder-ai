@@ -4,11 +4,7 @@ import { useState } from 'react'
 import PricingCards from '@/components/pricing/PricingCards'
 import { X, Check } from 'lucide-react'
 
-interface SwitchPlanSectionProps {
-  currentPlan?: string
-}
-
-export default function SwitchPlanSection({ currentPlan }: SwitchPlanSectionProps) {
+export default function SwitchPlanSection() {
   const [purchasing, setPurchasing] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; ok: boolean } | null>(null)
 
@@ -42,7 +38,7 @@ export default function SwitchPlanSection({ currentPlan }: SwitchPlanSectionProp
 
   return (
     <div className="rounded-xl border border-border bg-surface p-6">
-      <h2 className="font-display mb-4 text-lg font-semibold text-foreground">Switch Plan</h2>
+      <h2 className="font-display mb-4 text-lg font-semibold text-foreground">Buy Credits</h2>
 
       {toast && (
         <div className={`mb-4 flex items-center gap-2.5 rounded-lg border px-4 py-3 text-sm ${
@@ -57,7 +53,6 @@ export default function SwitchPlanSection({ currentPlan }: SwitchPlanSectionProp
 
       <PricingCards
         onCTAClick={handleCTAClick}
-        currentPlan={currentPlan}
         loadingTier={purchasing}
       />
     </div>

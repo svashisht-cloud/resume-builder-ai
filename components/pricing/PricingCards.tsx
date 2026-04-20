@@ -60,16 +60,14 @@ const TIERS: Tier[] = [
 
 interface PricingCardsProps {
   onCTAClick: (tier: 'free' | 'pack' | 'plus') => void
-  currentPlan?: string
   loadingTier?: string | null
 }
 
-export default function PricingCards({ onCTAClick, currentPlan, loadingTier }: PricingCardsProps) {
+export default function PricingCards({ onCTAClick, loadingTier }: PricingCardsProps) {
   return (
     <>
       <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3">
         {TIERS.map((tier) => {
-          const isCurrent = currentPlan === tier.id
           const isLoading = loadingTier === tier.id
           return (
             <div
@@ -117,19 +115,17 @@ export default function PricingCards({ onCTAClick, currentPlan, loadingTier }: P
 
               <div className="mt-auto">
                 <button
-                  onClick={() => !isCurrent && !isLoading && onCTAClick(tier.id)}
-                  disabled={isCurrent || isLoading}
+                  onClick={() => !isLoading && onCTAClick(tier.id)}
+                  disabled={isLoading}
                   className={`w-full rounded-lg py-2.5 text-sm font-semibold transition-all disabled:cursor-default ${
-                    isCurrent
+                    isLoading
                       ? 'border border-border text-text-dim'
-                      : isLoading
-                        ? 'border border-border text-text-dim'
-                        : tier.popular
-                          ? 'bg-gradient-to-r from-accent to-cyan-400 text-background shadow-[0_2px_12px_rgba(6,182,212,0.3)] hover:shadow-[0_2px_16px_rgba(6,182,212,0.45)] hover:opacity-95 active:scale-[0.98]'
-                          : 'border border-accent/50 text-accent hover:bg-accent/10 hover:border-accent'
+                      : tier.popular
+                        ? 'bg-gradient-to-r from-accent to-cyan-400 text-background shadow-[0_2px_12px_rgba(6,182,212,0.3)] hover:shadow-[0_2px_16px_rgba(6,182,212,0.45)] hover:opacity-95 active:scale-[0.98]'
+                        : 'border border-accent/50 text-accent hover:bg-accent/10 hover:border-accent'
                   }`}
                 >
-                  {isCurrent ? 'Current Plan' : isLoading ? 'Processing…' : tier.cta}
+                  {isLoading ? 'Processing…' : tier.cta}
                 </button>
               </div>
             </div>

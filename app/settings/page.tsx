@@ -4,9 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 import AppNavbar from '@/components/AppNavbar'
 import DeleteAccountButton from '@/components/DeleteAccountButton'
 import SwitchPlanSection from '@/components/settings/SwitchPlanSection'
+import PaymentHistory from '@/components/settings/PaymentHistory'
 import AvatarImage from '@/components/settings/AvatarImage'
 import MockPaymentsBanner from '@/components/MockPaymentsBanner'
-import { ArrowLeft, CreditCard, BarChart2, User } from 'lucide-react'
+import { ArrowLeft, Coins, BarChart2, User } from 'lucide-react'
 
 function formatMemberSince(isoDate: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(
@@ -118,11 +119,11 @@ export default async function SettingsPage() {
           </div>
         </div>
 
-        {/* Current Plan */}
+        {/* Credits */}
         <div className="rounded-xl border border-border/60 bg-surface p-6">
           <div className="mb-5 flex items-center gap-2">
-            <CreditCard size={15} className="text-muted" />
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Current Plan</h2>
+            <Coins size={15} className="text-muted" />
+            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Credits</h2>
           </div>
 
           <div className="mb-1 flex items-baseline gap-2">
@@ -147,8 +148,11 @@ export default async function SettingsPage() {
           ) : null}
         </div>
 
-        {/* Switch Plan */}
+        {/* Buy credits */}
         <SwitchPlanSection />
+
+        {/* Payment history — lazy-loaded on expand */}
+        <PaymentHistory />
 
         {/* Usage */}
         <div className="rounded-xl border border-border/60 bg-surface p-6">
