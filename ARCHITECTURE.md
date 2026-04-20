@@ -161,6 +161,7 @@ resume-builder/
 | `OPENAI_TAILOR_MODEL` | No | `gpt-5-chat-latest` | Model for resume generation (step 2) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | — | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | — | Supabase anon/public key |
+| `ENABLE_MOCK_PAYMENTS` | No | — | Set to `true` to enable `POST /api/billing/mock-purchase` in production; also shows warning banner in dashboard/settings |
 
 ---
 
@@ -206,7 +207,36 @@ POST /api/tailor/step3
 
 ### Combined route
 
-`POST /api/tailor` runs the same pipeline in a single request. Used for the Vitest tests and as a fallback. The 3-step routes are what the browser calls.
+`POST /api/tailor` runs the same pipeline in a single request. Also gated by auth + credit check. Used for the Vitest tests and as a fallback. The 3-step routes are what the browser calls.
+
+### Credit lifecycle
+
+```
+1. Signup   → handle_new_user trigger inserts 1 credit (free_signup, 12-month expiry)
+              → credits_refresh_count trigger sets profiles.credits_remaining = 1
+
+2. Purchase → POST /api/billing/mock-purchase → mock_purchase_credits RPC
+              → inserts payment row + N credit rows (3 for resume_pack, 10 for plus)
+              → trigger fires, credits_remaining updated
+
+3. New tailoring (new JD hash)
+              → start_or_regen_resume: insert resume row + call spend_credit
+              → spend_credit: FIFO by expiry, marks credit spent_at = now()
+              → trigger fires, credits_remaining decremented
+              → step1 returns { resumeId, isRegen: false, regenCount: 0 }
+
+4. Regeneration (same JD hash, regen_count < 2)
+              → start_or_regen_resume: increment regen_count, no credit spent
+              → step1 returns { resumeId, isRegen: true, regenCount: 1 or 2 }
+
+5. Regen limit (regen_count >= 2)
+              → start_or_regen_resume raises P0002 → step1 returns 403
+              → UI disables "Regenerate" button; shows "Start a new tailoring" link
+
+6. No credits (credits_remaining = 0 and new JD)
+              → spend_credit raises P0001 → step1 returns 402
+              → NoCreditsModal shown; user directed to /settings
+```
 
 ---
 
@@ -307,12 +337,13 @@ Scans raw resume text line-by-line with regex patterns to detect section headers
 | `/settings` | GET | Required | Profile settings |
 | `/auth/callback` | GET | Public | OAuth code exchange → session → redirect to `/dashboard` |
 | `/api/auth/signout` | POST | Public | Signs out, redirects to `/` |
-| `/api/tailor/step1` | POST | Public | FormData: `resumeFile` (File) + `jobDescriptionText` (string) |
+| `/api/tailor/step1` | POST | **Required** | FormData: `resumeFile` + `jobDescriptionText`; runs credit/regen check via `start_or_regen_resume` RPC; returns 401 (no auth), 402 (`no_credits`), 403 (`regen_limit_reached`) |
 | `/api/tailor/step2` | POST | Public | JSON: `resumeText`, `jobDescriptionText`, `originalEvaluation`, `selectedKeywords?` |
 | `/api/tailor/step3` | POST | Public | JSON: `tailoredResume`, `jobDescriptionText`, `originalEvaluation`, `changeLog` |
 | `/api/tailor` | POST | Public | FormData (same as step1) — full pipeline in one call |
 | `/api/export-pdf` | POST | Public | JSON: `tailoredResume`, `role?` → binary PDF |
 | `/api/export-docx` | POST | Public | JSON: `tailoredResume`, `role?` → binary DOCX |
+| `/api/billing/mock-purchase` | POST | Required | JSON: `{ product }` → grants credits via `mock_purchase_credits` RPC; 404 in production without `ENABLE_MOCK_PAYMENTS=true` |
 
 All AI/export API routes use `export const runtime = "nodejs"` (not Edge) because resume parsing libraries and React-PDF require Node.js APIs. Auth routes use the default Edge runtime.
 
@@ -332,9 +363,85 @@ All AI/export API routes use `export const runtime = "nodejs"` (not Edge) becaus
 
 - Auth: Google OAuth via `supabase.auth.signInWithOAuth({ provider: 'google' })` in `AuthModal.tsx`
 - Session management: cookie-based via `@supabase/ssr` — `lib/supabase/server.ts` for server components/routes, `lib/supabase/client.ts` for client components
-- Database: `profiles` table (id, display_name, email, avatar_url, plan) — auto-populated on first sign-in via database trigger
+- Database: see **Database Schema** section below
 - Route protection: `middleware.ts` redirects unauthenticated requests to `/dashboard` or `/settings` back to `/`
 - Redirect flow: Google → `https://<project>.supabase.co/auth/v1/callback` → `/auth/callback` → `/dashboard`
+
+---
+
+## Database Schema
+
+### `profiles` (auto-created on signup via `handle_new_user` trigger)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid PK | FK → auth.users |
+| `display_name` | text | From Google OAuth full_name |
+| `email` | text | |
+| `avatar_url` | text | |
+| `dodo_customer_id` | text | Reserved for real Dodo integration |
+| `credits_remaining` | int not null default 0 | Cache kept in sync by `credits_refresh_count` trigger |
+| `created_at` | timestamptz | |
+
+> **Dropped in migration 20260419:** `plan`, `plan_status`, `plan_expires_at`
+
+### `resumes` (server-side only — no client insert/update policy)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid PK | |
+| `user_id` | uuid | FK → auth.users |
+| `job_description_hash` | text | SHA-256 of normalised JD text |
+| `job_title` | text | Extracted from JD (nullable) |
+| `company_name` | text | Extracted from JD (nullable) |
+| `regen_count` | int default 0 | Incremented on each regen; capped at 2 |
+| `created_at` | timestamptz | |
+| `last_generated_at` | timestamptz | Updated on every regen |
+
+Unique constraint: `(user_id, job_description_hash)`. RLS: select-only.
+
+### `payments`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid PK | |
+| `user_id` | uuid | FK → auth.users |
+| `dodo_payment_id` | text unique | `mock_<uuid>` during mock phase |
+| `product` | text | `resume_pack` or `resume_pack_plus` |
+| `amount_cents` | int | |
+| `currency` | text default `usd` | |
+| `credits_granted` | int | 3 or 10 |
+| `status` | text | `succeeded` / `refunded` / `disputed` |
+| `paid_at` | timestamptz | |
+
+RLS: select-only.
+
+### `credits` (one row per credit)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid PK | |
+| `user_id` | uuid | FK → auth.users |
+| `source` | text | `free_signup` / `resume_pack` / `resume_pack_plus` / `admin_grant` |
+| `payment_id` | uuid | FK → payments (nullable) |
+| `granted_at` | timestamptz | |
+| `expires_at` | timestamptz | 12 months from grant |
+| `spent_at` | timestamptz | null = unspent |
+| `spent_on_resume_id` | uuid | FK → resumes (nullable) |
+
+Partial index: `(user_id, expires_at) where spent_at is null`. RLS: select-only.
+
+### Trigger: `credits_refresh_count`
+
+Fires `after insert or update or delete` on `credits`. Calls `refresh_credits_remaining()` which recomputes `count(*) where spent_at is null and expires_at > now()` and writes it to `profiles.credits_remaining`. Keeps the cache column always in sync.
+
+### Key RPCs (all `security definer`)
+
+| RPC | Purpose |
+|-----|---------|
+| `spend_credit(p_resume_id)` | FIFO by expiry, `for update skip locked`; raises `P0001` if no credits |
+| `start_or_regen_resume(p_jd_hash, p_job_title, p_company_name)` | New JD → insert + spend credit; regen → increment regen_count (max 2, raises `P0002`); returns `(resume_id, is_regen, regen_count)` |
+| `mock_purchase_credits(p_product)` | Inserts payment + N credit rows; trigger fires to update cache. **Remove when real Dodo lands.** |
 
 ---
 
@@ -380,4 +487,12 @@ All AI/export API routes use `export const runtime = "nodejs"` (not Edge) becaus
 
 15. **Avatar `referrerPolicy="no-referrer"`**: Google avatar URLs (`lh3.googleusercontent.com`) return 403 without this header. `AvatarImage` is a client component that renders a plain `<img>` (not Next `<Image>`) with `referrerPolicy="no-referrer"` and an `onError` handler that falls back to an initials div.
 
-16. **Settings page schema TODOs**: `profiles` table does not yet have `credits_remaining` (hardcoded 1/1) and there is no `resumes` table (usage hardcoded 0). The `plan` column only supports `'free'|'pro'` DB constraint. All three are marked with TODO comments in `app/settings/page.tsx` for later schema migration.
+16. **`step1/route.ts` is now auth-gated**: After migration 20260419, the tailoring entry point requires an authenticated session. Returns 401 if not signed in, 402 (`no_credits`) if the user has no unspent credits, 403 (`regen_limit_reached`) if the same JD has been regenerated twice already. The combined `POST /api/tailor` route has the same gate.
+
+---
+
+## Known TODOs
+
+- **Replace `mock_purchase_credits` with real Dodo webhook handler** — the RPC and `POST /api/billing/mock-purchase` route are scaffolding only. When Dodo is wired, delete the mock route and RPC, add a webhook handler that verifies signatures and calls `spend_credit` equivalents.
+- **Add refund handling when Dodo integration lands** — the `payments` table has `status` and `refunded_at` columns ready; refunds need to mark the corresponding credit rows as expired/revoked and decrement `credits_remaining`.
+- **Navbar credit count is not live-updated after mock purchase** — the settings page refreshes on navigation; the dashboard navbar requires a full page reload. Consider a client-side credit context or SWR if live updates are needed.
