@@ -7,6 +7,8 @@ import {
   renderTailoredResumeText,
 } from "@/lib/ai/pipeline";
 import { extractResumeText } from "@/lib/resume/extract-text";
+import { hashJD, extractJobMeta } from "@/lib/resume/normalize";
+import { createClient } from "@/lib/supabase/server";
 import {
   ChangeLogSchema,
   ResumeEvaluationSchema,
@@ -59,6 +61,32 @@ export async function POST(request: Request) {
       );
     }
 
+    // Auth check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return Response.json({ error: "Authentication required." }, { status: 401 });
+    }
+
+    const jdHash = await hashJD(jobDescriptionText);
+    const { jobTitle, companyName } = extractJobMeta(jobDescriptionText);
+
+    const { data: rpcData, error: rpcError } = await supabase.rpc("start_or_regen_resume", {
+      p_jd_hash: jdHash,
+      p_job_title: jobTitle,
+      p_company_name: companyName,
+    });
+
+    if (rpcError) {
+      if (rpcError.code === "P0001") {
+        return Response.json({ error: "no_credits" }, { status: 402 });
+      }
+      if (rpcError.code === "P0002") {
+        return Response.json({ error: "regen_limit_reached" }, { status: 403 });
+      }
+      return Response.json({ error: rpcError.message }, { status: 500 });
+    }
+
     const resumeText = await extractResumeText(resumeFile);
 
     if (!resumeText.trim()) {
@@ -67,6 +95,8 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+
+    void rpcData; // resume_id/is_regen/regen_count available but not returned by this combined route
 
     const originalEvaluation = await evaluateResumeAgainstJDRaw(
       resumeText,
