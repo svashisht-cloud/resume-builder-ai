@@ -32,6 +32,16 @@ async function loadPdfParse(): Promise<PdfParseModule> {
   return mod;
 }
 
+const PAGE_MARKER_RE = /^[\s-]*\d+\s+of\s+\d+[\s-]*$|^page\s+\d+(\s+of\s+\d+)?$/im;
+
+function cleanResumeText(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => !PAGE_MARKER_RE.test(line.trim()))
+    .join("\n")
+    .trim();
+}
+
 export async function extractResumeText(file: File) {
   const extension = getExtension(file.name);
 
@@ -46,7 +56,7 @@ export async function extractResumeText(file: File) {
   const buffer = Buffer.from(await file.arrayBuffer());
 
   if (extension === "txt" || file.type === "text/plain") {
-    return buffer.toString("utf8").trim();
+    return cleanResumeText(buffer.toString("utf8"));
   }
 
   if (extension === "pdf" || file.type === "application/pdf") {
@@ -55,7 +65,7 @@ export async function extractResumeText(file: File) {
 
     try {
       const parsed = await parser.getText();
-      return parsed.text.trim();
+      return cleanResumeText(parsed.text);
     } finally {
       await parser.destroy();
     }
@@ -67,7 +77,7 @@ export async function extractResumeText(file: File) {
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   ) {
     const parsed = await mammoth.extractRawText({ buffer });
-    return parsed.value.trim();
+    return cleanResumeText(parsed.value);
   }
 
   throw new Error("Unsupported resume format. Upload a .txt, .pdf, or .docx file.");

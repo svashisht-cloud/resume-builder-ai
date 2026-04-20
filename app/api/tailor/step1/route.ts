@@ -1,5 +1,7 @@
 import { evaluateResumeAgainstJDRaw } from "@/lib/ai/pipeline";
 import { extractResumeText } from "@/lib/resume/extract-text";
+import { hashJD, extractJobMeta } from "@/lib/resume/normalize";
+import { createClient } from "@/lib/supabase/server";
 import { isClientError } from "@/lib/errors";
 
 export const runtime = "nodejs";
@@ -36,6 +38,36 @@ export async function POST(request: Request) {
       );
     }
 
+    // Auth check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return Response.json({ error: "Authentication required." }, { status: 401 });
+    }
+
+    // Hash JD + extract meta before expensive file I/O
+    const jdHash = await hashJD(jobDescriptionText);
+    const { jobTitle, companyName } = extractJobMeta(jobDescriptionText);
+
+    // Credit / regen check (atomic, transactional)
+    const { data: rpcData, error: rpcError } = await supabase.rpc("start_or_regen_resume", {
+      p_jd_hash: jdHash,
+      p_job_title: jobTitle,
+      p_company_name: companyName,
+    });
+
+    if (rpcError) {
+      if (rpcError.code === "P0001") {
+        return Response.json({ error: "no_credits" }, { status: 402 });
+      }
+      if (rpcError.code === "P0002") {
+        return Response.json({ error: "regen_limit_reached" }, { status: 403 });
+      }
+      return Response.json({ error: rpcError.message }, { status: 500 });
+    }
+
+    const { resume_id: resumeId, is_regen: isRegen, regen_count: regenCount } = (rpcData as Array<{ resume_id: string; is_regen: boolean; regen_count: number }>)[0];
+
     const resumeText = await extractResumeText(resumeFile);
 
     if (!resumeText.trim()) {
@@ -50,7 +82,7 @@ export async function POST(request: Request) {
       jobDescriptionText,
     );
 
-    return Response.json({ resumeText, originalEvaluation });
+    return Response.json({ resumeText, originalEvaluation, resumeId, isRegen, regenCount });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Step 1 failed.";

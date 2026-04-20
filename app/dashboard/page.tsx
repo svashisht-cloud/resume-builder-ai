@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import AppNavbar from '@/components/AppNavbar'
 import { DashboardShell } from '@/components/DashboardShell'
+import MockPaymentsBanner from '@/components/MockPaymentsBanner'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -13,18 +14,20 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, email, avatar_url')
+    .select('display_name, email, avatar_url, credits_remaining')
     .eq('id', user.id)
     .single()
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
+      <MockPaymentsBanner />
       <AppNavbar
         user={{
           display_name: profile?.display_name ?? null,
           email: profile?.email ?? user.email ?? null,
           avatar_url: profile?.avatar_url ?? null,
         }}
+        credits={profile?.credits_remaining ?? 0}
       />
       <DashboardShell />
     </div>

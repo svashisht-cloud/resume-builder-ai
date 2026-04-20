@@ -23,6 +23,9 @@ export interface TailorResumeState {
   isModalOpen: boolean;
   noTransition: boolean;
   viewState: ViewState;
+  regenCount: number;
+  resumeId: string | null;
+  isNoCreditsOpen: boolean;
   handleTailorResume: () => void;
   handleGenerateResume: (keywords: string[]) => void;
   toggleKeyword: (kw: string) => void;
@@ -32,6 +35,7 @@ export interface TailorResumeState {
   handleReset: () => void;
   openModal: () => void;
   closeModal: () => void;
+  dismissNoCredits: () => void;
 }
 
 export function useTailorResume({
@@ -57,6 +61,9 @@ export function useTailorResume({
   const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [noTransition, setNoTransition] = useState(false);
+  const [regenCount, setRegenCount] = useState(0);
+  const [resumeId, setResumeId] = useState<string | null>(null);
+  const [isNoCreditsOpen, setIsNoCreditsOpen] = useState(false);
 
   useEffect(() => {
     if (!isModalOpen) return;
@@ -152,7 +159,24 @@ export function useTailorResume({
           signal,
         });
         const step1Data = await step1Res.json();
+
+        if (step1Res.status === 402 && step1Data.error === "no_credits") {
+          setIsNoCreditsOpen(true);
+          setLoadingStep(0);
+          return;
+        }
+
+        if (step1Res.status === 403 && step1Data.error === "regen_limit_reached") {
+          setError("You've reached the 2-regeneration limit for this job description. Start a new tailoring to continue.");
+          setLoadingStep(0);
+          return;
+        }
+
         if (!step1Res.ok) throw new Error(step1Data.error ?? "Step 1 failed.");
+
+        // Store resume tracking metadata
+        if (step1Data.resumeId) setResumeId(step1Data.resumeId as string);
+        if (typeof step1Data.regenCount === "number") setRegenCount(step1Data.regenCount as number);
 
         const resumeText: string = step1Data.resumeText;
         const evalParsed = ResumeEvaluationSchema.safeParse(step1Data.originalEvaluation);
@@ -276,6 +300,9 @@ export function useTailorResume({
     setError("");
     setDownloadError("");
     setIsModalOpen(false);
+    setRegenCount(0);
+    setResumeId(null);
+    setIsNoCreditsOpen(false);
     requestAnimationFrame(() => requestAnimationFrame(() => setNoTransition(false)));
   }
 
@@ -292,6 +319,9 @@ export function useTailorResume({
     isModalOpen,
     noTransition,
     viewState,
+    regenCount,
+    resumeId,
+    isNoCreditsOpen,
     handleTailorResume,
     handleGenerateResume,
     toggleKeyword,
@@ -301,5 +331,6 @@ export function useTailorResume({
     handleReset,
     openModal: () => setIsModalOpen(true),
     closeModal: () => setIsModalOpen(false),
+    dismissNoCredits: () => setIsNoCreditsOpen(false),
   };
 }

@@ -34,13 +34,13 @@ Auth state managed by Supabase (Google OAuth) + middleware.ts
 ```
 resume-builder/
 ├── app/                        # Next.js App Router
-│   ├── layout.tsx              # Root HTML shell (Inter font, dark bg, metadata)
-│   ├── globals.css             # Tailwind base + print media styles
+│   ├── layout.tsx              # Root HTML shell (Space Grotesk + Inter + JetBrains Mono fonts, CSS vars, metadata)
+│   ├── globals.css             # Tailwind v4 @theme inline tokens (bg, surface, surface-2, accent, accent-hover, accent-2, text, text-muted, text-dim, font-display/sans/mono) + print styles
 │   ├── page.tsx                # Root — shows LandingPage or redirects to /dashboard if signed in
 │   ├── dashboard/
 │   │   └── page.tsx            # Protected dashboard — fetches profile, renders AppNavbar + DashboardShell
 │   ├── settings/
-│   │   └── page.tsx            # Protected settings — display name, plan, delete account
+│   │   └── page.tsx            # Protected settings — vertical stack: profile (avatar+email+member-since), current plan, switch plan, usage, danger zone
 │   ├── auth/
 │   │   └── callback/route.ts   # GET /auth/callback — exchanges OAuth code for session, redirects to /dashboard
 │   └── api/
@@ -56,14 +56,22 @@ resume-builder/
 │       └── export-docx/route.ts# POST /api/export-docx — render DOCX via docx library
 │
 ├── components/
-│   ├── DashboardShell.tsx      # PRIMARY UI: form state + renders result; delegates fetch/AI state to useTailorResume (~280 lines)
-│   ├── AppNavbar.tsx           # Authenticated top nav — avatar, dropdown with Settings + Sign Out
-│   ├── LandingPage.tsx         # Marketing page — hero, how-it-works, pricing, Google sign-in trigger
-│   ├── AuthModal.tsx           # Google OAuth sign-in modal (calls supabase.auth.signInWithOAuth)
-│   ├── EditableName.tsx        # Inline-editable display name field (used on settings page)
+│   ├── DashboardShell.tsx      # PRIMARY UI: form state + renders result; delegates fetch/AI state to useTailorResume (~280 lines); all colors use design tokens
+│   ├── AppNavbar.tsx           # Authenticated top nav — avatar, z-10 nav (backdrop-blur stacking fix), dropdown with Settings + Sign Out
+│   ├── LandingPage.tsx         # Marketing page — two-col hero (HeroTrailer), How It Works (text-3xl + subtitle), Testimonials, Pricing (text-3xl + "Start for free" subtitle), footer
+│   ├── AuthModal.tsx           # Google OAuth modal — always mounted, data-state open/closed CSS transition (scale+fade), ToS line
+│   ├── EditableName.tsx        # Inline-editable display name field
 │   ├── DeleteAccountButton.tsx # Danger zone delete button (used on settings page)
 │   ├── ResumePreview.tsx       # Web HTML resume renderer — canonical production component
-│   └── ResumePDFDocument.tsx   # React-PDF resume document (used by export-pdf route server-side)
+│   ├── ResumePDFDocument.tsx   # React-PDF resume document (used by export-pdf route server-side)
+│   ├── landing/
+│   │   ├── HeroTrailer.tsx     # Animated product trailer: 9-step loop; step 6 full-width ATS 62→94% counter with delta badge; step 7 full-width resume card + download button (fades in at 600ms); file pill + JD textarea use text-sm for readability; prefersReducedMotion → static step 7
+│   │   └── Testimonials.tsx    # Snap carousel with 6 cards, stars, Quote watermark, chevrons, dots, clipping fix; heading text-3xl + subtitle
+│   ├── pricing/
+│   │   └── PricingCards.tsx    # Shared Free/Pack/Plus credit-tier cards (equal height flex-col, "Everything in X" pattern); used on landing + settings
+│   └── settings/
+│       ├── AvatarImage.tsx     # Client component — plain <img> with referrerPolicy + onError initials fallback
+│       └── SwitchPlanSection.tsx # Client wrapper for PricingCards on settings page (alert Coming soon)
 │
 ├── lib/
 │   ├── ai/
@@ -127,6 +135,7 @@ resume-builder/
 | `pdf-parse` | ^2.4.5 | Extract raw text from .pdf uploads (loaded dynamically due to Node.js 18 DOMMatrix issue) |
 | `@supabase/supabase-js` | ^2 | Supabase client SDK |
 | `@supabase/ssr` | ^0.6 | SSR-safe Supabase helpers for Next.js App Router (cookie-based sessions) |
+| `lucide-react` | latest | Icon library — used in landing (Upload, Target, Sparkles, Star, Quote) and HeroTrailer |
 | `vitest` | ^4.1.4 | Unit test runner |
 
 ---
@@ -152,6 +161,7 @@ resume-builder/
 | `OPENAI_TAILOR_MODEL` | No | `gpt-5-chat-latest` | Model for resume generation (step 2) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | — | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | — | Supabase anon/public key |
+| `ENABLE_MOCK_PAYMENTS` | No | — | Set to `true` to enable `POST /api/billing/mock-purchase` in production; also shows warning banner in dashboard/settings |
 
 ---
 
@@ -197,7 +207,36 @@ POST /api/tailor/step3
 
 ### Combined route
 
-`POST /api/tailor` runs the same pipeline in a single request. Used for the Vitest tests and as a fallback. The 3-step routes are what the browser calls.
+`POST /api/tailor` runs the same pipeline in a single request. Also gated by auth + credit check. Used for the Vitest tests and as a fallback. The 3-step routes are what the browser calls.
+
+### Credit lifecycle
+
+```
+1. Signup   → handle_new_user trigger inserts 1 credit (free_signup, 12-month expiry)
+              → credits_refresh_count trigger sets profiles.credits_remaining = 1
+
+2. Purchase → POST /api/billing/mock-purchase → mock_purchase_credits RPC
+              → inserts payment row + N credit rows (3 for resume_pack, 10 for plus)
+              → trigger fires, credits_remaining updated
+
+3. New tailoring (new JD hash)
+              → start_or_regen_resume: insert resume row + call spend_credit
+              → spend_credit: FIFO by expiry, marks credit spent_at = now()
+              → trigger fires, credits_remaining decremented
+              → step1 returns { resumeId, isRegen: false, regenCount: 0 }
+
+4. Regeneration (same JD hash, regen_count < 2)
+              → start_or_regen_resume: increment regen_count, no credit spent
+              → step1 returns { resumeId, isRegen: true, regenCount: 1 or 2 }
+
+5. Regen limit (regen_count >= 2)
+              → start_or_regen_resume raises P0002 → step1 returns 403
+              → UI disables "Regenerate" button; shows "Start a new tailoring" link
+
+6. No credits (credits_remaining = 0 and new JD)
+              → spend_credit raises P0001 → step1 returns 402
+              → NoCreditsModal shown; user directed to /settings
+```
 
 ---
 
@@ -298,12 +337,13 @@ Scans raw resume text line-by-line with regex patterns to detect section headers
 | `/settings` | GET | Required | Profile settings |
 | `/auth/callback` | GET | Public | OAuth code exchange → session → redirect to `/dashboard` |
 | `/api/auth/signout` | POST | Public | Signs out, redirects to `/` |
-| `/api/tailor/step1` | POST | Public | FormData: `resumeFile` (File) + `jobDescriptionText` (string) |
+| `/api/tailor/step1` | POST | **Required** | FormData: `resumeFile` + `jobDescriptionText`; runs credit/regen check via `start_or_regen_resume` RPC; returns 401 (no auth), 402 (`no_credits`), 403 (`regen_limit_reached`) |
 | `/api/tailor/step2` | POST | Public | JSON: `resumeText`, `jobDescriptionText`, `originalEvaluation`, `selectedKeywords?` |
 | `/api/tailor/step3` | POST | Public | JSON: `tailoredResume`, `jobDescriptionText`, `originalEvaluation`, `changeLog` |
 | `/api/tailor` | POST | Public | FormData (same as step1) — full pipeline in one call |
 | `/api/export-pdf` | POST | Public | JSON: `tailoredResume`, `role?` → binary PDF |
 | `/api/export-docx` | POST | Public | JSON: `tailoredResume`, `role?` → binary DOCX |
+| `/api/billing/mock-purchase` | POST | Required | JSON: `{ product }` → grants credits via `mock_purchase_credits` RPC; 404 in production without `ENABLE_MOCK_PAYMENTS=true` |
 
 All AI/export API routes use `export const runtime = "nodejs"` (not Edge) because resume parsing libraries and React-PDF require Node.js APIs. Auth routes use the default Edge runtime.
 
@@ -323,9 +363,85 @@ All AI/export API routes use `export const runtime = "nodejs"` (not Edge) becaus
 
 - Auth: Google OAuth via `supabase.auth.signInWithOAuth({ provider: 'google' })` in `AuthModal.tsx`
 - Session management: cookie-based via `@supabase/ssr` — `lib/supabase/server.ts` for server components/routes, `lib/supabase/client.ts` for client components
-- Database: `profiles` table (id, display_name, email, avatar_url, plan) — auto-populated on first sign-in via database trigger
+- Database: see **Database Schema** section below
 - Route protection: `middleware.ts` redirects unauthenticated requests to `/dashboard` or `/settings` back to `/`
 - Redirect flow: Google → `https://<project>.supabase.co/auth/v1/callback` → `/auth/callback` → `/dashboard`
+
+---
+
+## Database Schema
+
+### `profiles` (auto-created on signup via `handle_new_user` trigger)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid PK | FK → auth.users |
+| `display_name` | text | From Google OAuth full_name |
+| `email` | text | |
+| `avatar_url` | text | |
+| `dodo_customer_id` | text | Reserved for real Dodo integration |
+| `credits_remaining` | int not null default 0 | Cache kept in sync by `credits_refresh_count` trigger |
+| `created_at` | timestamptz | |
+
+> **Dropped in migration 20260419:** `plan`, `plan_status`, `plan_expires_at`
+
+### `resumes` (server-side only — no client insert/update policy)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid PK | |
+| `user_id` | uuid | FK → auth.users |
+| `job_description_hash` | text | SHA-256 of normalised JD text |
+| `job_title` | text | Extracted from JD (nullable) |
+| `company_name` | text | Extracted from JD (nullable) |
+| `regen_count` | int default 0 | Incremented on each regen; capped at 2 |
+| `created_at` | timestamptz | |
+| `last_generated_at` | timestamptz | Updated on every regen |
+
+Unique constraint: `(user_id, job_description_hash)`. RLS: select-only.
+
+### `payments`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid PK | |
+| `user_id` | uuid | FK → auth.users |
+| `dodo_payment_id` | text unique | `mock_<uuid>` during mock phase |
+| `product` | text | `resume_pack` or `resume_pack_plus` |
+| `amount_cents` | int | |
+| `currency` | text default `usd` | |
+| `credits_granted` | int | 3 or 10 |
+| `status` | text | `succeeded` / `refunded` / `disputed` |
+| `paid_at` | timestamptz | |
+
+RLS: select-only.
+
+### `credits` (one row per credit)
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid PK | |
+| `user_id` | uuid | FK → auth.users |
+| `source` | text | `free_signup` / `resume_pack` / `resume_pack_plus` / `admin_grant` |
+| `payment_id` | uuid | FK → payments (nullable) |
+| `granted_at` | timestamptz | |
+| `expires_at` | timestamptz | 12 months from grant |
+| `spent_at` | timestamptz | null = unspent |
+| `spent_on_resume_id` | uuid | FK → resumes (nullable) |
+
+Partial index: `(user_id, expires_at) where spent_at is null`. RLS: select-only.
+
+### Trigger: `credits_refresh_count`
+
+Fires `after insert or update or delete` on `credits`. Calls `refresh_credits_remaining()` which recomputes `count(*) where spent_at is null and expires_at > now()` and writes it to `profiles.credits_remaining`. Keeps the cache column always in sync.
+
+### Key RPCs (all `security definer`)
+
+| RPC | Purpose |
+|-----|---------|
+| `spend_credit(p_resume_id)` | FIFO by expiry, `for update skip locked`; raises `P0001` if no credits |
+| `start_or_regen_resume(p_jd_hash, p_job_title, p_company_name)` | New JD → insert + spend credit; regen → increment regen_count (max 2, raises `P0002`); returns `(resume_id, is_regen, regen_count)` |
+| `mock_purchase_credits(p_product)` | Inserts payment + N credit rows; trigger fires to update cache. **Remove when real Dodo lands.** |
 
 ---
 
@@ -351,7 +467,7 @@ All AI/export API routes use `export const runtime = "nodejs"` (not Edge) becaus
 
 5. **Keyword chip fallback**: The keyword chip panel shows `missingAreas` (genuine gaps the candidate can't cover) first. If that array is empty, it falls back to `gaps` (broader weaknesses). This means the user always sees something to confirm.
 
-6. **Project preservation fallback**: After `generateTailoredResumeFromRaw` returns, the pipeline scans the original resume text with `extractProjectsFromRawText()` and fuzzy-matches project names against the tailored output. Any dropped projects are re-appended. This enforces the CLAUDE.md guarantee programmatically rather than relying solely on the prompt instruction.
+6. **Project preservation**: Enforced via prompt rules in `buildTailorUserPrompt` — the model is instructed to keep every project from the source resume and reduce to 1 bullet rather than drop an entry entirely. The previous code-level fallback (`extractProjectsFromRawText` + fuzzy re-append) was removed because its line-by-line parser misidentified description fragments as project names.
 
 7. **Raw model response logging**: `runStructuredCall` logs the raw OpenAI response string before any parsing (`[pipeline] raw model response (label): ...`). This makes Zod validation failures and malformed output debuggable in production server logs.
 
@@ -362,3 +478,21 @@ All AI/export API routes use `export const runtime = "nodejs"` (not Edge) becaus
 10. **Dashboard layout uses flex column**: `app/dashboard/page.tsx` wraps everything in `flex h-screen flex-col overflow-hidden`. `AppNavbar` is `flex-shrink-0`; `DashboardShell` is `flex-1 overflow-hidden`. This ensures the navbar sits solidly at the top and the 3-panel sliding layout fills the remaining viewport height without overlap.
 
 11. **`maxDuration = 60` on all AI routes**: All four tailor routes (`/api/tailor`, step1, step2, step3) export `maxDuration = 60`. Requires Vercel Pro plan for the override to take effect (Hobby plan hard-caps at 10s regardless).
+
+12. **Tailwind v4 design tokens in CSS only**: No `tailwind.config.ts` exists. All named color and font tokens are declared in `app/globals.css` under `:root` and `@theme inline`. Colors: `bg`, `surface`, `surface-2`, `surface-raised`, `border`, `accent`, `accent-hover`, `accent-2`, `foreground`, `muted`, `text-dim`. Fonts: `display` (Space Grotesk), `sans` (Inter), `mono` (JetBrains Mono) — loaded via `next/font` in `layout.tsx` and exposed as CSS variables.
+
+13. **AppNavbar z-index stacking fix**: The `nav` element carries `z-10` so its `backdrop-blur-sm` stacking context renders above `DashboardShell`'s transform-based stacking contexts. The dropdown itself also carries `z-50`. Both are needed — z-10 on nav elevates the context, z-50 on the dropdown ensures it's on top within that context.
+
+14. **AuthModal always-mounted animation**: `AuthModal` no longer uses `if (!isOpen) return null`. Instead it uses `data-state="open|closed"` attributes with Tailwind `data-[state=closed]:opacity-0 data-[state=closed]:scale-95` transitions so the close animation plays before unmounting. `pointer-events-none` is applied when closed.
+
+15. **Avatar `referrerPolicy="no-referrer"`**: Google avatar URLs (`lh3.googleusercontent.com`) return 403 without this header. `AvatarImage` is a client component that renders a plain `<img>` (not Next `<Image>`) with `referrerPolicy="no-referrer"` and an `onError` handler that falls back to an initials div.
+
+16. **`step1/route.ts` is now auth-gated**: After migration 20260419, the tailoring entry point requires an authenticated session. Returns 401 if not signed in, 402 (`no_credits`) if the user has no unspent credits, 403 (`regen_limit_reached`) if the same JD has been regenerated twice already. The combined `POST /api/tailor` route has the same gate.
+
+---
+
+## Known TODOs
+
+- **Replace `mock_purchase_credits` with real Dodo webhook handler** — the RPC and `POST /api/billing/mock-purchase` route are scaffolding only. When Dodo is wired, delete the mock route and RPC, add a webhook handler that verifies signatures and calls `spend_credit` equivalents.
+- **Add refund handling when Dodo integration lands** — the `payments` table has `status` and `refunded_at` columns ready; refunds need to mark the corresponding credit rows as expired/revoked and decrement `credits_remaining`.
+- **Navbar credit count is not live-updated after mock purchase** — the settings page refreshes on navigation; the dashboard navbar requires a full page reload. Consider a client-side credit context or SWR if live updates are needed.
