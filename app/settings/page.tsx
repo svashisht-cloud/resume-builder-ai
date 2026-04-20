@@ -1,7 +1,3 @@
-// TODO: profiles table does not yet have credits_remaining — hardcoded below until schema is extended
-// TODO: no resumes table in schema yet — usage count hardcoded to 0 until table is added
-// TODO: plan column only supports 'free'|'pro' — extend enum when billing tiers are wired
-
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
@@ -9,6 +5,7 @@ import AppNavbar from '@/components/AppNavbar'
 import DeleteAccountButton from '@/components/DeleteAccountButton'
 import SwitchPlanSection from '@/components/settings/SwitchPlanSection'
 import AvatarImage from '@/components/settings/AvatarImage'
+import MockPaymentsBanner from '@/components/MockPaymentsBanner'
 import { ArrowLeft, CreditCard, BarChart2, User } from 'lucide-react'
 
 function formatMemberSince(isoDate: string) {
@@ -17,21 +14,18 @@ function formatMemberSince(isoDate: string) {
   )
 }
 
-function PlanBadge({ plan }: { plan: string }) {
-  const label =
-    plan === 'pro' ? 'Pro' : plan === 'pack' ? 'Resume Pack' : plan === 'plus' ? 'Resume Pack Plus' : 'Free'
-  const isPaid = plan !== 'free'
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-        isPaid
-          ? 'bg-gradient-to-r from-accent/20 to-accent-secondary/20 text-accent border border-accent/30'
-          : 'bg-surface-raised text-muted border border-border'
-      }`}
-    >
-      {label}
-    </span>
+function formatCreditExpiry(isoDate: string) {
+  return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
+    new Date(isoDate),
   )
+}
+
+function formatCreditSource(source: string) {
+  if (source === 'free_signup') return 'Free signup'
+  if (source === 'resume_pack') return 'Resume Pack'
+  if (source === 'resume_pack_plus') return 'Resume Pack Plus'
+  if (source === 'admin_grant') return 'Admin grant'
+  return source
 }
 
 export default async function SettingsPage() {
@@ -44,37 +38,54 @@ export default async function SettingsPage() {
     redirect('/')
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('display_name, email, avatar_url, plan')
-    .eq('id', user.id)
-    .single()
+  const [profileResult, unspentCreditsResult, resumesResult, spentCreditsResult] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('display_name, email, avatar_url, credits_remaining')
+      .eq('id', user.id)
+      .single(),
+    supabase
+      .from('credits')
+      .select('source, expires_at')
+      .is('spent_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .order('expires_at', { ascending: true })
+      .limit(3),
+    supabase
+      .from('resumes')
+      .select('regen_count'),
+    supabase
+      .from('credits')
+      .select('id', { count: 'exact', head: true })
+      .not('spent_at', 'is', null),
+  ])
 
+  const profile = profileResult.data
   const email = profile?.email ?? user.email ?? ''
   const avatarUrl =
     profile?.avatar_url ??
     (user.user_metadata?.avatar_url as string | undefined) ??
     (user.user_metadata?.picture as string | undefined) ??
     null
-  const plan = profile?.plan ?? 'free'
   const memberSince = user.created_at ? formatMemberSince(user.created_at) : null
   const initial = (email[0] ?? '?').toUpperCase()
 
-  // TODO: replace with profile.credits_remaining once column exists
-  const creditsRemaining = 1
-  const creditsTotal = 1
-
-  // TODO: replace with count query once resumes table exists
-  const resumesGenerated = 0
+  const creditsRemaining = profile?.credits_remaining ?? 0
+  const unspentCredits = unspentCreditsResult.data ?? []
+  const resumesGenerated = resumesResult.data?.length ?? 0
+  const regensUsed = resumesResult.data?.reduce((s, r) => s + r.regen_count, 0) ?? 0
+  const creditsSpentLifetime = spentCreditsResult.count ?? 0
 
   return (
     <>
+      <MockPaymentsBanner />
       <AppNavbar
         user={{
           display_name: profile?.display_name ?? null,
           email: email,
           avatar_url: avatarUrl,
         }}
+        credits={creditsRemaining}
       />
 
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-8">
@@ -113,17 +124,31 @@ export default async function SettingsPage() {
             <CreditCard size={15} className="text-muted" />
             <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Current Plan</h2>
           </div>
-          <div className="flex items-center gap-3">
-            <PlanBadge plan={plan} />
-            <span className="text-border">·</span>
-            <p className="text-sm text-muted">
-              {creditsRemaining} of {creditsTotal} credit{creditsTotal !== 1 ? 's' : ''} remaining
-            </p>
+
+          <div className="mb-1 flex items-baseline gap-2">
+            <span className="font-display text-4xl font-bold text-foreground">{creditsRemaining}</span>
+            <span className="text-sm text-muted">credit{creditsRemaining !== 1 ? 's' : ''} remaining</span>
           </div>
+
+          {creditsRemaining === 0 ? (
+            <p className="mt-2 text-sm text-muted">No credits remaining. Purchase a pack below.</p>
+          ) : unspentCredits.length > 0 ? (
+            <ul className="mt-3 space-y-1.5">
+              {unspentCredits.map((credit, i) => (
+                <li key={i} className="text-xs text-muted">
+                  1 credit expires{' '}
+                  <span className="font-medium text-foreground">
+                    {formatCreditExpiry(credit.expires_at as string)}
+                  </span>
+                  {' '}(from {formatCreditSource(credit.source as string)})
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
 
         {/* Switch Plan */}
-        <SwitchPlanSection currentPlan={plan} />
+        <SwitchPlanSection />
 
         {/* Usage */}
         <div className="rounded-xl border border-border/60 bg-surface p-6">
@@ -131,9 +156,19 @@ export default async function SettingsPage() {
             <BarChart2 size={15} className="text-muted" />
             <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Usage</h2>
           </div>
-          <div className="flex items-end gap-2">
-            <p className="font-display text-4xl font-bold text-foreground">{resumesGenerated}</p>
-            <p className="mb-1 text-sm text-muted">resumes generated</p>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="font-display text-4xl font-bold text-foreground">{resumesGenerated}</p>
+              <p className="mt-1 text-xs text-muted">resumes generated</p>
+            </div>
+            <div>
+              <p className="font-display text-4xl font-bold text-foreground">{regensUsed}</p>
+              <p className="mt-1 text-xs text-muted">regenerations used</p>
+            </div>
+            <div>
+              <p className="font-display text-4xl font-bold text-foreground">{creditsSpentLifetime}</p>
+              <p className="mt-1 text-xs text-muted">credits spent (all time)</p>
+            </div>
           </div>
         </div>
 
