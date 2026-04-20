@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { ResumePreview } from "@/components/ResumePreview";
 import { useTailorResume } from "@/lib/hooks/useTailorResume";
-import { FileText, Briefcase, ArrowRight, Check, X } from "lucide-react";
+import NoCreditsModal from "@/components/NoCreditsModal";
+import { FileText, Briefcase, ArrowRight, Check, X, RefreshCw } from "lucide-react";
 
 const RESUME_PAGE_WIDTH_PX = 816;
 const PREVIEW_CARD_SCALE = 400 / RESUME_PAGE_WIDTH_PX;
@@ -54,6 +55,8 @@ export function DashboardShell() {
     isModalOpen,
     noTransition,
     viewState,
+    regenCount,
+    isNoCreditsOpen,
     handleTailorResume,
     handleGenerateResume,
     toggleKeyword,
@@ -63,6 +66,7 @@ export function DashboardShell() {
     handleReset,
     openModal,
     closeModal,
+    dismissNoCredits,
   } = useTailorResume({ resumeFile, jobDescription });
 
   const canTailor =
@@ -319,13 +323,54 @@ export function DashboardShell() {
             {result && (
               <main className="min-h-full px-4 py-8 text-foreground sm:px-6 lg:px-8">
                 <div className="mx-auto w-full max-w-6xl">
-                  <button
-                    className="flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-foreground"
-                    onClick={handleReset}
-                    type="button"
-                  >
-                    ← Back to Dashboard
-                  </button>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <button
+                      className="flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-foreground"
+                      onClick={handleReset}
+                      type="button"
+                    >
+                      ← Back to Dashboard
+                    </button>
+
+                    <div className="flex items-center gap-3">
+                      {regenCount < 2 ? (
+                        <>
+                          <span className="text-xs text-muted">
+                            Regeneration {regenCount} of 2 used
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleTailorResume}
+                            disabled={!canTailor}
+                            className="flex items-center gap-1.5 rounded-lg border border-accent/50 px-3 py-1.5 text-xs font-semibold text-accent transition-all hover:bg-accent/10 disabled:cursor-not-allowed disabled:border-border disabled:text-text-dim"
+                          >
+                            <RefreshCw size={11} />
+                            Regenerate
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-xs text-rose-400">Regeneration limit reached</span>
+                          <button
+                            type="button"
+                            disabled
+                            title="You've used all 2 regenerations for this resume. Start a new tailoring to continue."
+                            className="flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-text-dim"
+                          >
+                            <RefreshCw size={11} />
+                            Regenerate
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleReset}
+                            className="text-xs text-accent underline-offset-2 hover:underline"
+                          >
+                            Start a new tailoring →
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
 
                   {downloadError && (
                     <div className="mt-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-950/30 p-4 text-sm text-red-400">
@@ -528,6 +573,8 @@ export function DashboardShell() {
 
         </div>
       </div>
+
+      <NoCreditsModal open={isNoCreditsOpen} onDismiss={dismissNoCredits} />
 
       {/* ── Resume modal ── */}
       {isModalOpen && result && (
