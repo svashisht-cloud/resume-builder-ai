@@ -74,6 +74,14 @@ export async function POST(request: Request) {
 
     const { resume_id: resumeId, is_regen: isRegen, regen_count: regenCount } = (rpcData as Array<{ resume_id: string; is_regen: boolean; regen_count: number }>)[0];
 
+    const { data: paidCreditData } = await supabase
+      .from("credits")
+      .select("id")
+      .eq("spent_on_resume_id", resumeId)
+      .in("source", ["resume_pack", "resume_pack_plus"])
+      .limit(1);
+    const isPaidCredit = (paidCreditData?.length ?? 0) > 0;
+
     const resumeText = await extractResumeText(resumeFile);
 
     if (!resumeText.trim()) {
@@ -88,7 +96,7 @@ export async function POST(request: Request) {
       jobDescriptionText,
     );
 
-    return Response.json({ resumeText, originalEvaluation, resumeId, isRegen, regenCount });
+    return Response.json({ resumeText, originalEvaluation, resumeId, isRegen, regenCount, isPaidCredit });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Step 1 failed.";

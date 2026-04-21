@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 100" width="140" height="100" role="img" aria-label="Forte mark">
+  <title>Forte — mark</title>
+  <g fill="none" stroke="#0A0A0A" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 50 L130 10"></path>
+    <path d="M10 50 L130 90"></path>
+  </g>
+</svg>

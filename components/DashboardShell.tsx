@@ -197,6 +197,7 @@ export function DashboardShell() {
     isStyleEditingOpen,
     handleOpenStyleEditing,
     handleCloseStyleEditing,
+    isPaidCredit,
   } = useTailorResume({ resumeFile, jobDescription, resumeStyle });
 
   function handleItemToggle(id: string, text: string) {
@@ -937,14 +938,22 @@ export function DashboardShell() {
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                title="Style resume"
-                                onClick={handleOpenStyleEditing}
-                                className="flex items-center gap-1 rounded-lg border border-border/60 px-2 py-1.5 text-xs font-medium text-muted transition-all hover:border-border hover:text-foreground"
+                                title={isPaidCredit ? "Style resume" : "Requires Resume Pack"}
+                                onClick={isPaidCredit ? handleOpenStyleEditing : undefined}
+                                disabled={!isPaidCredit}
+                                className="flex items-center gap-1 rounded-lg border border-border/60 px-2 py-1.5 text-xs font-medium text-muted transition-all hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                               >
                                 <Paintbrush size={12} />
                                 Style
                               </button>
-                              {regenCount < 2 ? (
+                              {!isPaidCredit ? (
+                                <span
+                                  title="Requires Resume Pack or Resume Plus Pack"
+                                  className="cursor-default rounded-lg border border-border/40 bg-surface px-2.5 py-1.5 text-xs font-medium text-text-dim"
+                                >
+                                  Pack required
+                                </span>
+                              ) : regenCount < 2 ? (
                                 <button
                                   type="button"
                                   onClick={() => { setRegenFeedback(""); setSelectedItems(new Map()); handleOpenRegenFeedback(); }}

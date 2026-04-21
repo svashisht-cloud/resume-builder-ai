@@ -28,6 +28,7 @@ export interface TailorResumeState {
   isNoCreditsOpen: boolean;
   isRegenFeedbackOpen: boolean;
   isStyleEditingOpen: boolean;
+  isPaidCredit: boolean;
   handleTailorResume: () => void;
   handleGenerateResume: (keywords: string[]) => void;
   toggleKeyword: (kw: string) => void;
@@ -75,6 +76,7 @@ export function useTailorResume({
   const [isNoCreditsOpen, setIsNoCreditsOpen] = useState(false);
   const [isRegenFeedbackOpen, setIsRegenFeedbackOpen] = useState(false);
   const [isStyleEditingOpen, setIsStyleEditingOpen] = useState(false);
+  const [isPaidCredit, setIsPaidCredit] = useState(false);
 
   useEffect(() => {
     return () => { abortControllerRef.current?.abort(); };
@@ -248,6 +250,7 @@ export function useTailorResume({
 
         if (step1Data.resumeId) setResumeId(step1Data.resumeId as string);
         if (typeof step1Data.regenCount === "number") setRegenCount(step1Data.regenCount as number);
+        if (typeof step1Data.isPaidCredit === "boolean") setIsPaidCredit(step1Data.isPaidCredit as boolean);
 
         const resumeText: string = step1Data.resumeText;
         const evalParsed = ResumeEvaluationSchema.safeParse(step1Data.originalEvaluation);
@@ -328,10 +331,17 @@ export function useTailorResume({
           setLoadingStep(0);
           return;
         }
+        if (regenInitRes.status === 402 && regenInitData.error === "paid_credit_required") {
+          setError("Regeneration requires a Resume Pack or Resume Plus Pack credit.");
+          setLoadingStep(0);
+          return;
+        }
         if (!regenInitRes.ok) throw new Error(regenInitData.error ?? "Regen init failed.");
 
         if (regenInitData.resumeId) setResumeId(regenInitData.resumeId as string);
         if (typeof regenInitData.regenCount === "number") setRegenCount(regenInitData.regenCount as number);
+        // Regen only succeeds when paid credit exists (P0003 blocks otherwise), so mark it paid.
+        setIsPaidCredit(true);
 
         await runRegenStep2And3(snapshotTailored, feedback, selectedItemTexts, snapshotOriginalEval, signal);
       } catch (requestError) {
@@ -435,6 +445,7 @@ export function useTailorResume({
     setIsModalOpen(false);
     setRegenCount(0);
     setResumeId(null);
+    setIsPaidCredit(false);
     setIsNoCreditsOpen(false);
     setIsRegenFeedbackOpen(false);
     setIsStyleEditingOpen(false);
@@ -459,6 +470,7 @@ export function useTailorResume({
     isNoCreditsOpen,
     isRegenFeedbackOpen,
     isStyleEditingOpen,
+    isPaidCredit,
     handleTailorResume,
     handleGenerateResume,
     toggleKeyword,

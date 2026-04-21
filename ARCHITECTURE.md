@@ -226,15 +226,20 @@ POST /api/tailor/step3
               → trigger fires, credits_remaining decremented
               → step1 returns { resumeId, isRegen: false, regenCount: 0 }
 
-4. Regeneration (same JD hash, regen_count < 2)
-              → start_or_regen_resume: increment regen_count, no credit spent
-              → step1 returns { resumeId, isRegen: true, regenCount: 1 or 2 }
+4. Regeneration (same JD hash, regen_count < 2, paid credit required)
+              → start_or_regen_resume: checks paid-credit gate (P0003 if free-only),
+                then increments regen_count, no credit spent
+              → regen-init returns { resumeId, regenCount: 1 or 2 }
 
-5. Regen limit (regen_count >= 2)
-              → start_or_regen_resume raises P0002 → step1 returns 403
-              → UI disables "Regenerate" button; shows "Start a new tailoring" link
+5. Regen blocked — free credit (no resume_pack/resume_pack_plus credit on resume)
+              → start_or_regen_resume raises P0003 → regen-init returns 402 "paid_credit_required"
+              → UI shows "Pack required" badge; Regenerate and Style buttons disabled
 
-6. No credits (credits_remaining = 0 and new JD)
+6. Regen limit (regen_count >= 2)
+              → start_or_regen_resume raises P0002 → regen-init returns 403
+              → UI shows "Limit reached (2/2)" badge
+
+7. No credits (credits_remaining = 0 and new JD)
               → spend_credit raises P0001 → step1 returns 402
               → NoCreditsModal shown; user directed to /settings
 ```
@@ -338,7 +343,7 @@ Scans raw resume text line-by-line with regex patterns to detect section headers
 | `/settings` | GET | Required | Profile settings |
 | `/auth/callback` | GET | Public | OAuth code exchange → session → redirect to `/dashboard` |
 | `/api/auth/signout` | POST | Public | Signs out, redirects to `/` |
-| `/api/tailor/step1` | POST | **Required** | FormData: `resumeFile` + `jobDescriptionText`; runs credit/regen check via `start_or_regen_resume` RPC; returns 401 (no auth), 402 (`no_credits`), 403 (`regen_limit_reached`) |
+| `/api/tailor/step1` | POST | **Required** | FormData: `resumeFile` + `jobDescriptionText`; runs credit/regen check via `start_or_regen_resume` RPC; returns 401 (no auth), 402 (`no_credits`), 403 (`regen_limit_reached`); response includes `isPaidCredit: boolean` |
 | `/api/tailor/step2` | POST | Public | JSON: `resumeText`, `jobDescriptionText`, `originalEvaluation`, `selectedKeywords?` |
 | `/api/tailor/step3` | POST | Public | JSON: `tailoredResume`, `jobDescriptionText`, `originalEvaluation`, `changeLog` |
 | `/api/tailor` | POST | Public | FormData (same as step1) — full pipeline in one call |
@@ -441,7 +446,7 @@ Fires `after insert or update or delete` on `credits`. Calls `refresh_credits_re
 | RPC | Purpose |
 |-----|---------|
 | `spend_credit(p_resume_id)` | FIFO by expiry, `for update skip locked`; raises `P0001` if no credits |
-| `start_or_regen_resume(p_jd_hash, p_job_title, p_company_name)` | New JD → insert + spend credit; regen → increment regen_count (max 2, raises `P0002`); returns `(resume_id, is_regen, regen_count)` |
+| `start_or_regen_resume(p_jd_hash, p_job_title, p_company_name, p_force_fresh)` | New JD → insert + spend credit; regen → checks paid credit (raises `P0003` if free-only), then increments regen_count (max 2, raises `P0002`); force_fresh → resets regen_count + spends credit; returns `(resume_id, is_regen, regen_count)` |
 | `mock_purchase_credits(p_product)` | Inserts payment + N credit rows; trigger fires to update cache. **Remove when real Dodo lands.** |
 
 ---

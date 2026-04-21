@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 180" width="220" height="180" role="img" aria-label="Forte">
+  <title>Forte — stacked lockup</title>
+  <g fill="none" stroke="#0A0A0A" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M60 50 L160 20"></path>
+    <path d="M60 50 L160 80"></path>
+  </g>
+  <text x="110" y="150" fill="#0A0A0A" text-anchor="middle" font-family="Inter Tight, Inter, -apple-system, BlinkMacSystemFont, Segoe UI, system-ui, sans-serif" font-size="56" font-weight="600" letter-spacing="-2.2">Forte</text>
+</svg>

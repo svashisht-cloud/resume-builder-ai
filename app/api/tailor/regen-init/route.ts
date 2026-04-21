@@ -35,6 +35,7 @@ export async function POST(request: Request) {
     if (rpcError) {
       if (rpcError.code === "P0001") return Response.json({ error: "no_credits" }, { status: 402 });
       if (rpcError.code === "P0002") return Response.json({ error: "regen_limit_reached" }, { status: 403 });
+      if (rpcError.code === "P0003") return Response.json({ error: "paid_credit_required" }, { status: 402 });
       return Response.json({ error: rpcError.message }, { status: 500 });
     }
 

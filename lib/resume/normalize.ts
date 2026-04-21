@@ -16,6 +16,25 @@ export function extractJobMeta(jd: string): { jobTitle: string | null; companyNa
   let jobTitle: string | null = null;
   let companyName: string | null = null;
 
+  // Pass 0: detect emoji-labeled sections (e.g. "💻 Role\nSoftware Engineer\n\n🏢 Company\nSnapchat")
+  const emojiLineRe = /^[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}]/u;
+  let lastEmojiLabel = '';
+  for (const raw of lines) {
+    const t = raw.trim();
+    if (!t) { lastEmojiLabel = ''; continue; }
+    if (emojiLineRe.test(t)) {
+      lastEmojiLabel = t.replace(/^[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}\s]+/u, '').toLowerCase();
+      continue;
+    }
+    if (lastEmojiLabel) {
+      if (!jobTitle && /\b(role|position|title|job)\b/.test(lastEmojiLabel)) jobTitle = t;
+      if (!companyName && /\b(company|organization|employer)\b/.test(lastEmojiLabel)) companyName = t;
+      lastEmojiLabel = '';
+    }
+    if (jobTitle && companyName) break;
+  }
+
+  // Pass 1: labeled fields (e.g. "Job Title: Software Engineer", "Company: Snapchat")
   const titleRe = /^(?:job\s+title|position|role|title)\s*[:–\-]\s*(.+)/i;
   const companyRe = /^(?:company|organization|employer|hiring\s+company)\s*[:–\-]\s*(.+)/i;
 
@@ -34,11 +53,12 @@ export function extractJobMeta(jd: string): { jobTitle: string | null; companyNa
     if (jobTitle && companyName) break;
   }
 
-  // Fall back: first non-empty line as job title if nothing matched
+  // Fallback: first non-empty, non-emoji-header line as job title
   if (!jobTitle) {
-    jobTitle = lines.find((l) => l.trim().length > 0)?.trim() ?? null;
-    // Clamp overly long first lines (probably a paragraph, not a title)
-    if (jobTitle && jobTitle.length > 120) jobTitle = null;
+    jobTitle = lines.find((l) => {
+      const t = l.trim();
+      return t.length > 0 && t.length <= 120 && !emojiLineRe.test(t);
+    })?.trim() ?? null;
   }
 
   return { jobTitle, companyName };
