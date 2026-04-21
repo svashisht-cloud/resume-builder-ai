@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+@keyframes gradient-flow {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 :root {
   /* existing tokens */
   --background: #0a0f1e;
@@ -42,6 +55,15 @@
   --font-display: var(--font-space-grotesk), system-ui, sans-serif;
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-jetbrains-mono), "SFMono-Regular", Consolas, monospace;
+  /* animations */
+  --animate-gradient-flow: gradient-flow 2.5s ease infinite;
+  --animate-fade-in-up: fade-in-up 0.4s ease forwards;
+  --animate-fade-in: fade-in 0.3s ease forwards;
+}
+
+.animate-gradient-flow {
+  background-size: 200% 100%;
+  animation: gradient-flow 2.5s ease infinite;
 }
 
 body {

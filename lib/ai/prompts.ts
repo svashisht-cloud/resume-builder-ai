@@ -50,6 +50,88 @@ Avoid keyword stuffing, repetition, and unnatural phrasing.
 Output format: for every optional string field that has no value, emit the key explicitly with a null value — never omit optional keys from the response object. Use [] for missing arrays.
 `;
 
+// ── Refinement (regenerate path) ──────────────────────────────────────────────
+
+export const REFINE_SYSTEM_PROMPT = `
+You are a senior technical resume writer refining an already-tailored resume based on user feedback.
+
+Your input is a previously tailored resume that has already been ATS-optimized, plus optional user feedback describing what to change.
+
+## Grounding rule — CRITICAL
+You may ONLY draw content from the tailored resume provided in this prompt.
+You may NOT invent new companies, roles, titles, dates, metrics, projects, credentials, tools, or skills that do not appear in the tailored resume.
+If the user's feedback requests something not supported by the tailored resume, skip that specific request and note it in the changeLog reason.
+
+## Allowed refinements
+- Reordering bullets within a role to improve JD alignment.
+- Rewording bullets using the JD's exact terminology when the tailored resume already expresses the underlying concept.
+- Reordering skill items within a category to front-load JD matches.
+- Improving the summary's opening, role title alignment, or JD-language mirroring.
+- Addressing user feedback about tone, conciseness, or emphasis — within what the tailored resume already contains.
+
+## What you must NOT do
+- Add new employers, projects, certifications, or credentials not in the tailored resume.
+- Add metrics or numbers not in the tailored resume.
+- Add skills or tools not in the tailored resume.
+- Remove entire sections present in the tailored resume.
+- Drop any project entry — reduce to 1 bullet rather than remove entirely.
+
+## Page limit (strictly enforce)
+- Experience bullets: 10 total across all roles.
+- Project bullets: maximum 2 per project.
+
+Output format: for every optional string field with no value, emit the key explicitly with a null value — never omit optional keys. Use [] for missing arrays.
+`;
+
+export function buildRefineUserPrompt({
+  renderedTailored,
+  userFeedback,
+  selectedItemTexts,
+  jobDescriptionText,
+  originalEvaluation,
+}: {
+  renderedTailored: string;
+  userFeedback: string;
+  selectedItemTexts?: string[];
+  jobDescriptionText: string;
+  originalEvaluation: { matchedAreas: string[]; gaps: string[] };
+}): string {
+  const feedbackBlock = userFeedback.trim()
+    ? `USER FEEDBACK (apply conservatively — only within what the tailored resume already contains):\n${userFeedback.trim()}`
+    : "USER FEEDBACK: None provided. Focus on improving ATS keyword alignment and bullet strength within the existing content.";
+
+  const selectedBlock =
+    selectedItemTexts && selectedItemTexts.length > 0
+      ? `SPECIFIC ITEMS TO REFINE (user highlighted these — prioritize rewriting them first):\n${selectedItemTexts.map((t, i) => `${i + 1}. ${t}`).join("\n")}`
+      : "";
+
+  const matchedBlock =
+    originalEvaluation.matchedAreas.length > 0
+      ? `ALREADY MATCHED (preserve — do NOT weaken these):\n${originalEvaluation.matchedAreas.map((a, i) => `${i + 1}. ${a}`).join("\n")}`
+      : "";
+
+  const gapsBlock =
+    originalEvaluation.gaps.length > 0
+      ? `KNOWN GAPS (address only if the tailored resume already contains supporting evidence):\n${originalEvaluation.gaps.map((g, i) => `${i + 1}. ${g}`).join("\n")}`
+      : "";
+
+  return `Refine the tailored resume below based on the user's feedback. Work ONLY from the tailored resume text — do not add content not present in it.
+
+${feedbackBlock}
+
+${selectedBlock}
+
+${matchedBlock}
+
+${gapsBlock}
+
+PREVIOUSLY TAILORED RESUME TEXT:
+${renderedTailored}
+
+JOB DESCRIPTION TEXT:
+${jobDescriptionText}`;
+}
+
 export function buildTailorUserPrompt({
   matchedBlock,
   gapsBlock,

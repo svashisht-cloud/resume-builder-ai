@@ -35,7 +35,7 @@ Auth state managed by Supabase (Google OAuth) + middleware.ts
 resume-builder/
 ├── app/                        # Next.js App Router
 │   ├── layout.tsx              # Root HTML shell (Space Grotesk + Inter + JetBrains Mono fonts, CSS vars, metadata)
-│   ├── globals.css             # Tailwind v4 @theme inline tokens (bg, surface, surface-2, accent, accent-hover, accent-2, text, text-muted, text-dim, font-display/sans/mono) + print styles
+│   ├── globals.css             # Tailwind v4 @theme inline tokens + keyframes (gradient-flow, fade-in-up, fade-in), .animate-gradient-flow utility + print styles
 │   ├── page.tsx                # Root — shows LandingPage or redirects to /dashboard if signed in
 │   ├── dashboard/
 │   │   └── page.tsx            # Protected dashboard — fetches profile, renders AppNavbar + DashboardShell
@@ -56,13 +56,13 @@ resume-builder/
 │       └── export-docx/route.ts# POST /api/export-docx — render DOCX via docx library
 │
 ├── components/
-│   ├── DashboardShell.tsx      # PRIMARY UI: form state + renders result; delegates fetch/AI state to useTailorResume (~280 lines); all colors use design tokens
+│   ├── DashboardShell.tsx      # PRIMARY UI: 3-panel sliding layout (idle→Panel1, loading/keyword-selection→Panel2, result/regen-feedback→Panel3); holds regenFeedback + selectedItems state; regen-feedback view is 2-column refine layout (left sidebar + interactive ResumePreview)
 │   ├── AppNavbar.tsx           # Authenticated top nav — avatar, z-10 nav (backdrop-blur stacking fix), dropdown with Settings + Sign Out
 │   ├── LandingPage.tsx         # Marketing page — two-col hero (HeroTrailer), How It Works (text-3xl + subtitle), Testimonials, Pricing (text-3xl + "Start for free" subtitle), footer
 │   ├── AuthModal.tsx           # Google OAuth modal — always mounted, data-state open/closed CSS transition (scale+fade), ToS line
 │   ├── EditableName.tsx        # Inline-editable display name field
 │   ├── DeleteAccountButton.tsx # Danger zone delete button (used on settings page)
-│   ├── ResumePreview.tsx       # Web HTML resume renderer — canonical production component
+│   ├── ResumePreview.tsx       # Web HTML resume renderer — canonical production component; supports interactiveMode (SelectionCtx, hover/select bullets + skill rows with amber/cyan highlights)
 │   ├── ResumePDFDocument.tsx   # React-PDF resume document (used by export-pdf route server-side)
 │   ├── landing/
 │   │   ├── HeroTrailer.tsx     # Animated product trailer: 9-step loop; step 6 full-width ATS 62→94% counter with delta badge; step 7 full-width resume card + download button (fades in at 600ms); file pill + JD textarea use text-sm for readability; prefersReducedMotion → static step 7
@@ -79,7 +79,7 @@ resume-builder/
 │   │   ├── pipeline.ts         # Core AI functions: evaluate, tailor, re-evaluate, render text; includes project preservation
 │   │   └── prompts.ts          # System prompts + user prompt builders for all 3 AI calls
 │   ├── hooks/
-│   │   └── useTailorResume.ts  # Custom React hook: all tailoring fetch logic, AbortController, all AI state
+│   │   └── useTailorResume.ts  # Custom React hook: all tailoring fetch logic, AbortController, all AI state; viewState: idle|loading|keyword-selection|regen-feedback|result; handleCloseRegenFeedback + handleRegenerateWithFeedback(feedback, selectedItemTexts[])
 │   ├── supabase/
 │   │   ├── client.ts           # Browser Supabase client (createBrowserClient via @supabase/ssr)
 │   │   └── server.ts           # Server Supabase client (createServerClient, cookie-based session)

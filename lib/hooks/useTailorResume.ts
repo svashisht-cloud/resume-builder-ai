@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { buildResumePdfFilename } from "@/lib/resume/filename";
 import { ResumeEvaluationSchema } from "@/types";
-import type { ResumeEvaluation } from "@/types";
+import type { ResumeEvaluation, TailoredResume } from "@/types";
 import type { TailorResponse } from "@/types/api";
 
 export type LoadingStep = 0 | 1 | 2 | 3;
 
-export type ViewState = "idle" | "loading" | "keyword-selection" | "result";
+export type ViewState = "idle" | "loading" | "keyword-selection" | "regen-feedback" | "result";
 
 export interface TailorResumeState {
   result: TailorResponse | null;
@@ -26,6 +26,7 @@ export interface TailorResumeState {
   regenCount: number;
   resumeId: string | null;
   isNoCreditsOpen: boolean;
+  isRegenFeedbackOpen: boolean;
   handleTailorResume: () => void;
   handleGenerateResume: (keywords: string[]) => void;
   toggleKeyword: (kw: string) => void;
@@ -36,6 +37,9 @@ export interface TailorResumeState {
   openModal: () => void;
   closeModal: () => void;
   dismissNoCredits: () => void;
+  handleOpenRegenFeedback: () => void;
+  handleCloseRegenFeedback: () => void;
+  handleRegenerateWithFeedback: (feedback: string, selectedItemTexts: string[]) => void;
 }
 
 export function useTailorResume({
@@ -64,6 +68,11 @@ export function useTailorResume({
   const [regenCount, setRegenCount] = useState(0);
   const [resumeId, setResumeId] = useState<string | null>(null);
   const [isNoCreditsOpen, setIsNoCreditsOpen] = useState(false);
+  const [isRegenFeedbackOpen, setIsRegenFeedbackOpen] = useState(false);
+
+  useEffect(() => {
+    return () => { abortControllerRef.current?.abort(); };
+  }, []);
 
   useEffect(() => {
     if (!isModalOpen) return;
@@ -77,6 +86,7 @@ export function useTailorResume({
   const viewState: ViewState =
     loadingStep > 0 ? "loading"
     : pendingEvalData ? "keyword-selection"
+    : isRegenFeedbackOpen ? "regen-feedback"
     : result ? "result"
     : "idle";
 
@@ -132,6 +142,60 @@ export function useTailorResume({
     }
   }
 
+  async function runRegenStep2And3(
+    previousTailoredResume: TailoredResume,
+    feedback: string,
+    selectedItemTexts: string[],
+    originalEvaluation: ResumeEvaluation,
+    signal: AbortSignal,
+  ) {
+    try {
+      setLoadingStep(2);
+
+      const step2Res = await fetch("/api/tailor/step2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          previousTailoredResume,
+          userFeedback: feedback,
+          selectedItemTexts,
+          jobDescriptionText: jobDescription,
+          originalEvaluation,
+        }),
+        signal,
+      });
+      const step2Data = await step2Res.json();
+      if (!step2Res.ok) throw new Error(step2Data.error ?? "Step 2 failed.");
+      const { tailoredResume, changeLog } = step2Data;
+
+      setLoadingStep(3);
+
+      const step3Res = await fetch("/api/tailor/step3", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tailoredResume,
+          jobDescriptionText: jobDescription,
+          originalEvaluation,
+          changeLog,
+        }),
+        signal,
+      });
+      const step3Data = await step3Res.json();
+      if (!step3Res.ok) throw new Error(step3Data.error ?? "Step 3 failed.");
+
+      setResult(step3Data as TailorResponse);
+    } catch (requestError) {
+      if (requestError instanceof Error && requestError.name === "AbortError") return;
+      setError(
+        requestError instanceof Error ? requestError.message : "Tailoring request failed.",
+      );
+    } finally {
+      setLoadingStep(0);
+      setPendingEvalData(null);
+    }
+  }
+
   function handleTailorResume() {
     if (!resumeFile || loadingStep !== 0 || pendingEvalData) return;
 
@@ -150,6 +214,7 @@ export function useTailorResume({
     const formData = new FormData();
     formData.append("resumeFile", resumeFile);
     formData.append("jobDescriptionText", jobDescription);
+    formData.append("isFreshTailor", "true");
 
     void (async () => {
       try {
@@ -174,7 +239,6 @@ export function useTailorResume({
 
         if (!step1Res.ok) throw new Error(step1Data.error ?? "Step 1 failed.");
 
-        // Store resume tracking metadata
         if (step1Data.resumeId) setResumeId(step1Data.resumeId as string);
         if (typeof step1Data.regenCount === "number") setRegenCount(step1Data.regenCount as number);
 
@@ -204,6 +268,68 @@ export function useTailorResume({
         setError(
           requestError instanceof Error ? requestError.message : "Tailoring request failed.",
         );
+        setLoadingStep(0);
+      }
+    })();
+  }
+
+  function handleOpenRegenFeedback() {
+    if (!result) {
+      // No previous result in state (e.g. page refresh) — fall back to fresh tailor.
+      handleTailorResume();
+      return;
+    }
+    setIsRegenFeedbackOpen(true);
+  }
+
+  function handleRegenerateWithFeedback(feedback: string, selectedItemTexts: string[]) {
+    if (!result || loadingStep !== 0) return;
+
+    const snapshotTailored = result.tailoredResume;
+    const snapshotOriginalEval = result.originalEvaluation;
+
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+    const { signal } = abortControllerRef.current;
+
+    setIsRegenFeedbackOpen(false);
+    setLoadingStep(2); // skip step 1 — regen-init is a fast DB call, go straight to generate
+    setInitialScore(null);
+    setPendingEvalData(null);
+    setSelectedKeywords([]);
+    setError("");
+    setDownloadError("");
+    setResult(null);
+
+    void (async () => {
+      try {
+        const regenInitRes = await fetch("/api/tailor/regen-init", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jobDescriptionText: jobDescription }),
+          signal,
+        });
+        const regenInitData = await regenInitRes.json();
+
+        if (regenInitRes.status === 402 && regenInitData.error === "no_credits") {
+          setIsNoCreditsOpen(true);
+          setLoadingStep(0);
+          return;
+        }
+        if (regenInitRes.status === 403 && regenInitData.error === "regen_limit_reached") {
+          setError("You've reached the 2-regeneration limit for this job description. Start a new tailoring to continue.");
+          setLoadingStep(0);
+          return;
+        }
+        if (!regenInitRes.ok) throw new Error(regenInitData.error ?? "Regen init failed.");
+
+        if (regenInitData.resumeId) setResumeId(regenInitData.resumeId as string);
+        if (typeof regenInitData.regenCount === "number") setRegenCount(regenInitData.regenCount as number);
+
+        await runRegenStep2And3(snapshotTailored, feedback, selectedItemTexts, snapshotOriginalEval, signal);
+      } catch (requestError) {
+        if (requestError instanceof Error && requestError.name === "AbortError") return;
+        setError(requestError instanceof Error ? requestError.message : "Tailoring request failed.");
         setLoadingStep(0);
       }
     })();
@@ -303,6 +429,7 @@ export function useTailorResume({
     setRegenCount(0);
     setResumeId(null);
     setIsNoCreditsOpen(false);
+    setIsRegenFeedbackOpen(false);
     requestAnimationFrame(() => requestAnimationFrame(() => setNoTransition(false)));
   }
 
@@ -322,6 +449,7 @@ export function useTailorResume({
     regenCount,
     resumeId,
     isNoCreditsOpen,
+    isRegenFeedbackOpen,
     handleTailorResume,
     handleGenerateResume,
     toggleKeyword,
@@ -332,5 +460,8 @@ export function useTailorResume({
     openModal: () => setIsModalOpen(true),
     closeModal: () => setIsModalOpen(false),
     dismissNoCredits: () => setIsNoCreditsOpen(false),
+    handleOpenRegenFeedback,
+    handleCloseRegenFeedback: () => setIsRegenFeedbackOpen(false),
+    handleRegenerateWithFeedback,
   };
 }

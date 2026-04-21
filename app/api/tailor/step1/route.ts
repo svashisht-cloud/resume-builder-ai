@@ -49,11 +49,17 @@ export async function POST(request: Request) {
     const jdHash = await hashJD(jobDescriptionText);
     const { jobTitle, companyName } = extractJobMeta(jobDescriptionText);
 
+    // isFreshTailor=true (default) → reset regen count on existing JD rows so
+    // "Tailor Resume" is never blocked by the regen limit. Only the Regenerate
+    // button path sends isFreshTailor=false to enforce the limit.
+    const isFreshTailor = formData.get("isFreshTailor") !== "false";
+
     // Credit / regen check (atomic, transactional)
     const { data: rpcData, error: rpcError } = await supabase.rpc("start_or_regen_resume", {
       p_jd_hash: jdHash,
       p_job_title: jobTitle,
       p_company_name: companyName,
+      p_force_fresh: isFreshTailor,
     });
 
     if (rpcError) {

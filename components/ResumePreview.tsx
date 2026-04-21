@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { createContext, Fragment, useContext } from "react";
 import type { TailoredResume, SectionKey } from "@/types";
 import { DEFAULT_SECTION_ORDER } from "@/lib/resume/detect-section-order";
 
@@ -12,6 +12,11 @@ function capitalize(s: string): string {
   const t = s.trim();
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
+
+const SelectionCtx = createContext<{
+  selectedIds: Set<string>;
+  onToggle: (id: string, text: string) => void;
+} | null>(null);
 
 function SectionHeader({ title }: { title: string }) {
   return (
@@ -27,23 +32,51 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-function BulletList({ items }: { items: string[] }) {
+function BulletList({ items, idPrefix }: { items: string[]; idPrefix: string }) {
+  const ctx = useContext(SelectionCtx);
   return (
     <ul className="ml-4 list-disc">
-      {items.map((item, i) => (
-        <li
-          className="text-[10.5pt] leading-[1.3] text-black"
-          key={`${item}-${i}`}
-          style={{ fontFamily: TIMES }}
-        >
-          {capitalize(item)}
-        </li>
-      ))}
+      {items.map((item, i) => {
+        const id = `${idPrefix}-${i}`;
+        const selected = ctx?.selectedIds.has(id) ?? false;
+        return ctx ? (
+          <li
+            key={id}
+            onClick={() => ctx.onToggle(id, item)}
+            className={`text-[10.5pt] leading-[1.3] cursor-pointer rounded-sm px-1 -mx-1 transition-colors duration-100 ${
+              selected
+                ? "bg-cyan-100 border-l-[3px] border-cyan-500 pl-2"
+                : "text-black hover:bg-amber-100 hover:border-l-[2px] hover:border-amber-400"
+            }`}
+            style={{ fontFamily: TIMES }}
+          >
+            {capitalize(item)}
+          </li>
+        ) : (
+          <li
+            className="text-[10.5pt] leading-[1.3] text-black"
+            key={id}
+            style={{ fontFamily: TIMES }}
+          >
+            {capitalize(item)}
+          </li>
+        );
+      })}
     </ul>
   );
 }
 
-export function ResumePreview({ resume }: { resume: TailoredResume }) {
+export function ResumePreview({
+  resume,
+  interactiveMode,
+  selectedItemIds,
+  onItemToggle,
+}: {
+  resume: TailoredResume;
+  interactiveMode?: boolean;
+  selectedItemIds?: Map<string, string>;
+  onItemToggle?: (id: string, text: string) => void;
+}) {
   const name = present(resume.contact.name) ?? "Resume";
 
   const infoItems = [
@@ -62,10 +95,18 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
   const hasSkills = resume.skills.length > 0;
   const hasCertifications = resume.certifications.length > 0;
 
+  const selectionCtxValue =
+    interactiveMode && onItemToggle
+      ? {
+          selectedIds: new Set(selectedItemIds?.keys() ?? []),
+          onToggle: onItemToggle,
+        }
+      : null;
+
   function renderSection(key: SectionKey): React.ReactElement | null {
     switch (key) {
       case "summary":
-        return null; // summary not rendered in preview
+        return null;
 
       case "education":
         return hasEducation ? (
@@ -74,7 +115,6 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
             <div className="space-y-1.5">
               {resume.education.map((edu) => (
                 <div className="break-inside-avoid" key={`${edu.institution}-${edu.degree}`}>
-                  {/* Institution ←→ Date */}
                   <div className="flex items-baseline justify-between gap-2">
                     <span
                       className="text-[11pt] font-bold leading-snug text-black"
@@ -94,7 +134,6 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
                       </span>
                     )}
                   </div>
-                  {/* Degree + GPA */}
                   <p
                     className="text-[10.5pt] italic leading-snug text-black"
                     style={{ fontFamily: TIMES }}
@@ -113,22 +152,37 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
           <Fragment key="skills">
             <SectionHeader title="Technical Skills" />
             <div className="space-y-0.5">
-              {resume.skills.map((group) => (
-                <div className="flex items-baseline" key={group.category}>
-                  <span
-                    className="shrink-0 w-[170px] text-[11pt] font-bold leading-[1.3] text-black"
-                    style={{ fontFamily: TIMES }}
+              {resume.skills.map((group, gi) => {
+                const id = `skill-${gi}`;
+                const text = `${group.category}: ${group.items.join(", ")}`;
+                const selected = selectionCtxValue?.selectedIds.has(id) ?? false;
+                return (
+                  <div
+                    key={group.category}
+                    onClick={selectionCtxValue ? () => selectionCtxValue.onToggle(id, text) : undefined}
+                    className={`flex items-baseline rounded-sm px-1 -mx-1 transition-colors duration-100 ${
+                      selectionCtxValue
+                        ? selected
+                          ? "bg-cyan-100 border-l-[3px] border-cyan-500 pl-2 cursor-pointer"
+                          : "hover:bg-amber-100 hover:border-l-[2px] hover:border-amber-400 cursor-pointer"
+                        : ""
+                    }`}
                   >
-                    {group.category}:
-                  </span>
-                  <span
-                    className="text-[10.5pt] leading-[1.3] text-black"
-                    style={{ fontFamily: TIMES }}
-                  >
-                    {group.items.join(", ")}
-                  </span>
-                </div>
-              ))}
+                    <span
+                      className="shrink-0 w-[170px] text-[11pt] font-bold leading-[1.3] text-black"
+                      style={{ fontFamily: TIMES }}
+                    >
+                      {group.category}:
+                    </span>
+                    <span
+                      className="text-[10.5pt] leading-[1.3] text-black"
+                      style={{ fontFamily: TIMES }}
+                    >
+                      {group.items.join(", ")}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </Fragment>
         ) : null;
@@ -140,7 +194,6 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
             <div className="space-y-2">
               {resume.experience.map((exp) => (
                 <div className="break-inside-avoid" key={exp.sourceExperienceId}>
-                  {/* Company ←→ Dates */}
                   <div className="flex items-baseline justify-between gap-2">
                     <span
                       className="text-[11pt] font-bold leading-snug text-black"
@@ -157,7 +210,6 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
                       </span>
                     )}
                   </div>
-                  {/* Role ←→ Location */}
                   <div className="flex items-baseline justify-between gap-2">
                     <span
                       className="text-[11pt] italic leading-snug text-black"
@@ -175,7 +227,10 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
                     )}
                   </div>
                   {exp.bullets.length > 0 && (
-                    <BulletList items={exp.bullets.map((b) => b.text)} />
+                    <BulletList
+                      items={exp.bullets.map((b) => b.text)}
+                      idPrefix={`exp-${exp.sourceExperienceId}-bullet`}
+                    />
                   )}
                 </div>
               ))}
@@ -188,9 +243,8 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
           <Fragment key="projects">
             <SectionHeader title="Projects" />
             <div className="space-y-2">
-              {resume.projects.map((proj) => (
+              {resume.projects.map((proj, pi) => (
                 <div className="break-inside-avoid" key={proj.name}>
-                  {/* Name (tech stack) [- URL] ←→ Date */}
                   <div className="flex items-baseline justify-between gap-2">
                     <span
                       className="text-[11pt] font-bold italic leading-snug text-black"
@@ -219,7 +273,12 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
                       </span>
                     )}
                   </div>
-                  {proj.bullets.length > 0 && <BulletList items={proj.bullets} />}
+                  {proj.bullets.length > 0 && (
+                    <BulletList
+                      items={proj.bullets}
+                      idPrefix={`proj-${pi}-bullet`}
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -230,7 +289,7 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
         return hasCertifications ? (
           <Fragment key="certifications">
             <SectionHeader title="Certifications" />
-            <BulletList items={resume.certifications} />
+            <BulletList items={resume.certifications} idPrefix="cert" />
           </Fragment>
         ) : null;
 
@@ -240,46 +299,48 @@ export function ResumePreview({ resume }: { resume: TailoredResume }) {
   }
 
   return (
-    <article
-      className="resume-document min-h-[11in] w-full max-w-[816px] bg-white px-[42px] py-[40px] text-black print:min-h-0 print:max-w-none print:px-0 print:py-0 print:shadow-none"
-      style={{ fontFamily: TIMES }}
-    >
-      {/* ── Header ── */}
-      <header className="mb-0.5 text-center">
-        <h1
-          className="text-[20pt] font-bold leading-tight text-black"
-          style={{ fontFamily: TIMES }}
-        >
-          {name}
-        </h1>
-        {present(resume.contact.roleSubtitle) && (
-          <p
-            className="mt-0.5 text-[11pt] leading-snug text-black"
+    <SelectionCtx.Provider value={selectionCtxValue}>
+      <article
+        className="resume-document min-h-[11in] w-full max-w-[816px] bg-white px-[42px] py-[40px] text-black print:min-h-0 print:max-w-none print:px-0 print:py-0 print:shadow-none"
+        style={{ fontFamily: TIMES }}
+      >
+        {/* ── Header ── */}
+        <header className="mb-0.5 text-center">
+          <h1
+            className="text-[20pt] font-bold leading-tight text-black"
             style={{ fontFamily: TIMES }}
           >
-            {resume.contact.roleSubtitle}
-          </p>
-        )}
-        {infoItems.length > 0 && (
-          <p
-            className="mt-1 text-[10.5pt] leading-snug text-black"
-            style={{ fontFamily: TIMES }}
-          >
-            {infoItems.join("  |  ")}
-          </p>
-        )}
-        {linkItems.length > 0 && (
-          <p
-            className="mt-0.5 text-[10.5pt] leading-snug text-black"
-            style={{ fontFamily: TIMES }}
-          >
-            {linkItems.join("  |  ")}
-          </p>
-        )}
-      </header>
+            {name}
+          </h1>
+          {present(resume.contact.roleSubtitle) && (
+            <p
+              className="mt-0.5 text-[11pt] leading-snug text-black"
+              style={{ fontFamily: TIMES }}
+            >
+              {resume.contact.roleSubtitle}
+            </p>
+          )}
+          {infoItems.length > 0 && (
+            <p
+              className="mt-1 text-[10.5pt] leading-snug text-black"
+              style={{ fontFamily: TIMES }}
+            >
+              {infoItems.join("  |  ")}
+            </p>
+          )}
+          {linkItems.length > 0 && (
+            <p
+              className="mt-0.5 text-[10.5pt] leading-snug text-black"
+              style={{ fontFamily: TIMES }}
+            >
+              {linkItems.join("  |  ")}
+            </p>
+          )}
+        </header>
 
-      {/* ── Sections in source-detected order ── */}
-      {(resume.sectionOrder ?? DEFAULT_SECTION_ORDER).map(renderSection)}
-    </article>
+        {/* ── Sections in source-detected order ── */}
+        {(resume.sectionOrder ?? DEFAULT_SECTION_ORDER).map(renderSection)}
+      </article>
+    </SelectionCtx.Provider>
   );
 }

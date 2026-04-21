@@ -7,9 +7,11 @@ import {
 } from "@/lib/ai/client";
 import {
   buildEvalUserPrompt,
+  buildRefineUserPrompt,
   buildTailoredEvalUserPrompt,
   buildTailorUserPrompt,
   EVAL_SYSTEM_PROMPT,
+  REFINE_SYSTEM_PROMPT,
   TAILORED_EVAL_SYSTEM_PROMPT,
   TAILOR_SYSTEM_PROMPT,
 } from "@/lib/ai/prompts";
@@ -417,6 +419,47 @@ export async function generateTailoredResumeFromRaw({
     tailoredResume: {
       ...result.tailoredResume,
       sectionOrder: detectSectionOrder(resumeText),
+    },
+  };
+}
+
+export async function refineTailoredResume({
+  previousTailoredResume,
+  userFeedback,
+  selectedItemTexts,
+  jobDescriptionText,
+  originalEvaluation,
+}: {
+  previousTailoredResume: TailoredResume;
+  userFeedback: string;
+  selectedItemTexts?: string[];
+  jobDescriptionText: string;
+  originalEvaluation: ResumeEvaluation;
+}): Promise<TailoringResult> {
+  const renderedTailored = renderTailoredResumeText(previousTailoredResume);
+
+  const result = await runStructuredCall({
+    model: AI_TAILOR_MODEL,
+    schema: TailoringResultSchema,
+    schemaName: "tailoring_result",
+    stage: "refineTailoredResume",
+    validationLabel: "AI response failed TailoredResume validation (refine)",
+    temperature: 0.2,
+    systemPrompt: REFINE_SYSTEM_PROMPT,
+    userPrompt: buildRefineUserPrompt({
+      renderedTailored,
+      userFeedback,
+      selectedItemTexts,
+      jobDescriptionText,
+      originalEvaluation,
+    }),
+  });
+
+  return {
+    ...result,
+    tailoredResume: {
+      ...result.tailoredResume,
+      sectionOrder: previousTailoredResume.sectionOrder,
     },
   };
 }

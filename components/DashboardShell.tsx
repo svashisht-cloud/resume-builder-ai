@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ResumePreview } from "@/components/ResumePreview";
 import { useTailorResume } from "@/lib/hooks/useTailorResume";
 import NoCreditsModal from "@/components/NoCreditsModal";
-import { FileText, Briefcase, ArrowRight, Check, X, RefreshCw } from "lucide-react";
+import { FileText, Briefcase, ArrowRight, Check, X, RefreshCw, AlertCircle, ChevronLeft, Sparkles, Download, FileDown, Printer, Upload, Info } from "lucide-react";
 
 const RESUME_PAGE_WIDTH_PX = 816;
 const PREVIEW_CARD_SCALE = 400 / RESUME_PAGE_WIDTH_PX;
@@ -37,10 +38,76 @@ function FeedbackList({
   );
 }
 
+function Tooltip({ text }: { text: string }) {
+  const [pos, setPos] = useState<{ x: number; y: number; above: boolean } | null>(null);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  function show() {
+    if (!ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    setPos({
+      x: r.left + r.width / 2,
+      y: r.top > window.innerHeight / 2 ? r.top - 6 : r.bottom + 6,
+      above: r.top > window.innerHeight / 2,
+    });
+  }
+
+  const tooltip = pos
+    ? createPortal(
+        <span
+          className="pointer-events-none w-48 rounded-lg border border-border/60 bg-surface-raised px-3 py-2 text-xs leading-4 text-muted shadow-lg"
+          style={{
+            position: "fixed",
+            left: pos.x,
+            transform: `translateX(-50%) translateY(${pos.above ? "-100%" : "0%"})`,
+            top: pos.y,
+            zIndex: 9999,
+          }}
+        >
+          {text}
+        </span>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <span ref={ref} className="inline-flex items-center" onMouseEnter={show} onMouseLeave={() => setPos(null)}>
+      <Info size={13} className="cursor-help text-text-dim transition-colors hover:text-muted" />
+      {tooltip}
+    </span>
+  );
+}
+
+const SECTION_ORDER = ["Skills", "Work Experience", "Projects", "Certifications", "Other"] as const;
+
+function getSectionLabel(id: string): string {
+  if (id.startsWith("skill-")) return "Skills";
+  if (id.startsWith("exp-")) return "Work Experience";
+  if (id.startsWith("proj-")) return "Projects";
+  if (id.startsWith("cert-")) return "Certifications";
+  return "Other";
+}
+
 export function DashboardShell() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeFileName, setResumeFileName] = useState("");
   const [jobDescription, setJobDescription] = useState("");
+  const [regenFeedback, setRegenFeedback] = useState("");
+  const [selectedItems, setSelectedItems] = useState<Map<string, string>>(new Map());
+  const [refineScale, setRefineScale] = useState(1);
+  const refineRoRef = useRef<ResizeObserver | null>(null);
+
+  const refineRightRef = useCallback((el: HTMLDivElement | null) => {
+    refineRoRef.current?.disconnect();
+    refineRoRef.current = null;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const available = entry.contentRect.width - 64; // 32px padding each side (px-8)
+      setRefineScale(Math.min(1, available / RESUME_PAGE_WIDTH_PX));
+    });
+    ro.observe(el);
+    refineRoRef.current = ro;
+  }, []);
 
   const {
     result,
@@ -67,7 +134,22 @@ export function DashboardShell() {
     openModal,
     closeModal,
     dismissNoCredits,
+    handleOpenRegenFeedback,
+    handleCloseRegenFeedback,
+    handleRegenerateWithFeedback,
   } = useTailorResume({ resumeFile, jobDescription });
+
+  function handleItemToggle(id: string, text: string) {
+    setSelectedItems((prev) => {
+      const next = new Map(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.set(id, text);
+      }
+      return next;
+    });
+  }
 
   const canTailor =
     resumeFileName.length > 0 &&
@@ -86,7 +168,7 @@ export function DashboardShell() {
             transform:
               viewState === "idle"
                 ? "translateX(0)"
-                : viewState === "result"
+                : (viewState === "result" || viewState === "regen-feedback")
                   ? "translateX(-200vw)"
                   : "translateX(-100vw)",
           }}
@@ -112,7 +194,7 @@ export function DashboardShell() {
                 </header>
 
                 {error && (
-                  <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-950/30 p-4 text-sm text-red-400">
+                  <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-500/40 bg-red-900/30 p-4 text-sm text-red-400">
                     <X size={15} className="mt-0.5 flex-shrink-0" />
                     {error}
                   </div>
@@ -131,10 +213,19 @@ export function DashboardShell() {
                           Resume
                         </label>
                       </div>
-                      <p className="mb-3 text-sm text-muted">Upload a .txt, .pdf, or .docx file.</p>
+                      <label
+                        htmlFor="resume-upload"
+                        className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 bg-background px-4 py-6 text-center transition-colors hover:border-accent/40 hover:bg-surface/50"
+                      >
+                        <Upload size={20} className="text-text-dim" />
+                        <span className="text-sm font-medium text-muted">
+                          Drop your resume here or <span className="text-accent">browse</span>
+                        </span>
+                        <span className="text-xs text-text-dim">.pdf, .docx, or .txt · max 5 MB</span>
+                      </label>
                       <input
                         accept=".pdf,.docx,.txt"
-                        className="block w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm text-foreground transition-colors file:mr-4 file:rounded-md file:border-0 file:bg-surface-raised file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-muted hover:file:bg-border hover:file:text-foreground focus:border-accent/60 focus:outline-none"
+                        className="sr-only"
                         id="resume-upload"
                         onChange={(event) => {
                           const file = event.target.files?.[0] ?? null;
@@ -162,7 +253,7 @@ export function DashboardShell() {
                         </label>
                       </div>
                       <textarea
-                        className="min-h-52 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-3 text-sm leading-6 text-foreground outline-none transition placeholder:text-text-dim focus:border-accent/60 focus:ring-1 focus:ring-accent/20"
+                        className="min-h-52 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-3 text-sm leading-6 text-foreground outline-none transition placeholder:text-text-dim focus:border-accent/60 focus:ring-2 focus:ring-accent/30"
                         id="job-description"
                         onChange={(event) => setJobDescription(event.target.value)}
                         placeholder="Paste the target job description here…"
@@ -171,7 +262,7 @@ export function DashboardShell() {
                     </div>
 
                     <button
-                      className="group flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.25)] transition-all hover:shadow-[0_2px_20px_rgba(6,182,212,0.4)] hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:from-border disabled:to-border disabled:text-text-dim disabled:shadow-none sm:w-auto"
+                      className="group flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.25)] transition-all hover:shadow-[0_4px_24px_rgba(6,182,212,0.5)] hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:from-border disabled:to-border disabled:text-text-dim disabled:shadow-none sm:w-auto"
                       disabled={!canTailor}
                       onClick={handleTailorResume}
                       type="button"
@@ -207,7 +298,7 @@ export function DashboardShell() {
                       Initial ATS Score
                     </p>
                     <div className="mt-3 flex items-end justify-center gap-1.5">
-                      <span className="bg-gradient-to-br from-accent to-cyan-300 bg-clip-text text-8xl font-bold leading-none tracking-tight text-transparent">
+                      <span className="font-mono bg-gradient-to-br from-accent to-cyan-300 bg-clip-text text-8xl font-bold leading-none tracking-tight text-transparent">
                         {initialScore}
                       </span>
                       <span className="mb-2 text-2xl font-light text-text-dim">/100</span>
@@ -216,29 +307,37 @@ export function DashboardShell() {
                 ) : null}
 
                 <p className="mb-6 text-sm font-medium text-text-dim">
-                  {loadingStep === 1 && "Analyzing your resume against the job description…"}
-                  {loadingStep === 2 && "Generating your tailored resume…"}
-                  {loadingStep === 3 && "Getting your final ATS rating…"}
-                  {loadingStep === 0 && pendingEvalData && "Review the skills on the right, then generate."}
+                  <span key={loadingStep} style={{ animation: "fade-in 0.3s ease forwards" }}>
+                    {loadingStep === 1 && "Analyzing your resume against the job description…"}
+                    {loadingStep === 2 && "Generating your tailored resume…"}
+                    {loadingStep === 3 && "Getting your final ATS rating…"}
+                    {loadingStep === 0 && pendingEvalData && "Review the skills on the right, then generate."}
+                  </span>
                 </p>
 
                 {loadingStep > 0 && (
                   <div className="mb-8 flex justify-center">
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-accent" />
+                    <div className="relative h-8 w-8">
+                      <div className="absolute inset-0 animate-spin rounded-full bg-gradient-to-r from-accent to-cyan-300 [mask:radial-gradient(farthest-side,transparent_55%,black_55%)]" />
+                    </div>
                   </div>
                 )}
 
                 {/* Progress bar */}
                 <div className="h-1 w-full overflow-hidden rounded-full bg-border">
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-accent to-cyan-400"
+                    className="h-full rounded-full"
                     style={{
                       width:
                         loadingStep === 1 ? "10%"
-                        : loadingStep === 2 ? "33%"
-                        : loadingStep === 3 ? "66%"
+                        : loadingStep === 2 ? "45%"
+                        : loadingStep === 3 ? "80%"
                         : "33%",
+                      background: "linear-gradient(90deg, var(--accent), #22d3ee, var(--accent))",
+                      backgroundSize: "200% 100%",
+                      animation: "gradient-flow 2.5s ease infinite",
                       transition: "width 700ms ease-in-out",
+                      boxShadow: "0 0 12px rgba(6,182,212,0.5)",
                     }}
                   />
                 </div>
@@ -318,257 +417,378 @@ export function DashboardShell() {
             </div>
           </div>
 
-          {/* ── Panel 3: Result ── */}
-          <div className="h-full w-screen flex-shrink-0 overflow-y-auto bg-background">
-            {result && (
-              <main className="min-h-full px-4 py-8 text-foreground sm:px-6 lg:px-8">
-                <div className="mx-auto w-full max-w-6xl">
-                  <div className="flex flex-wrap items-center gap-4">
+          {/* ── Panel 3: Result / Refine ── */}
+          <div className="relative h-full w-screen flex-shrink-0 overflow-hidden bg-background">
+
+            {/* Refine layer — slides in from right */}
+            <div className={`absolute inset-0 transition-transform duration-[350ms] ease-in-out ${
+              viewState === "regen-feedback" ? "translate-x-0" : "translate-x-full"
+            }`}>
+              {result && (
+              /* ── 2-column refine layout ── */
+              <div className="flex h-full" style={{ animation: "fade-in-up 0.3s ease forwards" }}>
+
+                {/* Left sidebar */}
+                <div className="flex w-1/2 shrink-0 flex-col overflow-hidden border-r border-border/60">
+                  <div className="h-px shrink-0 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+                  <div className="flex min-h-0 flex-1 flex-col px-6 py-6">
                     <button
-                      className="flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-foreground"
-                      onClick={handleReset}
                       type="button"
+                      onClick={handleCloseRegenFeedback}
+                      className="mb-5 flex w-fit shrink-0 items-center gap-1.5 rounded-lg border border-border/60 px-3 py-1.5 text-sm font-medium text-muted transition-all hover:border-border hover:text-foreground"
                     >
-                      ← Back to Dashboard
+                      <ChevronLeft size={14} />
+                      Cancel
                     </button>
 
-                    <div className="flex items-center gap-3">
-                      {regenCount < 2 ? (
-                        <>
-                          <span className="text-xs text-muted">
-                            Regeneration {regenCount} of 2 used
-                          </span>
-                          <button
-                            type="button"
-                            onClick={handleTailorResume}
-                            disabled={!canTailor}
-                            className="flex items-center gap-1.5 rounded-lg border border-accent/50 px-3 py-1.5 text-xs font-semibold text-accent transition-all hover:bg-accent/10 disabled:cursor-not-allowed disabled:border-border disabled:text-text-dim"
-                          >
-                            <RefreshCw size={11} />
-                            Regenerate
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-xs text-rose-400">Regeneration limit reached</span>
-                          <button
-                            type="button"
-                            disabled
-                            title="You've used all 2 regenerations for this resume. Start a new tailoring to continue."
-                            className="flex cursor-not-allowed items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-text-dim"
-                          >
-                            <RefreshCw size={11} />
-                            Regenerate
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleReset}
-                            className="text-xs text-accent underline-offset-2 hover:underline"
-                          >
-                            Start a new tailoring →
-                          </button>
-                        </>
-                      )}
+                    <div className="mb-6 shrink-0">
+                      <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+                        <Sparkles size={16} className="text-accent" />
+                        Refine your resume
+                      </h2>
+                      <p className="mt-2 text-sm text-text-dim">
+                        Describe what you&apos;d like changed, or click bullets on the right to highlight specific items.
+                      </p>
                     </div>
-                  </div>
 
-                  {downloadError && (
-                    <div className="mt-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-950/30 p-4 text-sm text-red-400">
-                      <X size={15} className="mt-0.5 flex-shrink-0" />
-                      {downloadError}
-                    </div>
-                  )}
+                    <textarea
+                      className="min-h-32 w-full shrink-0 resize-none rounded-lg border border-border/60 bg-background px-3 py-3 text-sm leading-6 text-foreground outline-none transition placeholder:text-text-dim focus:border-accent/60 focus:ring-2 focus:ring-accent/30"
+                      placeholder="What would you like changed? (optional)"
+                      value={regenFeedback}
+                      onChange={(e) => setRegenFeedback(e.target.value)}
+                    />
 
-                  <div className="mt-6 grid gap-6 lg:grid-cols-[3fr_2fr]">
-                    {/* ── LEFT ── */}
-                    <div className="space-y-5">
-
-                      {/* Score comparison */}
-                      <section className="overflow-hidden rounded-xl border border-border/60 bg-surface shadow-[0_2px_16px_rgba(0,0,0,0.2)]">
-                        <div className="h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
-                        <div className="p-5 sm:p-6">
-                          <h2 className="mb-5 font-display text-lg font-semibold text-foreground">ATS Fit Score</h2>
-
-                          <div className="grid gap-3 sm:grid-cols-3">
-                            {/* Before */}
-                            <div className="rounded-xl border border-border/60 bg-background p-4">
-                              <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-text-dim">Before</p>
-                              <p className="text-3xl font-bold text-foreground">
-                                {result.scoreComparison.before}
-                                <span className="ml-0.5 text-sm font-normal text-text-dim">/100</span>
-                              </p>
-                            </div>
-                            {/* After */}
-                            <div className="rounded-xl border border-accent/20 bg-accent/5 p-4">
-                              <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-accent/70">After</p>
-                              <p className="bg-gradient-to-r from-accent to-cyan-300 bg-clip-text text-3xl font-bold text-transparent">
-                                {result.scoreComparison.after}
-                                <span className="ml-0.5 text-sm font-normal text-text-dim">/100</span>
-                              </p>
-                            </div>
-                            {/* Delta */}
-                            <div className={`rounded-xl border p-4 ${
-                              result.scoreComparison.delta >= 0
-                                ? "border-emerald-500/20 bg-emerald-950/20"
-                                : "border-red-500/20 bg-red-950/20"
-                            }`}>
-                              <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-text-dim">Improvement</p>
-                              <p className={`text-3xl font-bold ${
-                                result.scoreComparison.delta >= 0 ? "text-emerald-400" : "text-red-400"
-                              }`}>
-                                {formatScoreDelta(result.scoreComparison.delta)}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="mt-5 rounded-lg border border-border/60 bg-background/60 p-4">
-                            <p className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-text-dim">Overall Assessment</p>
-                            <p className="text-sm leading-6 text-muted">
-                              {result.tailoredEvaluation.summary}
+                    {/* Scrollable selected items — flex-1 so regen button stays pinned at bottom */}
+                    <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
+                      {selectedItems.size > 0 && (() => {
+                        const grouped = new Map<string, Array<[string, string]>>();
+                        for (const [id, text] of selectedItems.entries()) {
+                          const label = getSectionLabel(id);
+                          if (!grouped.has(label)) grouped.set(label, []);
+                          grouped.get(label)!.push([id, text]);
+                        }
+                        const orderedSections = SECTION_ORDER.filter((s) => grouped.has(s));
+                        return (
+                          <div className="pb-2">
+                            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-dim">
+                              Selected items ({selectedItems.size})
                             </p>
-                          </div>
-
-                          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                            <div>
-                              <p className="mb-2.5 flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                                <span className="h-2 w-2 rounded-full bg-accent" />
-                                Matched areas
-                              </p>
-                              <div className="flex flex-wrap gap-1.5">
-                                {result.tailoredEvaluation.matchedAreas.length > 0 ? (
-                                  result.tailoredEvaluation.matchedAreas.map((area) => (
-                                    <span
-                                      className="inline-flex items-center gap-1 rounded-full border border-accent/20 bg-accent/8 px-2.5 py-0.5 text-xs font-medium text-accent"
-                                      key={area}
+                            {orderedSections.map((section) => (
+                              <div key={section} className="mb-4">
+                                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-accent/60">
+                                  {section}
+                                </p>
+                                <div className="space-y-1.5">
+                                  {grouped.get(section)!.map(([id, text]) => (
+                                    <div
+                                      key={id}
+                                      style={{ animation: "fade-in-up 0.28s ease forwards" }}
+                                      className="group flex items-start gap-2.5 rounded-lg border border-accent/25 bg-accent/6 px-3 py-2.5"
                                     >
-                                      <Check size={10} />
-                                      {area}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <p className="text-sm text-text-dim">None generated.</p>
-                                )}
-                              </div>
-                            </div>
-                            <div>
-                              <p className="mb-2.5 flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                                <span className="h-2 w-2 rounded-full bg-border" />
-                                Missing areas
-                              </p>
-                              <div className="flex flex-wrap gap-1.5">
-                                {result.tailoredEvaluation.missingAreas.length > 0 ? (
-                                  result.tailoredEvaluation.missingAreas.map((area) => (
-                                    <span
-                                      className="rounded-full border border-border/60 bg-surface-raised px-2.5 py-0.5 text-xs font-medium text-muted"
-                                      key={area}
-                                    >
-                                      {area}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <p className="text-sm text-text-dim">None.</p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                            <div>
-                              <p className="mb-2 text-sm font-semibold text-foreground">Strengths</p>
-                              <FeedbackList
-                                emptyText="No strengths generated."
-                                items={result.tailoredEvaluation.strengths}
-                              />
-                            </div>
-                            <div>
-                              <p className="mb-2 text-sm font-semibold text-foreground">Gaps</p>
-                              <FeedbackList
-                                emptyText="No major gaps."
-                                items={result.tailoredEvaluation.gaps}
-                              />
-                            </div>
-                          </div>
-
-                          {result.tailoredEvaluation.improvementSuggestions.length > 0 && (
-                            <div className="mt-5">
-                              <p className="mb-2 text-sm font-semibold text-foreground">Suggestions</p>
-                              <FeedbackList
-                                emptyText=""
-                                items={result.tailoredEvaluation.improvementSuggestions}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </section>
-
-                      {/* Change log */}
-                      <section className="overflow-hidden rounded-xl border border-border/60 bg-surface shadow-[0_2px_16px_rgba(0,0,0,0.2)]">
-                        <div className="h-px bg-gradient-to-r from-transparent via-accent-secondary/30 to-transparent" />
-                        <div className="p-5 sm:p-6">
-                          <h2 className="mb-4 font-display text-lg font-semibold text-foreground">Change Log</h2>
-                          <ul className="space-y-3">
-                            {result.changeLog.changes.map((change, i) => (
-                              <li
-                                key={`${change.section}-${i}`}
-                                className="flex gap-3 rounded-lg border border-border/40 bg-background/50 p-3"
-                              >
-                                <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-[10px] font-bold text-accent">
-                                  {i + 1}
-                                </span>
-                                <div className="min-w-0">
-                                  <p className="mb-0.5 text-xs font-semibold uppercase tracking-wider text-accent/70">
-                                    {change.section}
-                                  </p>
-                                  <p className="text-sm leading-5 text-muted">{change.reason}</p>
+                                      <span className="mt-[6px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent/70" />
+                                      <p className="flex-1 text-sm leading-[1.45] text-foreground/90">{text}</p>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleItemToggle(id, text)}
+                                        className="mt-0.5 shrink-0 text-text-dim opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
+                                        aria-label="Remove"
+                                      >
+                                        <X size={13} />
+                                      </button>
+                                    </div>
+                                  ))}
                                 </div>
-                              </li>
+                              </div>
                             ))}
-                          </ul>
-                        </div>
-                      </section>
+                          </div>
+                        );
+                      })()}
                     </div>
 
-                    {/* ── RIGHT: Resume preview ── */}
-                    <div>
-                      <div className="sticky top-8">
-                        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
-                          Tailored Resume
-                        </p>
-                        <button
-                          aria-label="Preview tailored resume"
-                          className="group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border/60 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all hover:shadow-[0_8px_40px_rgba(6,182,212,0.15),0_8px_32px_rgba(0,0,0,0.3)] hover:border-accent/30"
-                          onClick={openModal}
-                          style={{ height: PREVIEW_CARD_HEIGHT }}
-                          type="button"
-                        >
-                          <div
-                            className="absolute top-0 blur-[3px]"
-                            style={{
-                              left: "50%",
-                              transform: `translateX(-50%) scale(${PREVIEW_CARD_SCALE})`,
-                              transformOrigin: "top center",
-                              width: RESUME_PAGE_WIDTH_PX,
-                            }}
-                          >
-                            <ResumePreview resume={result.tailoredResume} />
-                          </div>
-                          <div
-                            className="absolute inset-0"
-                            style={{ background: "linear-gradient(to bottom, transparent 35%, rgba(255,255,255,0.97) 80%)" }}
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="flex items-center gap-2 rounded-full bg-gradient-to-r from-accent to-cyan-400 px-5 py-2.5 text-sm font-semibold text-background shadow-[0_4px_16px_rgba(6,182,212,0.35)] transition-all group-hover:shadow-[0_4px_24px_rgba(6,182,212,0.5)]">
-                              Preview & Download
-                              <ArrowRight size={14} />
-                            </span>
-                          </div>
-                        </button>
-                      </div>
+                    <div className="shrink-0 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => handleRegenerateWithFeedback(regenFeedback, [...selectedItems.values()])}
+                        className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.25)] transition-all hover:opacity-95 active:scale-[0.98]"
+                      >
+                        <RefreshCw size={14} />
+                        Regenerate
+                      </button>
                     </div>
                   </div>
                 </div>
-              </main>
-            )}
+
+                {/* Right column — interactive resume viewer */}
+                <div ref={refineRightRef} className="flex-1 overflow-y-auto">
+                  <div className="px-8 py-6">
+                    <div style={{ zoom: refineScale, width: RESUME_PAGE_WIDTH_PX }}>
+                      <ResumePreview
+                        resume={result.tailoredResume}
+                        interactiveMode
+                        selectedItemIds={selectedItems}
+                        onItemToggle={handleItemToggle}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              )}
+            </div>
+
+            {/* Result layer — slides out to left when refine opens */}
+            <div className={`absolute inset-0 transition-transform duration-[350ms] ease-in-out ${
+              viewState === "regen-feedback" ? "-translate-x-full" : "translate-x-0"
+            }`}>
+              {result && (
+              /* ── Existing result layout ── */
+              <div className="h-full overflow-y-auto">
+                <main className="min-h-full px-4 py-8 text-foreground sm:px-6 lg:px-8">
+                  <div className="mx-auto w-full max-w-6xl">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <button
+                        className="flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-foreground"
+                        onClick={handleReset}
+                        type="button"
+                      >
+                        ← Back to Dashboard
+                      </button>
+                      {regenCount >= 2 && (
+                        <button
+                          type="button"
+                          onClick={handleReset}
+                          className="text-xs text-accent underline-offset-2 hover:underline"
+                        >
+                          Start a new tailoring →
+                        </button>
+                      )}
+                    </div>
+
+                    {downloadError && (
+                      <div className="mt-4 flex items-start gap-3 rounded-xl border border-red-500/40 bg-red-900/30 p-4 text-sm text-red-400">
+                        <X size={15} className="mt-0.5 flex-shrink-0" />
+                        {downloadError}
+                      </div>
+                    )}
+
+                    <div className="mt-6 grid gap-6 lg:grid-cols-[3fr_2fr]" style={{ animation: "fade-in-up 0.45s ease forwards" }}>
+                      {/* ── LEFT ── */}
+                      <div className="space-y-5">
+
+                        {/* Score comparison */}
+                        <section className="overflow-hidden rounded-xl border border-border/60 bg-surface shadow-[0_2px_16px_rgba(0,0,0,0.2)]">
+                          <div className="h-px bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+                          <div className="p-5 sm:p-6">
+                            <h2 className="mb-5 flex items-center gap-2 font-display text-lg font-semibold text-foreground">
+                              ATS Fit Score
+                              <Tooltip text="Applicant Tracking System score — how well this resume matches the job description keywords and requirements." />
+                            </h2>
+
+                            <div className="grid gap-3 sm:grid-cols-3">
+                              {/* Before */}
+                              <div className="rounded-xl border border-border/60 bg-gradient-to-br from-surface to-background p-4 transition-colors hover:border-border">
+                                <p className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-text-dim">
+                                  Before <Tooltip text="Score of your original, unmodified resume." />
+                                </p>
+                                <p className="font-mono text-3xl font-bold text-foreground">
+                                  {result.scoreComparison.before}
+                                  <span className="ml-0.5 text-sm font-normal text-text-dim">/100</span>
+                                </p>
+                              </div>
+                              {/* After */}
+                              <div className="rounded-xl border border-accent/20 bg-accent/5 p-4 transition-colors hover:border-accent/30">
+                                <p className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-widest text-accent/70">
+                                  After <Tooltip text="Score of the AI-tailored resume, optimized for this job." />
+                                </p>
+                                <p className="font-mono bg-gradient-to-r from-accent to-cyan-300 bg-clip-text text-3xl font-bold text-transparent">
+                                  {result.scoreComparison.after}
+                                  <span className="ml-0.5 text-sm font-normal text-text-dim">/100</span>
+                                </p>
+                              </div>
+                              {/* Delta */}
+                              <div className={`rounded-xl border p-4 transition-colors ${
+                                result.scoreComparison.delta >= 0
+                                  ? "border-emerald-500/20 bg-emerald-950/20 hover:border-emerald-500/30"
+                                  : "border-red-500/20 bg-red-950/20 hover:border-red-500/30"
+                              }`}>
+                                <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-text-dim">Improvement</p>
+                                <p className={`font-mono text-3xl font-bold ${
+                                  result.scoreComparison.delta >= 0 ? "text-emerald-400" : "text-red-400"
+                                }`}>
+                                  {formatScoreDelta(result.scoreComparison.delta)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="mt-5 rounded-lg border border-border/60 bg-background/60 p-4 transition-colors hover:border-border/80">
+                              <p className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-text-dim">Overall Assessment</p>
+                              <p className="text-sm leading-6 text-muted">
+                                {result.tailoredEvaluation.summary}
+                              </p>
+                            </div>
+
+                            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                              <div>
+                                <p className="mb-2.5 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                                  <Check size={13} className="text-accent" />
+                                  Matched areas
+                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {result.tailoredEvaluation.matchedAreas.length > 0 ? (
+                                    result.tailoredEvaluation.matchedAreas.map((area) => (
+                                      <span
+                                        className="inline-flex items-center gap-1 rounded-full border border-accent/20 bg-accent/8 px-2.5 py-0.5 text-xs font-medium text-accent"
+                                        key={area}
+                                      >
+                                        <Check size={10} />
+                                        {area}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <p className="text-sm text-text-dim">None generated.</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div>
+                                <p className="mb-2.5 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                                  <AlertCircle size={13} className="text-text-dim" />
+                                  Missing areas
+                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {result.tailoredEvaluation.missingAreas.length > 0 ? (
+                                    result.tailoredEvaluation.missingAreas.map((area) => (
+                                      <span
+                                        className="rounded-full border border-border/60 bg-surface-raised px-2.5 py-0.5 text-xs font-medium text-muted"
+                                        key={area}
+                                      >
+                                        {area}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <p className="text-sm text-text-dim">None.</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                              <div>
+                                <p className="mb-2 text-sm font-semibold text-foreground">Strengths</p>
+                                <FeedbackList
+                                  emptyText="No strengths generated."
+                                  items={result.tailoredEvaluation.strengths}
+                                />
+                              </div>
+                              <div>
+                                <p className="mb-2 text-sm font-semibold text-foreground">Gaps</p>
+                                <FeedbackList
+                                  emptyText="No major gaps."
+                                  items={result.tailoredEvaluation.gaps}
+                                />
+                              </div>
+                            </div>
+
+                            {result.tailoredEvaluation.improvementSuggestions.length > 0 && (
+                              <div className="mt-5">
+                                <p className="mb-2 text-sm font-semibold text-foreground">Suggestions</p>
+                                <FeedbackList
+                                  emptyText=""
+                                  items={result.tailoredEvaluation.improvementSuggestions}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </section>
+
+                        {/* Change log */}
+                        <section className="overflow-hidden rounded-xl border border-border/60 bg-surface shadow-[0_2px_16px_rgba(0,0,0,0.2)]">
+                          <div className="h-px bg-gradient-to-r from-transparent via-accent-secondary/30 to-transparent" />
+                          <div className="p-5 sm:p-6">
+                            <h2 className="mb-4 font-display text-lg font-semibold text-foreground">Change Log</h2>
+                            <ul className="space-y-3">
+                              {result.changeLog.changes.map((change, i) => (
+                                <li
+                                  key={`${change.section}-${i}`}
+                                  className="flex gap-3 rounded-lg border border-border/40 bg-background/50 p-3"
+                                >
+                                  <span className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-accent/10 text-[10px] font-bold text-accent">
+                                    {i + 1}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <p className="mb-0.5 text-xs font-semibold uppercase tracking-wider text-accent/70">
+                                      {change.section}
+                                    </p>
+                                    <p className="text-sm leading-5 text-muted">{change.reason}</p>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </section>
+                      </div>
+
+                      {/* ── RIGHT: Resume preview ── */}
+                      <div>
+                        <div className="sticky top-8">
+                          <div className="mb-3 flex items-center justify-between gap-3">
+                            <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+                              Tailored Resume
+                            </p>
+                            {regenCount < 2 ? (
+                              <button
+                                type="button"
+                                onClick={() => { setRegenFeedback(""); setSelectedItems(new Map()); handleOpenRegenFeedback(); }}
+                                disabled={loadingStep !== 0}
+                                className="flex items-center gap-1.5 rounded-lg border border-accent/50 bg-accent/8 px-3 py-1.5 text-xs font-semibold text-accent transition-all hover:border-accent/70 hover:bg-accent/15 disabled:cursor-not-allowed disabled:border-border disabled:text-text-dim"
+                              >
+                                <RefreshCw size={13} />
+                                Regenerate
+                                <span className="text-accent/50">({regenCount}/2)</span>
+                              </button>
+                            ) : (
+                              <span className="rounded-lg border border-rose-500/20 bg-rose-950/20 px-2.5 py-1.5 text-xs font-medium text-rose-400">
+                                Limit reached (2/2)
+                              </span>
+                            )}
+                          </div>
+
+                          <button
+                            aria-label="Preview tailored resume"
+                            className="group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border/60 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all hover:shadow-[0_8px_40px_rgba(6,182,212,0.15),0_8px_32px_rgba(0,0,0,0.3)] hover:border-accent/30"
+                            onClick={openModal}
+                            style={{ height: PREVIEW_CARD_HEIGHT }}
+                            type="button"
+                          >
+                            <div
+                              className="absolute top-0 blur-[3px]"
+                              style={{
+                                left: "50%",
+                                transform: `translateX(-50%) scale(${PREVIEW_CARD_SCALE})`,
+                                transformOrigin: "top center",
+                                width: RESUME_PAGE_WIDTH_PX,
+                              }}
+                            >
+                              <ResumePreview resume={result.tailoredResume} />
+                            </div>
+                            <div
+                              className="absolute inset-0"
+                              style={{ background: "linear-gradient(to bottom, transparent 35%, rgba(255,255,255,0.97) 80%)" }}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="flex items-center gap-2 rounded-full bg-gradient-to-r from-accent to-cyan-400 px-5 py-2.5 text-sm font-semibold text-background shadow-[0_4px_16px_rgba(6,182,212,0.35)] transition-all group-hover:shadow-[0_4px_24px_rgba(6,182,212,0.5)]">
+                                Preview & Download
+                                <ArrowRight size={14} />
+                              </span>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </main>
+              </div>
+              )}
+            </div>
+
           </div>
 
         </div>
@@ -588,26 +808,29 @@ export function DashboardShell() {
           >
             <div className="flex flex-wrap gap-2">
               <button
-                className="h-9 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-sm transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:from-border disabled:to-border disabled:text-text-dim disabled:shadow-none"
+                className="flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-sm transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:from-border disabled:to-border disabled:text-text-dim disabled:shadow-none"
                 disabled={isDownloadingPdf}
                 onClick={handleDownloadPdf}
                 type="button"
               >
+                <Download size={14} />
                 {isDownloadingPdf ? "Preparing…" : "Download PDF"}
               </button>
               <button
-                className="h-9 rounded-lg border border-accent/50 bg-transparent px-4 text-sm font-semibold text-accent transition-all hover:bg-accent/10 disabled:cursor-not-allowed disabled:border-border disabled:text-text-dim"
+                className="flex h-9 items-center gap-2 rounded-lg border border-accent/50 bg-transparent px-4 text-sm font-semibold text-accent transition-all hover:bg-accent/10 disabled:cursor-not-allowed disabled:border-border disabled:text-text-dim"
                 disabled={isDownloadingDocx}
                 onClick={handleDownloadDocx}
                 type="button"
               >
+                <FileDown size={14} />
                 {isDownloadingDocx ? "Preparing…" : "Download DOCX"}
               </button>
               <button
-                className="h-9 rounded-lg border border-border/60 bg-transparent px-4 text-sm font-semibold text-muted transition-all hover:border-border hover:text-foreground"
+                className="flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-transparent px-4 text-sm font-semibold text-muted transition-all hover:border-border hover:text-foreground"
                 onClick={handlePrintResume}
                 type="button"
               >
+                <Printer size={14} />
                 Print / Save as PDF
               </button>
             </div>
