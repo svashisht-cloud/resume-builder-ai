@@ -1,8 +1,50 @@
 import { createContext, Fragment, useContext } from "react";
-import type { TailoredResume, SectionKey } from "@/types";
+import type { TailoredResume, SectionKey, ResumeStyle } from "@/types";
+import { DEFAULT_RESUME_STYLE } from "@/types";
 import { DEFAULT_SECTION_ORDER } from "@/lib/resume/detect-section-order";
 
-const TIMES = '"Times New Roman", Times, serif';
+// ── Style lookup tables ───────────────────────────────────────────────────────
+
+const FONT_CSS: Record<ResumeStyle["fontFamily"], string> = {
+  times: '"Times New Roman", Times, serif',
+  helvetica: '"Helvetica Neue", Helvetica, Arial, sans-serif',
+};
+
+const NAME_PT: Record<ResumeStyle["nameSize"], number> = { small: 18, medium: 20, large: 22 };
+const HEADER_PT: Record<ResumeStyle["headerSize"], number> = { small: 11, medium: 12, large: 13 };
+const BODY_PT: Record<ResumeStyle["bodySize"], number> = { small: 9.5, medium: 10.5, large: 11.5 };
+const BULLET_LEADING: Record<ResumeStyle["bulletSpacing"], number> = { compact: 1.15, normal: 1.3, relaxed: 1.5 };
+const SECTION_MT: Record<ResumeStyle["sectionSpacing"], string> = { compact: "0.25rem", normal: "0.5rem", relaxed: "1rem" };
+const ITEM_GAP: Record<ResumeStyle["sectionSpacing"], string> = { compact: "0.25rem", normal: "0.5rem", relaxed: "0.75rem" };
+
+// ── Contexts ─────────────────────────────────────────────────────────────────
+
+const SelectionCtx = createContext<{
+  selectedIds: Set<string>;
+  onToggle: (id: string, text: string) => void;
+} | null>(null);
+
+interface RenderStyle {
+  fontFamily: string;
+  namePt: number;
+  headerPt: number;
+  bodyPt: number;
+  leading: number;
+  sectionMt: string;
+  itemGap: string;
+}
+
+const RenderStyleCtx = createContext<RenderStyle>({
+  fontFamily: FONT_CSS.times,
+  namePt: 20,
+  headerPt: 12,
+  bodyPt: 10.5,
+  leading: 1.3,
+  sectionMt: "0.5rem",
+  itemGap: "0.5rem",
+});
+
+// ── Helper ────────────────────────────────────────────────────────────────────
 
 function present(v: string | null | undefined): string | null {
   return v?.trim() ? v.trim() : null;
@@ -13,17 +55,15 @@ function capitalize(s: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-const SelectionCtx = createContext<{
-  selectedIds: Set<string>;
-  onToggle: (id: string, text: string) => void;
-} | null>(null);
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function SectionHeader({ title }: { title: string }) {
+  const { fontFamily, headerPt, sectionMt } = useContext(RenderStyleCtx);
   return (
-    <div className="mb-1 mt-2">
+    <div className="mb-1" style={{ marginTop: sectionMt }}>
       <h2
-        className="text-[12pt] font-bold uppercase text-black"
-        style={{ fontFamily: TIMES }}
+        className="font-bold uppercase text-black"
+        style={{ fontSize: `${headerPt}pt`, fontFamily }}
       >
         {title}
       </h2>
@@ -34,6 +74,7 @@ function SectionHeader({ title }: { title: string }) {
 
 function BulletList({ items, idPrefix }: { items: string[]; idPrefix: string }) {
   const ctx = useContext(SelectionCtx);
+  const { fontFamily, bodyPt, leading } = useContext(RenderStyleCtx);
   return (
     <ul className="ml-4 list-disc">
       {items.map((item, i) => {
@@ -43,20 +84,20 @@ function BulletList({ items, idPrefix }: { items: string[]; idPrefix: string }) 
           <li
             key={id}
             onClick={() => ctx.onToggle(id, item)}
-            className={`text-[10.5pt] leading-[1.3] cursor-pointer rounded-sm px-1 -mx-1 transition-colors duration-100 ${
+            className={`cursor-pointer rounded-sm px-1 -mx-1 transition-colors duration-100 ${
               selected
                 ? "bg-cyan-100 border-l-[3px] border-cyan-500 pl-2"
                 : "text-black hover:bg-amber-100 hover:border-l-[2px] hover:border-amber-400"
             }`}
-            style={{ fontFamily: TIMES }}
+            style={{ fontSize: `${bodyPt}pt`, lineHeight: leading, fontFamily }}
           >
             {capitalize(item)}
           </li>
         ) : (
           <li
-            className="text-[10.5pt] leading-[1.3] text-black"
+            className="text-black"
             key={id}
-            style={{ fontFamily: TIMES }}
+            style={{ fontSize: `${bodyPt}pt`, lineHeight: leading, fontFamily }}
           >
             {capitalize(item)}
           </li>
@@ -66,17 +107,31 @@ function BulletList({ items, idPrefix }: { items: string[]; idPrefix: string }) 
   );
 }
 
+// ── Main component ────────────────────────────────────────────────────────────
+
 export function ResumePreview({
   resume,
+  resumeStyle = DEFAULT_RESUME_STYLE,
   interactiveMode,
   selectedItemIds,
   onItemToggle,
 }: {
   resume: TailoredResume;
+  resumeStyle?: ResumeStyle;
   interactiveMode?: boolean;
   selectedItemIds?: Map<string, string>;
   onItemToggle?: (id: string, text: string) => void;
 }) {
+  const fontFamily = FONT_CSS[resumeStyle.fontFamily];
+  const namePt = NAME_PT[resumeStyle.nameSize];
+  const headerPt = HEADER_PT[resumeStyle.headerSize];
+  const bodyPt = BODY_PT[resumeStyle.bodySize];
+  const leading = BULLET_LEADING[resumeStyle.bulletSpacing];
+  const sectionMt = SECTION_MT[resumeStyle.sectionSpacing];
+  const itemGap = ITEM_GAP[resumeStyle.sectionSpacing];
+
+  const renderStyleValue: RenderStyle = { fontFamily, namePt, headerPt, bodyPt, leading, sectionMt, itemGap };
+
   const name = present(resume.contact.name) ?? "Resume";
 
   const infoItems = [
@@ -112,13 +167,13 @@ export function ResumePreview({
         return hasEducation ? (
           <Fragment key="education">
             <SectionHeader title="Education" />
-            <div className="space-y-1.5">
+            <div className="space-y-1.5" style={{ gap: itemGap }}>
               {resume.education.map((edu) => (
                 <div className="break-inside-avoid" key={`${edu.institution}-${edu.degree}`}>
                   <div className="flex items-baseline justify-between gap-2">
                     <span
-                      className="text-[11pt] font-bold leading-snug text-black"
-                      style={{ fontFamily: TIMES }}
+                      className="font-bold leading-snug text-black"
+                      style={{ fontSize: `${bodyPt + 0.5}pt`, fontFamily }}
                     >
                       {edu.institution}
                       {present(edu.location) ? (
@@ -127,16 +182,16 @@ export function ResumePreview({
                     </span>
                     {present(edu.date) && (
                       <span
-                        className="shrink-0 text-[10.5pt] font-bold leading-snug text-black"
-                        style={{ fontFamily: TIMES }}
+                        className="shrink-0 font-bold leading-snug text-black"
+                        style={{ fontSize: `${bodyPt}pt`, fontFamily }}
                       >
                         {edu.date}
                       </span>
                     )}
                   </div>
                   <p
-                    className="text-[10.5pt] italic leading-snug text-black"
-                    style={{ fontFamily: TIMES }}
+                    className="italic leading-snug text-black"
+                    style={{ fontSize: `${bodyPt}pt`, fontFamily }}
                   >
                     {edu.degree}
                     {present(edu.gpa) ? `, GPA: ${edu.gpa}` : ""}
@@ -169,14 +224,14 @@ export function ResumePreview({
                     }`}
                   >
                     <span
-                      className="shrink-0 w-[170px] text-[11pt] font-bold leading-[1.3] text-black"
-                      style={{ fontFamily: TIMES }}
+                      className="shrink-0 w-[170px] font-bold leading-[1.3] text-black"
+                      style={{ fontSize: `${bodyPt + 0.5}pt`, fontFamily }}
                     >
                       {group.category}:
                     </span>
                     <span
-                      className="text-[10.5pt] leading-[1.3] text-black"
-                      style={{ fontFamily: TIMES }}
+                      className="leading-[1.3] text-black"
+                      style={{ fontSize: `${bodyPt}pt`, fontFamily }}
                     >
                       {group.items.join(", ")}
                     </span>
@@ -191,20 +246,20 @@ export function ResumePreview({
         return hasExperience ? (
           <Fragment key="experience">
             <SectionHeader title="Work Experience" />
-            <div className="space-y-2">
+            <div className="space-y-2" style={{ gap: itemGap }}>
               {resume.experience.map((exp) => (
                 <div className="break-inside-avoid" key={exp.sourceExperienceId}>
                   <div className="flex items-baseline justify-between gap-2">
                     <span
-                      className="text-[11pt] font-bold leading-snug text-black"
-                      style={{ fontFamily: TIMES }}
+                      className="font-bold leading-snug text-black"
+                      style={{ fontSize: `${bodyPt + 0.5}pt`, fontFamily }}
                     >
                       {exp.company}
                     </span>
                     {present(exp.dates) && (
                       <span
-                        className="shrink-0 text-[10.5pt] font-bold leading-snug text-black"
-                        style={{ fontFamily: TIMES }}
+                        className="shrink-0 font-bold leading-snug text-black"
+                        style={{ fontSize: `${bodyPt}pt`, fontFamily }}
                       >
                         {exp.dates}
                       </span>
@@ -212,15 +267,15 @@ export function ResumePreview({
                   </div>
                   <div className="flex items-baseline justify-between gap-2">
                     <span
-                      className="text-[11pt] italic leading-snug text-black"
-                      style={{ fontFamily: TIMES }}
+                      className="italic leading-snug text-black"
+                      style={{ fontSize: `${bodyPt + 0.5}pt`, fontFamily }}
                     >
                       {exp.title}
                     </span>
                     {present(exp.location) && (
                       <span
-                        className="shrink-0 text-[10.5pt] italic leading-snug text-black"
-                        style={{ fontFamily: TIMES }}
+                        className="shrink-0 italic leading-snug text-black"
+                        style={{ fontSize: `${bodyPt}pt`, fontFamily }}
                       >
                         {exp.location}
                       </span>
@@ -242,13 +297,13 @@ export function ResumePreview({
         return hasProjects ? (
           <Fragment key="projects">
             <SectionHeader title="Projects" />
-            <div className="space-y-2">
+            <div className="space-y-2" style={{ gap: itemGap }}>
               {resume.projects.map((proj, pi) => (
                 <div className="break-inside-avoid" key={proj.name}>
                   <div className="flex items-baseline justify-between gap-2">
                     <span
-                      className="text-[11pt] font-bold italic leading-snug text-black"
-                      style={{ fontFamily: TIMES }}
+                      className="font-bold italic leading-snug text-black"
+                      style={{ fontSize: `${bodyPt + 0.5}pt`, fontFamily }}
                     >
                       {proj.name}
                       {present(proj.techStack) && ` (${proj.techStack})`}
@@ -266,8 +321,8 @@ export function ResumePreview({
                     </span>
                     {present(proj.date) && (
                       <span
-                        className="shrink-0 text-[10.5pt] font-bold leading-snug text-black"
-                        style={{ fontFamily: TIMES }}
+                        className="shrink-0 font-bold leading-snug text-black"
+                        style={{ fontSize: `${bodyPt}pt`, fontFamily }}
                       >
                         {proj.date}
                       </span>
@@ -300,47 +355,49 @@ export function ResumePreview({
 
   return (
     <SelectionCtx.Provider value={selectionCtxValue}>
-      <article
-        className="resume-document min-h-[11in] w-full max-w-[816px] bg-white px-[42px] py-[40px] text-black print:min-h-0 print:max-w-none print:px-0 print:py-0 print:shadow-none"
-        style={{ fontFamily: TIMES }}
-      >
-        {/* ── Header ── */}
-        <header className="mb-0.5 text-center">
-          <h1
-            className="text-[20pt] font-bold leading-tight text-black"
-            style={{ fontFamily: TIMES }}
-          >
-            {name}
-          </h1>
-          {present(resume.contact.roleSubtitle) && (
-            <p
-              className="mt-0.5 text-[11pt] leading-snug text-black"
-              style={{ fontFamily: TIMES }}
+      <RenderStyleCtx.Provider value={renderStyleValue}>
+        <article
+          className="resume-document min-h-[11in] w-full max-w-[816px] bg-white px-[42px] py-[40px] text-black print:min-h-0 print:max-w-none print:px-0 print:py-0 print:shadow-none"
+          style={{ fontFamily }}
+        >
+          {/* ── Header ── */}
+          <header className="mb-0.5 text-center">
+            <h1
+              className="font-bold leading-tight text-black"
+              style={{ fontSize: `${namePt}pt`, fontFamily }}
             >
-              {resume.contact.roleSubtitle}
-            </p>
-          )}
-          {infoItems.length > 0 && (
-            <p
-              className="mt-1 text-[10.5pt] leading-snug text-black"
-              style={{ fontFamily: TIMES }}
-            >
-              {infoItems.join("  |  ")}
-            </p>
-          )}
-          {linkItems.length > 0 && (
-            <p
-              className="mt-0.5 text-[10.5pt] leading-snug text-black"
-              style={{ fontFamily: TIMES }}
-            >
-              {linkItems.join("  |  ")}
-            </p>
-          )}
-        </header>
+              {name}
+            </h1>
+            {present(resume.contact.roleSubtitle) && (
+              <p
+                className="mt-0.5 leading-snug text-black"
+                style={{ fontSize: `${bodyPt + 0.5}pt`, fontFamily }}
+              >
+                {resume.contact.roleSubtitle}
+              </p>
+            )}
+            {infoItems.length > 0 && (
+              <p
+                className="mt-1 leading-snug text-black"
+                style={{ fontSize: `${bodyPt}pt`, fontFamily }}
+              >
+                {infoItems.join("  |  ")}
+              </p>
+            )}
+            {linkItems.length > 0 && (
+              <p
+                className="mt-0.5 leading-snug text-black"
+                style={{ fontSize: `${bodyPt}pt`, fontFamily }}
+              >
+                {linkItems.join("  |  ")}
+              </p>
+            )}
+          </header>
 
-        {/* ── Sections in source-detected order ── */}
-        {(resume.sectionOrder ?? DEFAULT_SECTION_ORDER).map(renderSection)}
-      </article>
+          {/* ── Sections in source-detected order ── */}
+          {(resume.sectionOrder ?? DEFAULT_SECTION_ORDER).map(renderSection)}
+        </article>
+      </RenderStyleCtx.Provider>
     </SelectionCtx.Provider>
   );
 }

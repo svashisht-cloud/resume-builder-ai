@@ -3,7 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { z } from "zod";
 import { ResumePDFDocument } from "@/components/ResumePDFDocument";
 import { buildResumePdfFilename } from "@/lib/resume/filename";
-import { TailoredResumeSchema, type TailoredResume } from "@/types";
+import { TailoredResumeSchema, ResumeStyleSchema, type TailoredResume } from "@/types";
 
 function logResumeStats(resume: TailoredResume): void {
   const allText: string[] = [
@@ -50,6 +50,7 @@ export const runtime = "nodejs";
 const ExportPdfRequestSchema = z.object({
   role: z.string().nullable().optional(),
   tailoredResume: TailoredResumeSchema,
+  resumeStyle: ResumeStyleSchema.optional(),
 });
 
 function contentDisposition(filename: string) {
@@ -67,6 +68,7 @@ export async function POST(request: Request) {
     });
     const pdfDocument = React.createElement(ResumePDFDocument, {
       resume: payload.tailoredResume,
+      resumeStyle: payload.resumeStyle,
     }) as unknown as PdfElement;
     const pdfBuffer = await renderToBuffer(pdfDocument);
 

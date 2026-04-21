@@ -7,156 +7,83 @@ import {
   View,
 } from "@react-pdf/renderer";
 import type React from "react";
-import type { TailoredResume, SectionKey } from "@/types";
+import type { TailoredResume, SectionKey, ResumeStyle } from "@/types";
+import { DEFAULT_RESUME_STYLE } from "@/types";
 import { DEFAULT_SECTION_ORDER } from "@/lib/resume/detect-section-order";
 
 const BLACK = "#000000";
 
-const styles = StyleSheet.create({
-  page: {
-    paddingTop: 30,
-    paddingRight: 32,
-    paddingBottom: 30,
-    paddingLeft: 32,
-    fontFamily: "Times-Roman",
-    fontSize: 10.5,
-    lineHeight: 1.27,
-    color: BLACK,
+// PDF font names for each fontFamily option (built-in PDF standard fonts)
+const PDF_FONT: Record<ResumeStyle["fontFamily"], { normal: string; bold: string; italic: string; boldItalic: string }> = {
+  times: {
+    normal: "Times-Roman",
+    bold: "Times-Bold",
+    italic: "Times-Italic",
+    boldItalic: "Times-BoldItalic",
   },
-  // ── Header ──────────────────────────────────────────────────────────────
-  header: {
-    textAlign: "center",
-    marginBottom: 3,
+  helvetica: {
+    normal: "Helvetica",
+    bold: "Helvetica-Bold",
+    italic: "Helvetica-Oblique",
+    boldItalic: "Helvetica-BoldOblique",
   },
-  name: {
-    fontSize: 20,
-    fontFamily: "Times-Bold",
-    color: BLACK,
-    marginBottom: 10,
-  },
-  roleSubtitle: {
-    fontSize: 11,
-    fontFamily: "Times-Roman",
-    color: BLACK,
-    marginBottom: 2,
-  },
-  contactLine: {
-    fontSize: 10.5,
-    fontFamily: "Times-Roman",
-    color: BLACK,
-    marginTop: 1,
-  },
-  // ── Section ─────────────────────────────────────────────────────────────
-  section: {
-    marginTop: 3,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontFamily: "Times-Bold",
-    color: BLACK,
-    textTransform: "uppercase",
-    marginBottom: 1,
-  },
-  sectionRule: {
-    borderBottomWidth: 0.75,
-    borderBottomColor: BLACK,
-    marginBottom: 2,
-  },
-  // ── Experience ───────────────────────────────────────────────────────────
-  expBlock: {
-    marginBottom: 4,
-  },
-  twoColRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-  },
-  companyText: {
-    fontSize: 11,
-    fontFamily: "Times-Bold",
-    color: BLACK,
-  },
-  roleText: {
-    fontSize: 11,
-    fontFamily: "Times-Italic",
-    color: BLACK,
-  },
-  locationText: {
-    fontSize: 10.5,
-    fontFamily: "Times-Italic",
-    color: BLACK,
-  },
-  datesText: {
-    fontSize: 10.5,
-    fontFamily: "Times-Bold",
-    color: BLACK,
-  },
-  // ── Projects ──────────────────────────────────────────────────────────────
-  projectName: {
-    fontSize: 11,
-    fontFamily: "Times-BoldItalic",
-    color: BLACK,
-  },
-  projectTech: {
-    fontSize: 10.5,
-    fontFamily: "Times-Italic",
-    color: BLACK,
-    marginBottom: 1,
-  },
-  // ── Education ─────────────────────────────────────────────────────────────
-  institutionText: {
-    fontSize: 11,
-    fontFamily: "Times-Bold",
-    color: BLACK,
-  },
-  degreeText: {
-    fontSize: 10.5,
-    fontFamily: "Times-Italic",
-    color: BLACK,
-  },
-  // ── Skills ───────────────────────────────────────────────────────────────
-  skillRow: {
-    flexDirection: "row",
-    flexWrap: "nowrap",
-    marginBottom: 1,
-  },
-  skillCategory: {
-    fontSize: 11,
-    fontFamily: "Times-Bold",
-    color: BLACK,
-    width: 150,
-  },
-  skillItems: {
-    fontSize: 10.5,
-    fontFamily: "Times-Roman",
-    color: BLACK,
-    flex: 1,
-  },
-  // ── Project URL ──────────────────────────────────────────────────────────
-  projectUrl: {
-    fontSize: 9,
-    fontFamily: "Times-Roman",
-    color: "#1155CC",
-  },
-  // ── Bullets ──────────────────────────────────────────────────────────────
-  bulletRow: {
-    flexDirection: "row",
-    marginBottom: 3,
-    paddingLeft: 4,
-  },
-  bulletMarker: {
-    width: 8,
-    fontSize: 10.5,
-    fontFamily: "Times-Roman",
-    color: BLACK,
-  },
-  bulletText: {
-    flex: 1,
-    fontSize: 10.5,
-    fontFamily: "Times-Roman",
-    color: BLACK,
-  },
-});
+};
+
+const NAME_PT: Record<ResumeStyle["nameSize"], number> = { small: 18, medium: 20, large: 22 };
+const HEADER_PT: Record<ResumeStyle["headerSize"], number> = { small: 11, medium: 12, large: 13 };
+const BODY_PT: Record<ResumeStyle["bodySize"], number> = { small: 9.5, medium: 10.5, large: 11.5 };
+const BULLET_LEADING: Record<ResumeStyle["bulletSpacing"], number> = { compact: 1.15, normal: 1.27, relaxed: 1.5 };
+const SECTION_MT: Record<ResumeStyle["sectionSpacing"], number> = { compact: 1, normal: 3, relaxed: 6 };
+const ITEM_MB: Record<ResumeStyle["sectionSpacing"], number> = { compact: 2, normal: 4, relaxed: 7 };
+
+function makeStyles(style: ResumeStyle) {
+  const font = PDF_FONT[style.fontFamily];
+  const namePt = NAME_PT[style.nameSize];
+  const headerPt = HEADER_PT[style.headerSize];
+  const bodyPt = BODY_PT[style.bodySize];
+  const leading = BULLET_LEADING[style.bulletSpacing];
+  const sectionMt = SECTION_MT[style.sectionSpacing];
+  const itemMb = ITEM_MB[style.sectionSpacing];
+
+  return StyleSheet.create({
+    page: {
+      paddingTop: 30,
+      paddingRight: 32,
+      paddingBottom: 30,
+      paddingLeft: 32,
+      fontFamily: font.normal,
+      fontSize: bodyPt,
+      lineHeight: leading,
+      color: BLACK,
+    },
+    header: { textAlign: "center", marginBottom: 3 },
+    name: { fontSize: namePt, fontFamily: font.bold, color: BLACK, marginBottom: 10 },
+    roleSubtitle: { fontSize: bodyPt + 0.5, fontFamily: font.normal, color: BLACK, marginBottom: 2 },
+    contactLine: { fontSize: bodyPt, fontFamily: font.normal, color: BLACK, marginTop: 1 },
+    section: { marginTop: sectionMt },
+    sectionTitle: { fontSize: headerPt, fontFamily: font.bold, color: BLACK, textTransform: "uppercase", marginBottom: 1 },
+    sectionRule: { borderBottomWidth: 0.75, borderBottomColor: BLACK, marginBottom: 2 },
+    expBlock: { marginBottom: itemMb },
+    twoColRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" },
+    companyText: { fontSize: bodyPt + 0.5, fontFamily: font.bold, color: BLACK },
+    roleText: { fontSize: bodyPt + 0.5, fontFamily: font.italic, color: BLACK },
+    locationText: { fontSize: bodyPt, fontFamily: font.italic, color: BLACK },
+    datesText: { fontSize: bodyPt, fontFamily: font.bold, color: BLACK },
+    projectName: { fontSize: bodyPt + 0.5, fontFamily: font.boldItalic, color: BLACK },
+    projectTech: { fontSize: bodyPt, fontFamily: font.italic, color: BLACK, marginBottom: 1 },
+    institutionText: { fontSize: bodyPt + 0.5, fontFamily: font.bold, color: BLACK },
+    degreeText: { fontSize: bodyPt, fontFamily: font.italic, color: BLACK },
+    skillRow: { flexDirection: "row", flexWrap: "nowrap", marginBottom: 1 },
+    skillCategory: { fontSize: bodyPt + 0.5, fontFamily: font.bold, color: BLACK, width: 150 },
+    skillItems: { fontSize: bodyPt, fontFamily: font.normal, color: BLACK, flex: 1 },
+    projectUrl: { fontSize: 9, fontFamily: font.normal, color: "#1155CC" },
+    bulletRow: { flexDirection: "row", marginBottom: 3, paddingLeft: 4 },
+    bulletMarker: { width: 8, fontSize: bodyPt, fontFamily: font.normal, color: BLACK },
+    bulletText: { flex: 1, fontSize: bodyPt, fontFamily: font.normal, color: BLACK },
+  });
+}
+
+type PdfStyles = ReturnType<typeof makeStyles>;
 
 function present(v: string | null | undefined): string | null {
   return v?.trim() ? v.trim() : null;
@@ -167,7 +94,7 @@ function capitalize(s: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-function PdfSectionHeader({ title }: { title: string }) {
+function PdfSectionHeader({ title, styles }: { title: string; styles: PdfStyles }) {
   return (
     <>
       <Text style={styles.sectionTitle}>{title.toUpperCase()}</Text>
@@ -176,7 +103,7 @@ function PdfSectionHeader({ title }: { title: string }) {
   );
 }
 
-function PdfBulletList({ items }: { items: string[] }) {
+function PdfBulletList({ items, styles }: { items: string[]; styles: PdfStyles }) {
   return (
     <View>
       {items.map((item, i) => (
@@ -191,9 +118,13 @@ function PdfBulletList({ items }: { items: string[] }) {
 
 export function ResumePDFDocument({
   resume,
+  resumeStyle = DEFAULT_RESUME_STYLE,
 }: {
   resume: TailoredResume;
+  resumeStyle?: ResumeStyle;
 }): React.ReactElement {
+  const styles = makeStyles(resumeStyle);
+
   const name = present(resume.contact.name) ?? "Resume";
 
   const infoItems = [
@@ -215,19 +146,14 @@ export function ResumePDFDocument({
   const hasLinkItems = linkItems.length > 0;
   const hasRoleSubtitle = present(resume.contact.roleSubtitle) !== null;
 
-  // Pre-compute section elements so they render in source-detected order
   const sectionElements: Partial<Record<SectionKey, React.ReactElement>> = {};
 
   if (hasEducation) {
     sectionElements.education = (
       <View key="education" style={styles.section}>
-        <PdfSectionHeader title="Education" />
+        <PdfSectionHeader title="Education" styles={styles} />
         {resume.education.map((edu) => (
-          <View
-            key={`${edu.institution}-${edu.degree}`}
-            style={styles.expBlock}
-            wrap={false}
-          >
+          <View key={`${edu.institution}-${edu.degree}`} style={styles.expBlock} wrap={false}>
             <View style={styles.twoColRow}>
               <Text style={styles.institutionText}>
                 {edu.institution}
@@ -235,9 +161,7 @@ export function ResumePDFDocument({
                   <Text style={styles.locationText}>{`, ${edu.location}`}</Text>
                 ) : ""}
               </Text>
-              {present(edu.date) && (
-                <Text style={styles.datesText}>{edu.date}</Text>
-              )}
+              {present(edu.date) && <Text style={styles.datesText}>{edu.date}</Text>}
             </View>
             <Text style={styles.degreeText}>
               {edu.degree}
@@ -252,7 +176,7 @@ export function ResumePDFDocument({
   if (hasSkills) {
     sectionElements.skills = (
       <View key="skills" style={styles.section}>
-        <PdfSectionHeader title="Technical Skills" />
+        <PdfSectionHeader title="Technical Skills" styles={styles} />
         {resume.skills.map((group) => (
           <View key={group.category} style={styles.skillRow}>
             <Text style={styles.skillCategory}>{group.category}:</Text>
@@ -266,26 +190,18 @@ export function ResumePDFDocument({
   if (hasExperience) {
     sectionElements.experience = (
       <View key="experience" style={styles.section}>
-        <PdfSectionHeader title="Work Experience" />
+        <PdfSectionHeader title="Work Experience" styles={styles} />
         {resume.experience.map((exp) => (
           <View key={exp.sourceExperienceId} style={styles.expBlock}>
-            {/* Company ←→ Dates */}
             <View style={styles.twoColRow}>
               <Text style={styles.companyText}>{exp.company}</Text>
-              {present(exp.dates) && (
-                <Text style={styles.datesText}>{exp.dates}</Text>
-              )}
+              {present(exp.dates) && <Text style={styles.datesText}>{exp.dates}</Text>}
             </View>
-            {/* Role ←→ Location */}
             <View style={styles.twoColRow}>
               <Text style={styles.roleText}>{exp.title}</Text>
-              {present(exp.location) && (
-                <Text style={styles.locationText}>{exp.location}</Text>
-              )}
+              {present(exp.location) && <Text style={styles.locationText}>{exp.location}</Text>}
             </View>
-            {exp.bullets.length > 0 && (
-              <PdfBulletList items={exp.bullets.map((b) => b.text)} />
-            )}
+            {exp.bullets.length > 0 && <PdfBulletList items={exp.bullets.map((b) => b.text)} styles={styles} />}
           </View>
         ))}
       </View>
@@ -295,7 +211,7 @@ export function ResumePDFDocument({
   if (hasProjects) {
     sectionElements.projects = (
       <View key="projects" style={styles.section}>
-        <PdfSectionHeader title="Projects" />
+        <PdfSectionHeader title="Projects" styles={styles} />
         {resume.projects.map((proj) => (
           <View key={proj.name} style={styles.expBlock}>
             <View style={styles.twoColRow}>
@@ -311,11 +227,9 @@ export function ResumePDFDocument({
                   </Link>
                 )}
               </View>
-              {present(proj.date) && (
-                <Text style={styles.datesText}>{proj.date}</Text>
-              )}
+              {present(proj.date) && <Text style={styles.datesText}>{proj.date}</Text>}
             </View>
-            {proj.bullets.length > 0 && <PdfBulletList items={proj.bullets} />}
+            {proj.bullets.length > 0 && <PdfBulletList items={proj.bullets} styles={styles} />}
           </View>
         ))}
       </View>
@@ -325,35 +239,21 @@ export function ResumePDFDocument({
   if (hasCertifications) {
     sectionElements.certifications = (
       <View key="certifications" style={styles.section}>
-        <PdfSectionHeader title="Certifications" />
-        <PdfBulletList items={resume.certifications} />
+        <PdfSectionHeader title="Certifications" styles={styles} />
+        <PdfBulletList items={resume.certifications} styles={styles} />
       </View>
     );
   }
 
   return (
-    <Document
-      author={name}
-      creator="Resume Builder"
-      producer="Resume Builder"
-      title={`${name} Resume`}
-    >
+    <Document author={name} creator="Resume Builder" producer="Resume Builder" title={`${name} Resume`}>
       <Page size="LETTER" style={styles.page} wrap>
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.name}>{name}</Text>
-          {hasRoleSubtitle && (
-            <Text style={styles.roleSubtitle}>{resume.contact.roleSubtitle}</Text>
-          )}
-          {hasInfoItems && (
-            <Text style={styles.contactLine}>{infoItems.join("  |  ")}</Text>
-          )}
-          {hasLinkItems && (
-            <Text style={styles.contactLine}>{linkItems.join("  |  ")}</Text>
-          )}
+          {hasRoleSubtitle && <Text style={styles.roleSubtitle}>{resume.contact.roleSubtitle}</Text>}
+          {hasInfoItems && <Text style={styles.contactLine}>{infoItems.join("  |  ")}</Text>}
+          {hasLinkItems && <Text style={styles.contactLine}>{linkItems.join("  |  ")}</Text>}
         </View>
-
-        {/* Sections in source-detected order */}
         {(resume.sectionOrder ?? DEFAULT_SECTION_ORDER)
           .filter((key) => key !== "summary")
           .map((key) => sectionElements[key] ?? null)}

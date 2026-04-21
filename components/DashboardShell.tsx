@@ -5,7 +5,9 @@ import { createPortal } from "react-dom";
 import { ResumePreview } from "@/components/ResumePreview";
 import { useTailorResume } from "@/lib/hooks/useTailorResume";
 import NoCreditsModal from "@/components/NoCreditsModal";
-import { FileText, Briefcase, ArrowRight, Check, X, RefreshCw, AlertCircle, ChevronLeft, Sparkles, Download, FileDown, Printer, Upload, Info } from "lucide-react";
+import { FileText, Briefcase, ArrowRight, Check, X, RefreshCw, AlertCircle, ChevronLeft, Sparkles, Download, FileDown, Printer, Upload, Info, Paintbrush, Eye, RotateCcw, MousePointerClick } from "lucide-react";
+import type { ResumeStyle } from "@/types";
+import { DEFAULT_RESUME_STYLE, ResumeStyleSchema } from "@/types";
 
 const RESUME_PAGE_WIDTH_PX = 816;
 const PREVIEW_CARD_SCALE = 400 / RESUME_PAGE_WIDTH_PX;
@@ -88,6 +90,46 @@ function getSectionLabel(id: string): string {
   return "Other";
 }
 
+function SizeToggle({ value, onChange }: { value: "small" | "medium" | "large"; onChange: (v: "small" | "medium" | "large") => void }) {
+  return (
+    <div className={`flex overflow-hidden rounded-lg border transition-shadow ${value !== "medium" ? "border-accent/40 shadow-[0_0_8px_rgba(6,182,212,0.2)]" : "border-border/60"}`}>
+      {(["small", "medium", "large"] as const).map((v, i, arr) => (
+        <button
+          key={v}
+          type="button"
+          aria-pressed={value === v}
+          onClick={() => onChange(v)}
+          className={`px-3 py-1 text-xs font-semibold transition-colors ${i < arr.length - 1 ? "border-r border-border/60" : ""} ${
+            value === v ? "bg-accent text-background" : "text-muted hover:bg-surface-raised hover:text-foreground"
+          }`}
+        >
+          {v === "small" ? "S" : v === "medium" ? "M" : "L"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SpacingToggle({ value, onChange }: { value: "compact" | "normal" | "relaxed"; onChange: (v: "compact" | "normal" | "relaxed") => void }) {
+  return (
+    <div className={`flex overflow-hidden rounded-lg border transition-shadow ${value !== "normal" ? "border-accent/40 shadow-[0_0_8px_rgba(6,182,212,0.2)]" : "border-border/60"}`}>
+      {(["compact", "normal", "relaxed"] as const).map((v, i, arr) => (
+        <button
+          key={v}
+          type="button"
+          aria-pressed={value === v}
+          onClick={() => onChange(v)}
+          className={`px-3 py-1 text-xs font-semibold transition-colors ${i < arr.length - 1 ? "border-r border-border/60" : ""} ${
+            value === v ? "bg-accent text-background" : "text-muted hover:bg-surface-raised hover:text-foreground"
+          }`}
+        >
+          {v.charAt(0).toUpperCase() + v.slice(1)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function DashboardShell() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeFileName, setResumeFileName] = useState("");
@@ -95,18 +137,33 @@ export function DashboardShell() {
   const [regenFeedback, setRegenFeedback] = useState("");
   const [selectedItems, setSelectedItems] = useState<Map<string, string>>(new Map());
   const [refineScale, setRefineScale] = useState(1);
+  const [styleScale, setStyleScale] = useState(1);
+  const [resumeStyle, setResumeStyle] = useState<ResumeStyle>(DEFAULT_RESUME_STYLE);
   const refineRoRef = useRef<ResizeObserver | null>(null);
+  const styleRoRef = useRef<ResizeObserver | null>(null);
 
   const refineRightRef = useCallback((el: HTMLDivElement | null) => {
     refineRoRef.current?.disconnect();
     refineRoRef.current = null;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      const available = entry.contentRect.width - 64; // 32px padding each side (px-8)
+      const available = entry.contentRect.width - 64;
       setRefineScale(Math.min(1, available / RESUME_PAGE_WIDTH_PX));
     });
     ro.observe(el);
     refineRoRef.current = ro;
+  }, []);
+
+  const styleRightRef = useCallback((el: HTMLDivElement | null) => {
+    styleRoRef.current?.disconnect();
+    styleRoRef.current = null;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const available = entry.contentRect.width - 64;
+      setStyleScale(Math.min(1, available / RESUME_PAGE_WIDTH_PX));
+    });
+    ro.observe(el);
+    styleRoRef.current = ro;
   }, []);
 
   const {
@@ -137,7 +194,10 @@ export function DashboardShell() {
     handleOpenRegenFeedback,
     handleCloseRegenFeedback,
     handleRegenerateWithFeedback,
-  } = useTailorResume({ resumeFile, jobDescription });
+    isStyleEditingOpen,
+    handleOpenStyleEditing,
+    handleCloseStyleEditing,
+  } = useTailorResume({ resumeFile, jobDescription, resumeStyle });
 
   function handleItemToggle(id: string, text: string) {
     setSelectedItems((prev) => {
@@ -168,7 +228,7 @@ export function DashboardShell() {
             transform:
               viewState === "idle"
                 ? "translateX(0)"
-                : (viewState === "result" || viewState === "regen-feedback")
+                : (viewState === "result" || viewState === "regen-feedback" || viewState === "style-editing")
                   ? "translateX(-200vw)"
                   : "translateX(-100vw)",
           }}
@@ -438,7 +498,7 @@ export function DashboardShell() {
                       className="mb-5 flex w-fit shrink-0 items-center gap-1.5 rounded-lg border border-border/60 px-3 py-1.5 text-sm font-medium text-muted transition-all hover:border-border hover:text-foreground"
                     >
                       <ChevronLeft size={14} />
-                      Cancel
+                      Back
                     </button>
 
                     <div className="mb-6 shrink-0">
@@ -460,7 +520,12 @@ export function DashboardShell() {
 
                     {/* Scrollable selected items — flex-1 so regen button stays pinned at bottom */}
                     <div className="mt-4 min-h-0 flex-1 overflow-y-auto">
-                      {selectedItems.size > 0 && (() => {
+                      {selectedItems.size === 0 ? (
+                        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border/40 px-4 py-5 text-center">
+                          <MousePointerClick size={16} className="text-text-dim" />
+                          <p className="text-xs leading-relaxed text-text-dim">Click any bullet or skill on the right to pin it here</p>
+                        </div>
+                      ) : (() => {
                         const grouped = new Map<string, Array<[string, string]>>();
                         for (const [id, text] of selectedItems.entries()) {
                           const label = getSectionLabel(id);
@@ -471,11 +536,12 @@ export function DashboardShell() {
                         return (
                           <div className="pb-2">
                             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-dim">
-                              Selected items ({selectedItems.size})
+                              Selected items{" "}
+                              <span className="text-accent">({selectedItems.size})</span>
                             </p>
                             {orderedSections.map((section) => (
                               <div key={section} className="mb-4">
-                                <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-accent/60">
+                                <p className="mb-1.5 border-l-2 border-accent/30 pl-2 text-[10px] font-bold uppercase tracking-widest text-accent/80">
                                   {section}
                                 </p>
                                 <div className="space-y-1.5">
@@ -519,11 +585,16 @@ export function DashboardShell() {
                 </div>
 
                 {/* Right column — interactive resume viewer */}
-                <div ref={refineRightRef} className="flex-1 overflow-y-auto">
-                  <div className="px-8 py-6">
+                <div ref={refineRightRef} className="flex flex-1 flex-col overflow-hidden">
+                  <div className="flex shrink-0 items-center gap-1.5 border-b border-border/40 bg-background/90 px-8 py-2.5 backdrop-blur-sm">
+                    <Eye size={12} className="text-text-dim" />
+                    <span className="text-xs font-semibold uppercase tracking-widest text-text-dim">Live Preview</span>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-8 py-6">
                     <div style={{ zoom: refineScale, width: RESUME_PAGE_WIDTH_PX }}>
                       <ResumePreview
                         resume={result.tailoredResume}
+                        resumeStyle={resumeStyle}
                         interactiveMode
                         selectedItemIds={selectedItems}
                         onItemToggle={handleItemToggle}
@@ -535,9 +606,139 @@ export function DashboardShell() {
               )}
             </div>
 
-            {/* Result layer — slides out to left when refine opens */}
+            {/* Style editor layer — slides in from right */}
             <div className={`absolute inset-0 transition-transform duration-[350ms] ease-in-out ${
-              viewState === "regen-feedback" ? "-translate-x-full" : "translate-x-0"
+              isStyleEditingOpen ? "translate-x-0" : "translate-x-full"
+            }`}>
+              {result && (
+                <div className="flex h-full" style={{ animation: "fade-in-up 0.3s ease forwards" }}>
+                  {/* Left sidebar — style controls */}
+                  <div className="flex w-1/2 shrink-0 flex-col overflow-hidden border-r border-border/60">
+                    <div className="h-px shrink-0 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+                    <div className="flex min-h-0 flex-1 flex-col px-6 py-6">
+                      {/* Pinned top: Back button + heading */}
+                      <div className="shrink-0">
+                        <button
+                          type="button"
+                          onClick={handleCloseStyleEditing}
+                          className="mb-5 flex w-fit items-center gap-1.5 rounded-lg border border-border/60 px-3 py-1.5 text-sm font-medium text-muted transition-all hover:border-border hover:text-foreground"
+                        >
+                          <ChevronLeft size={14} />
+                          Back
+                        </button>
+
+                        <div className="mb-5">
+                          <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+                            <Paintbrush size={16} className="text-accent" />
+                            Style your resume
+                          </h2>
+                          <p className="mt-1.5 text-sm text-text-dim">Changes appear live on the right.</p>
+                        </div>
+                      </div>
+
+                      {/* Scrollable controls */}
+                      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                        <div className="space-y-6 pb-2">
+                          {/* Typography */}
+                          <div>
+                            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-dim">Typography</p>
+
+                            <div className="mb-4">
+                              <label className="mb-1.5 block text-sm font-medium text-muted">Font family</label>
+                              <div className="relative">
+                                <select
+                                  value={resumeStyle.fontFamily}
+                                  onChange={(e) => {
+                                    const parsed = ResumeStyleSchema.shape.fontFamily.safeParse(e.target.value);
+                                    if (parsed.success) setResumeStyle((s) => ({ ...s, fontFamily: parsed.data }));
+                                  }}
+                                  className="w-full appearance-none rounded-lg border border-border/60 bg-background py-2 pl-3 pr-8 text-sm text-foreground outline-none transition focus:border-accent/60 focus:ring-2 focus:ring-accent/30"
+                                >
+                                  <option value="times">Times New Roman</option>
+                                  <option value="helvetica">Helvetica / Arial</option>
+                                </select>
+                                <ChevronLeft size={13} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 -rotate-90 text-text-dim" />
+                              </div>
+                            </div>
+
+                            <p className="mb-2 text-xs font-medium text-text-dim">Font sizes</p>
+                          <div className="space-y-2.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted">Name</span>
+                                <SizeToggle value={resumeStyle.nameSize} onChange={(v) => setResumeStyle((s) => ({ ...s, nameSize: v }))} />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted">Section headers</span>
+                                <SizeToggle value={resumeStyle.headerSize} onChange={(v) => setResumeStyle((s) => ({ ...s, headerSize: v }))} />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted">Body & bullets</span>
+                                <SizeToggle value={resumeStyle.bodySize} onChange={(v) => setResumeStyle((s) => ({ ...s, bodySize: v }))} />
+                              </div>
+                            </div>
+                          </div>
+
+                          <hr className="border-border/40" />
+
+                          {/* Spacing */}
+                          <div>
+                            <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-text-dim">Spacing</p>
+                            <div className="space-y-2.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted">Bullet spacing</span>
+                                <SpacingToggle value={resumeStyle.bulletSpacing} onChange={(v) => setResumeStyle((s) => ({ ...s, bulletSpacing: v }))} />
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted">Section spacing</span>
+                                <SpacingToggle value={resumeStyle.sectionSpacing} onChange={(v) => setResumeStyle((s) => ({ ...s, sectionSpacing: v }))} />
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setResumeStyle(DEFAULT_RESUME_STYLE)}
+                            className="flex items-center gap-1.5 text-xs font-medium text-text-dim transition-colors hover:text-foreground"
+                          >
+                            <RotateCcw size={12} />
+                            Reset to defaults
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Pinned bottom: Save button */}
+                      <div className="shrink-0 pt-5">
+                        <button
+                          type="button"
+                          onClick={handleCloseStyleEditing}
+                          className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.25)] transition-all hover:opacity-95 active:scale-[0.98]"
+                        >
+                          <Check size={14} />
+                          Save style
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right column — live preview */}
+                  <div ref={styleRightRef} className="flex flex-1 flex-col overflow-hidden">
+                    <div className="flex shrink-0 items-center gap-1.5 border-b border-border/40 bg-background/90 px-8 py-2.5 backdrop-blur-sm">
+                      <Eye size={12} className="text-text-dim" />
+                      <span className="text-xs font-semibold uppercase tracking-widest text-text-dim">Live Preview</span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto px-8 py-6">
+                      <div style={{ zoom: styleScale, width: RESUME_PAGE_WIDTH_PX }}>
+                        <ResumePreview resume={result.tailoredResume} resumeStyle={resumeStyle} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Result layer — slides out to left when refine or style editing opens */}
+            <div className={`absolute inset-0 transition-transform duration-[350ms] ease-in-out ${
+              viewState === "regen-feedback" || viewState === "style-editing" ? "-translate-x-full" : "translate-x-0"
             }`}>
               {result && (
               /* ── Existing result layout ── */
@@ -547,7 +748,7 @@ export function DashboardShell() {
                     <div className="flex flex-wrap items-center gap-4">
                       <button
                         className="flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-foreground"
-                        onClick={handleReset}
+                        onClick={() => { handleReset(); setResumeStyle(DEFAULT_RESUME_STYLE); }}
                         type="button"
                       >
                         ← Back to Dashboard
@@ -729,26 +930,37 @@ export function DashboardShell() {
                       {/* ── RIGHT: Resume preview ── */}
                       <div>
                         <div className="sticky top-8">
-                          <div className="mb-3 flex items-center justify-between gap-3">
+                          <div className="mb-3 flex items-center justify-between gap-2">
                             <p className="text-xs font-semibold uppercase tracking-widest text-muted">
                               Tailored Resume
                             </p>
-                            {regenCount < 2 ? (
+                            <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                onClick={() => { setRegenFeedback(""); setSelectedItems(new Map()); handleOpenRegenFeedback(); }}
-                                disabled={loadingStep !== 0}
-                                className="flex items-center gap-1.5 rounded-lg border border-accent/50 bg-accent/8 px-3 py-1.5 text-xs font-semibold text-accent transition-all hover:border-accent/70 hover:bg-accent/15 disabled:cursor-not-allowed disabled:border-border disabled:text-text-dim"
+                                title="Style resume"
+                                onClick={handleOpenStyleEditing}
+                                className="flex items-center gap-1 rounded-lg border border-border/60 px-2 py-1.5 text-xs font-medium text-muted transition-all hover:border-border hover:text-foreground"
                               >
-                                <RefreshCw size={13} />
-                                Regenerate
-                                <span className="text-accent/50">({regenCount}/2)</span>
+                                <Paintbrush size={12} />
+                                Style
                               </button>
-                            ) : (
-                              <span className="rounded-lg border border-rose-500/20 bg-rose-950/20 px-2.5 py-1.5 text-xs font-medium text-rose-400">
-                                Limit reached (2/2)
-                              </span>
-                            )}
+                              {regenCount < 2 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => { setRegenFeedback(""); setSelectedItems(new Map()); handleOpenRegenFeedback(); }}
+                                  disabled={loadingStep !== 0}
+                                  className="flex items-center gap-1.5 rounded-lg border border-accent/50 bg-accent/8 px-3 py-1.5 text-xs font-semibold text-accent transition-all hover:border-accent/70 hover:bg-accent/15 disabled:cursor-not-allowed disabled:border-border disabled:text-text-dim"
+                                >
+                                  <RefreshCw size={13} />
+                                  Regenerate
+                                  <span className="text-accent/50">({regenCount}/2)</span>
+                                </button>
+                              ) : (
+                                <span className="rounded-lg border border-rose-500/20 bg-rose-950/20 px-2.5 py-1.5 text-xs font-medium text-rose-400">
+                                  Limit reached (2/2)
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <button
@@ -767,7 +979,7 @@ export function DashboardShell() {
                                 width: RESUME_PAGE_WIDTH_PX,
                               }}
                             >
-                              <ResumePreview resume={result.tailoredResume} />
+                              <ResumePreview resume={result.tailoredResume} resumeStyle={resumeStyle} />
                             </div>
                             <div
                               className="absolute inset-0"
@@ -848,7 +1060,7 @@ export function DashboardShell() {
             className="resume-print-area mx-auto my-8 w-[816px] shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <ResumePreview resume={result.tailoredResume} />
+            <ResumePreview resume={result.tailoredResume} resumeStyle={resumeStyle} />
           </div>
         </div>
       )}

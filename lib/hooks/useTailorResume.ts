@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { buildResumePdfFilename } from "@/lib/resume/filename";
 import { ResumeEvaluationSchema } from "@/types";
-import type { ResumeEvaluation, TailoredResume } from "@/types";
+import type { ResumeEvaluation, TailoredResume, ResumeStyle } from "@/types";
 import type { TailorResponse } from "@/types/api";
 
 export type LoadingStep = 0 | 1 | 2 | 3;
 
-export type ViewState = "idle" | "loading" | "keyword-selection" | "regen-feedback" | "result";
+export type ViewState = "idle" | "loading" | "keyword-selection" | "style-editing" | "regen-feedback" | "result";
 
 export interface TailorResumeState {
   result: TailorResponse | null;
@@ -27,6 +27,7 @@ export interface TailorResumeState {
   resumeId: string | null;
   isNoCreditsOpen: boolean;
   isRegenFeedbackOpen: boolean;
+  isStyleEditingOpen: boolean;
   handleTailorResume: () => void;
   handleGenerateResume: (keywords: string[]) => void;
   toggleKeyword: (kw: string) => void;
@@ -40,14 +41,18 @@ export interface TailorResumeState {
   handleOpenRegenFeedback: () => void;
   handleCloseRegenFeedback: () => void;
   handleRegenerateWithFeedback: (feedback: string, selectedItemTexts: string[]) => void;
+  handleOpenStyleEditing: () => void;
+  handleCloseStyleEditing: () => void;
 }
 
 export function useTailorResume({
   resumeFile,
   jobDescription,
+  resumeStyle,
 }: {
   resumeFile: File | null;
   jobDescription: string;
+  resumeStyle?: ResumeStyle;
 }): TailorResumeState {
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -69,6 +74,7 @@ export function useTailorResume({
   const [resumeId, setResumeId] = useState<string | null>(null);
   const [isNoCreditsOpen, setIsNoCreditsOpen] = useState(false);
   const [isRegenFeedbackOpen, setIsRegenFeedbackOpen] = useState(false);
+  const [isStyleEditingOpen, setIsStyleEditingOpen] = useState(false);
 
   useEffect(() => {
     return () => { abortControllerRef.current?.abort(); };
@@ -86,6 +92,7 @@ export function useTailorResume({
   const viewState: ViewState =
     loadingStep > 0 ? "loading"
     : pendingEvalData ? "keyword-selection"
+    : isStyleEditingOpen ? "style-editing"
     : isRegenFeedbackOpen ? "regen-feedback"
     : result ? "result"
     : "idle";
@@ -359,7 +366,7 @@ export function useTailorResume({
       const response = await fetch("/api/export-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tailoredResume: result.tailoredResume }),
+        body: JSON.stringify({ tailoredResume: result.tailoredResume, resumeStyle }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => null);
@@ -390,7 +397,7 @@ export function useTailorResume({
       const response = await fetch("/api/export-docx", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tailoredResume: result.tailoredResume }),
+        body: JSON.stringify({ tailoredResume: result.tailoredResume, resumeStyle }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => null);
@@ -430,6 +437,7 @@ export function useTailorResume({
     setResumeId(null);
     setIsNoCreditsOpen(false);
     setIsRegenFeedbackOpen(false);
+    setIsStyleEditingOpen(false);
     requestAnimationFrame(() => requestAnimationFrame(() => setNoTransition(false)));
   }
 
@@ -450,6 +458,7 @@ export function useTailorResume({
     resumeId,
     isNoCreditsOpen,
     isRegenFeedbackOpen,
+    isStyleEditingOpen,
     handleTailorResume,
     handleGenerateResume,
     toggleKeyword,
@@ -463,5 +472,7 @@ export function useTailorResume({
     handleOpenRegenFeedback,
     handleCloseRegenFeedback: () => setIsRegenFeedbackOpen(false),
     handleRegenerateWithFeedback,
+    handleOpenStyleEditing: () => setIsStyleEditingOpen(true),
+    handleCloseStyleEditing: () => setIsStyleEditingOpen(false),
   };
 }

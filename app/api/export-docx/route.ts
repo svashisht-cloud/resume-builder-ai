@@ -1,13 +1,14 @@
 import { z } from "zod";
 import { buildResumeDocxBuffer } from "@/lib/resume/docx-document";
 import { buildResumePdfFilename } from "@/lib/resume/filename";
-import { TailoredResumeSchema } from "@/types";
+import { TailoredResumeSchema, ResumeStyleSchema } from "@/types";
 
 export const runtime = "nodejs";
 
 const ExportDocxRequestSchema = z.object({
   role: z.string().nullable().optional(),
   tailoredResume: TailoredResumeSchema,
+  resumeStyle: ResumeStyleSchema.optional(),
 });
 
 function contentDisposition(filename: string) {
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
       role: payload.role,
     }).replace(/\.pdf$/, ".docx");
 
-    const buffer = await buildResumeDocxBuffer(payload.tailoredResume);
+    const buffer = await buildResumeDocxBuffer(payload.tailoredResume, payload.resumeStyle);
 
     return new Response(new Uint8Array(buffer), {
       headers: {
