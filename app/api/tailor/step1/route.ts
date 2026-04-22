@@ -2,6 +2,7 @@ import { evaluateResumeAgainstJDRaw } from "@/lib/ai/pipeline";
 import { extractResumeText } from "@/lib/resume/extract-text";
 import { hashJD, extractJobMeta } from "@/lib/resume/normalize";
 import { createClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { isClientError } from "@/lib/errors";
 import { checkRateLimit, getIdentifier } from "@/lib/ratelimit";
 
@@ -9,6 +10,8 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
+  let userId: string | null = null;
+
   try {
     const formData = await request.formData();
     const resumeFile = formData.get("resumeFile");
@@ -45,6 +48,7 @@ export async function POST(request: Request) {
     if (!user) {
       return Response.json({ error: "Authentication required." }, { status: 401 });
     }
+    userId = user.id;
 
     // Rate limit
     const { success: rlSuccess, reset: rlReset } = await checkRateLimit(getIdentifier(request, user.id));
@@ -60,9 +64,6 @@ export async function POST(request: Request) {
     const jdHash = await hashJD(jobDescriptionText);
     const { jobTitle, companyName } = extractJobMeta(jobDescriptionText);
 
-    // isFreshTailor=true (default) → reset regen count on existing JD rows so
-    // "Tailor Resume" is never blocked by the regen limit. Only the Regenerate
-    // button path sends isFreshTailor=false to enforce the limit.
     const isFreshTailor = formData.get("isFreshTailor") !== "false";
 
     // Credit / regen check (atomic, transactional)
@@ -116,12 +117,24 @@ export async function POST(request: Request) {
         );
       }
 
-      const originalEvaluation = await evaluateResumeAgainstJDRaw(
+      const step1Start = Date.now();
+      const { data: originalEvaluation, usage: usageEval1 } = await evaluateResumeAgainstJDRaw(
         resumeText,
         jobDescriptionText,
       );
+      const step1DurationMs = Date.now() - step1Start;
 
-      return Response.json({ resumeText, originalEvaluation, resumeId, isRegen, regenCount, isPaidCredit });
+      return Response.json({
+        resumeText,
+        originalEvaluation,
+        resumeId,
+        isRegen,
+        regenCount,
+        isPaidCredit,
+        step1DurationMs,
+        tokensEval1: usageEval1.totalTokens,
+        eval1CostUsd: usageEval1.estimatedCostUsd,
+      });
     } catch (err) {
       await restoreCredit();
       throw err;
@@ -129,6 +142,19 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Step 1 failed.";
+
+    if (userId) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (getAdminClient().from("pipeline_runs") as any).insert({
+          user_id: userId,
+          error_step: "step1",
+          error_code: message,
+        });
+      } catch {
+        // ignore logging errors
+      }
+    }
 
     if (isClientError(error)) {
       return Response.json({ error: message }, { status: 400 });

@@ -34,6 +34,9 @@ const TailoringResultSchema = z.object({
 });
 
 export type TailoringResult = z.infer<typeof TailoringResultSchema>;
+export type TailoringResultWithUsage = TailoringResult & { usage: PipelineUsage };
+
+export type PipelineUsage = { totalTokens: number; estimatedCostUsd: number };
 
 const PRICING_PER_MILLION_TOKENS: Record<
   string,
@@ -177,7 +180,7 @@ async function runStructuredCall<TSchema extends z.ZodType>({
   userPrompt: string;
   validationLabel: string;
   temperature?: number;
-}): Promise<z.infer<TSchema>> {
+}): Promise<{ data: z.infer<TSchema>; usage: PipelineUsage }> {
   const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model,
@@ -194,11 +197,23 @@ async function runStructuredCall<TSchema extends z.ZodType>({
     ],
     response_format: zodResponseFormat(schema, schemaName),
   });
-  logOpenAICost({
-    stage,
-    model,
-    usage: completion.usage ?? null,
-  });
+
+  const rawUsage = completion.usage ?? null;
+  logOpenAICost({ stage, model, usage: rawUsage });
+
+  const pricing = getPricing(model);
+  const inputTokens = rawUsage?.prompt_tokens ?? 0;
+  const cachedTokens = rawUsage?.prompt_tokens_details?.cached_tokens ?? 0;
+  const billableInput = Math.max(inputTokens - cachedTokens, 0);
+  const outputTokens = rawUsage?.completion_tokens ?? 0;
+  const estimatedCostUsd =
+    (billableInput / 1_000_000) * pricing.input +
+    (cachedTokens / 1_000_000) * pricing.cachedInput +
+    (outputTokens / 1_000_000) * pricing.output;
+  const usage: PipelineUsage = {
+    totalTokens: rawUsage?.total_tokens ?? inputTokens + outputTokens,
+    estimatedCostUsd: Number(estimatedCostUsd.toFixed(6)),
+  };
 
   const choice = completion.choices[0];
 
@@ -233,7 +248,7 @@ async function runStructuredCall<TSchema extends z.ZodType>({
     );
   }
 
-  return validation.data;
+  return { data: validation.data, usage };
 }
 
 export function buildScoreComparison({
@@ -343,7 +358,7 @@ export function renderTailoredResumeText(resume: TailoredResume) {
 export async function evaluateResumeAgainstJDRaw(
   resumeText: string,
   jobDescriptionText: string,
-): Promise<ResumeEvaluation> {
+): Promise<{ data: ResumeEvaluation; usage: PipelineUsage }> {
   return runStructuredCall({
     model: AI_EVAL_MODEL,
     schema: ResumeEvaluationSchema,
@@ -358,7 +373,7 @@ export async function evaluateResumeAgainstJDRaw(
 export async function evaluateTailoredResumeAgainstJDRaw(
   resumeText: string,
   jobDescriptionText: string,
-): Promise<ResumeEvaluation> {
+): Promise<{ data: ResumeEvaluation; usage: PipelineUsage }> {
   return runStructuredCall({
     model: AI_EVAL_MODEL,
     schema: ResumeEvaluationSchema,
@@ -380,7 +395,7 @@ export async function generateTailoredResumeFromRaw({
   jobDescriptionText: string;
   originalEvaluation: ResumeEvaluation;
   selectedKeywords?: string[];
-}): Promise<TailoringResult> {
+}): Promise<TailoringResultWithUsage> {
   const matchedBlock =
     originalEvaluation.matchedAreas.length > 0
       ? `STRENGTHS TO PRESERVE — do NOT weaken or remove bullets that support these already-matched areas:\n${originalEvaluation.matchedAreas.map((a, i) => `${i + 1}. ${a}`).join("\n")}`
@@ -396,7 +411,7 @@ export async function generateTailoredResumeFromRaw({
       ? `IMPROVEMENT SUGGESTIONS — apply only where the source resume supports it:\n${originalEvaluation.improvementSuggestions.map((s, i) => `${i + 1}. ${s}`).join("\n")}`
       : "";
 
-  const result = await runStructuredCall({
+  const { data: result, usage } = await runStructuredCall({
     model: AI_TAILOR_MODEL,
     schema: TailoringResultSchema,
     schemaName: "tailoring_result",
@@ -420,6 +435,7 @@ export async function generateTailoredResumeFromRaw({
       ...result.tailoredResume,
       sectionOrder: detectSectionOrder(resumeText),
     },
+    usage,
   };
 }
 
@@ -435,10 +451,10 @@ export async function refineTailoredResume({
   selectedItemTexts?: string[];
   jobDescriptionText: string;
   originalEvaluation: ResumeEvaluation;
-}): Promise<TailoringResult> {
+}): Promise<TailoringResultWithUsage> {
   const renderedTailored = renderTailoredResumeText(previousTailoredResume);
 
-  const result = await runStructuredCall({
+  const { data: result, usage } = await runStructuredCall({
     model: AI_TAILOR_MODEL,
     schema: TailoringResultSchema,
     schemaName: "tailoring_result",
@@ -461,5 +477,6 @@ export async function refineTailoredResume({
       ...result.tailoredResume,
       sectionOrder: previousTailoredResume.sectionOrder,
     },
+    usage,
   };
 }

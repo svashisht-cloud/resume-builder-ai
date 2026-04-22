@@ -29,9 +29,23 @@ export async function POST(request: Request) {
     if (typeof body !== "object" || body === null) {
       return Response.json({ error: "Request body must be a JSON object." }, { status: 400 });
     }
-    const { resumeText, jobDescriptionText, originalEvaluation, selectedKeywords,
-            previousTailoredResume, userFeedback, selectedItemTexts } =
-      body as Record<string, unknown>;
+    const {
+      resumeText,
+      jobDescriptionText,
+      originalEvaluation,
+      selectedKeywords,
+      previousTailoredResume,
+      userFeedback,
+      selectedItemTexts,
+      // threading fields from step1
+      step1DurationMs,
+      resumeId,
+      tokensEval1,
+      eval1CostUsd,
+      isRegen,
+    } = body as Record<string, unknown>;
+
+    const step2Start = Date.now();
 
     // ── Refine path (regenerate with tailored resume as base) ──────────────────
     if (previousTailoredResume !== undefined) {
@@ -49,7 +63,7 @@ export async function POST(request: Request) {
         return Response.json({ error: "originalEvaluation is invalid." }, { status: 400 });
       }
 
-      const { tailoredResume, changeLog } = await refineTailoredResume({
+      const { tailoredResume, changeLog, usage: usageTailor } = await refineTailoredResume({
         previousTailoredResume: parsedPrevResume.data,
         userFeedback: typeof userFeedback === "string" ? userFeedback : "",
         selectedItemTexts: Array.isArray(selectedItemTexts)
@@ -59,10 +73,21 @@ export async function POST(request: Request) {
         originalEvaluation: parsedEvaluation.data,
       });
 
-      return Response.json({ tailoredResume, changeLog });
+      return Response.json({
+        tailoredResume,
+        changeLog,
+        step1DurationMs: typeof step1DurationMs === "number" ? step1DurationMs : null,
+        step2DurationMs: Date.now() - step2Start,
+        resumeId: typeof resumeId === "string" ? resumeId : null,
+        tokensEval1: typeof tokensEval1 === "number" ? tokensEval1 : null,
+        tokensTailor: usageTailor.totalTokens,
+        eval1CostUsd: typeof eval1CostUsd === "number" ? eval1CostUsd : null,
+        tailorCostUsd: usageTailor.estimatedCostUsd,
+        isRegen: typeof isRegen === "boolean" ? isRegen : true,
+      });
     }
 
-    // ── Fresh tailor path (unchanged) ──────────────────────────────────────────
+    // ── Fresh tailor path ──────────────────────────────────────────────────────
     if (typeof resumeText !== "string" || !resumeText.trim()) {
       return Response.json({ error: "resumeText is required." }, { status: 400 });
     }
@@ -82,14 +107,25 @@ export async function POST(request: Request) {
       );
     }
 
-    const { tailoredResume, changeLog } = await generateTailoredResumeFromRaw({
+    const { tailoredResume, changeLog, usage: usageTailor } = await generateTailoredResumeFromRaw({
       resumeText,
       jobDescriptionText,
       originalEvaluation: parsedEvaluation.data,
       selectedKeywords: Array.isArray(selectedKeywords) ? selectedKeywords.filter((k: unknown) => typeof k === "string") : [],
     });
 
-    return Response.json({ tailoredResume, changeLog });
+    return Response.json({
+      tailoredResume,
+      changeLog,
+      step1DurationMs: typeof step1DurationMs === "number" ? step1DurationMs : null,
+      step2DurationMs: Date.now() - step2Start,
+      resumeId: typeof resumeId === "string" ? resumeId : null,
+      tokensEval1: typeof tokensEval1 === "number" ? tokensEval1 : null,
+      tokensTailor: usageTailor.totalTokens,
+      eval1CostUsd: typeof eval1CostUsd === "number" ? eval1CostUsd : null,
+      tailorCostUsd: usageTailor.estimatedCostUsd,
+      isRegen: typeof isRegen === "boolean" ? isRegen : false,
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Step 2 failed.";

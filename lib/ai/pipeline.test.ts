@@ -119,9 +119,9 @@ describe("evaluateResumeAgainstJDRaw", () => {
   it("returns structured LLM evaluation for raw resume and JD text", async () => {
     const create = mockStructuredOpenAIResponse(evaluation);
 
-    await expect(
-      evaluateResumeAgainstJDRaw("raw resume text", "raw jd text"),
-    ).resolves.toEqual(evaluation);
+    const result = await evaluateResumeAgainstJDRaw("raw resume text", "raw jd text");
+    expect(result.data).toEqual(evaluation);
+    expect(result.usage).toBeDefined();
 
     const request = create.mock.calls[0][0];
     expect(request.model).toBe("eval-model");
@@ -175,6 +175,7 @@ describe("generateTailoredResumeFromRaw", () => {
     });
 
     expect(result.tailoredResume.projects).toEqual(tailoredResume.projects);
+    expect(result.usage).toBeDefined();
     const request = create.mock.calls[0][0];
     expect(request.model).toBe("tailor-model");
     expect(request.messages[1].content).toContain("RAW RESUME WITH PROJECTS");
@@ -201,7 +202,7 @@ describe("deterministic parsing and scoring cleanup", () => {
     const files = [
       "app/api/tailor/route.ts",
       "lib/ai/pipeline.ts",
-      "components/dashboard-shell.tsx",
+      "components/DashboardShell.tsx",
     ];
 
     for (const file of files) {

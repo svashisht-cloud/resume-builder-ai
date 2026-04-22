@@ -8,7 +8,7 @@ import PaymentHistory from '@/components/settings/PaymentHistory'
 import AvatarImage from '@/components/settings/AvatarImage'
 import MockPaymentsBanner from '@/components/MockPaymentsBanner'
 import AppearanceSection from '@/components/settings/AppearanceSection'
-import { ArrowLeft, Coins, BarChart2, User } from 'lucide-react'
+import { ArrowLeft, Coins, BarChart2, User, ShieldCheck } from 'lucide-react'
 
 function formatMemberSince(isoDate: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(
@@ -43,7 +43,7 @@ export default async function SettingsPage() {
   const [profileResult, unspentCreditsResult, resumesResult, spentCreditsResult] = await Promise.all([
     supabase
       .from('profiles')
-      .select('display_name, email, avatar_url, credits_remaining')
+      .select('display_name, email, avatar_url, credits_remaining, is_admin')
       .eq('id', user.id)
       .single(),
     supabase
@@ -179,6 +179,25 @@ export default async function SettingsPage() {
 
         {/* Appearance */}
         <AppearanceSection />
+
+        {/* Admin */}
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+        {(profile as any)?.is_admin && (
+          <div className="rounded-xl border border-indigo-500/20 bg-indigo-950/20 p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={15} className="text-indigo-400" />
+                <h2 className="text-sm font-semibold text-indigo-400">Admin</h2>
+              </div>
+              <Link
+                href="/admin/overview"
+                className="rounded-lg bg-indigo-500/15 px-3 py-1.5 text-sm font-medium text-indigo-400 transition-colors hover:bg-indigo-500/25"
+              >
+                Open Admin Dashboard →
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Danger Zone */}
         <div className="rounded-xl border border-red-500/20 bg-red-950/20 p-6">

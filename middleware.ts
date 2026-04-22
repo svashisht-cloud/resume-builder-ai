@@ -31,10 +31,39 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (!user && (pathname.startsWith('/dashboard') || pathname.startsWith('/settings'))) {
+  const isProtected =
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/admin')
+
+  // Redirect unauthenticated users away from protected routes
+  if (!user && isProtected) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)
+  }
+
+  // For authenticated users on protected routes: check disabled_at and is_admin
+  if (user && isProtected) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin, disabled_at')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.disabled_at) {
+      await supabase.auth.signOut({ scope: 'local' })
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      url.searchParams.set('reason', 'disabled')
+      return NextResponse.redirect(url)
+    }
+
+    if (pathname.startsWith('/admin') && !profile?.is_admin) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

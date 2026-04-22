@@ -9,8 +9,40 @@ import {
   renderTailoredResumeText,
 } from "@/lib/ai/pipeline";
 
+const mockUsage = { totalTokens: 150, estimatedCostUsd: 0.0001 };
+
 vi.mock("@/lib/resume/extract-text", () => ({
   extractResumeText: vi.fn().mockResolvedValue("Raw resume text with projects."),
+}));
+
+vi.mock("@/lib/resume/normalize", () => ({
+  hashJD: vi.fn().mockResolvedValue("abc123"),
+  extractJobMeta: vi.fn().mockReturnValue({ jobTitle: "Engineer", companyName: "Acme" }),
+}));
+
+vi.mock("@/lib/ratelimit", () => ({
+  checkRateLimit: vi.fn().mockResolvedValue({ success: true, reset: 0, limit: 10, remaining: 9 }),
+  getIdentifier: vi.fn().mockReturnValue("user-123"),
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: vi.fn().mockResolvedValue({
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: { id: "user-123" } }, error: null }),
+    },
+    rpc: vi.fn().mockResolvedValue({
+      data: [{ resume_id: "resume-456", is_regen: false, regen_count: 0 }],
+      error: null,
+    }),
+  }),
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  getAdminClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      insert: vi.fn().mockResolvedValue({ error: null }),
+    })),
+  })),
 }));
 
 vi.mock("@/lib/ai/pipeline", async () => {
@@ -90,12 +122,13 @@ const tailoredResult = {
       },
     ],
   },
+  usage: mockUsage,
 };
 
 describe("POST /api/tailor", () => {
   it("returns evaluator-based before and after scores", async () => {
-    vi.mocked(evaluateResumeAgainstJDRaw).mockResolvedValueOnce(makeEvaluation(56));
-    vi.mocked(evaluateTailoredResumeAgainstJDRaw).mockResolvedValueOnce(makeEvaluation(88));
+    vi.mocked(evaluateResumeAgainstJDRaw).mockResolvedValueOnce({ data: makeEvaluation(56), usage: mockUsage });
+    vi.mocked(evaluateTailoredResumeAgainstJDRaw).mockResolvedValueOnce({ data: makeEvaluation(88), usage: mockUsage });
     vi.mocked(generateTailoredResumeFromRaw).mockResolvedValue(tailoredResult);
 
     const response = await POST(

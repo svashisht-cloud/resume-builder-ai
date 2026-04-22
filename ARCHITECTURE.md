@@ -46,12 +46,15 @@ resume-builder/
 │   └── api/
 │       ├── auth/
 │       │   └── signout/route.ts# POST /api/auth/signout — signs out and redirects to /
+│       ├── admin/
+│       │   ├── grant-credits/route.ts  # POST /api/admin/grant-credits — auth+admin check, calls admin_grant_credits RPC
+│       │   └── disable-user/route.ts   # POST /api/admin/disable-user — auth+admin check, calls disable_user RPC
 │       ├── tailor/
 │       │   ├── route.ts        # POST /api/tailor — full pipeline in one call (legacy/test path)
 │       │   ├── route.test.ts   # Vitest tests for the combined route
-│       │   ├── step1/route.ts  # POST /api/tailor/step1 — extract + evaluate original
-│       │   ├── step2/route.ts  # POST /api/tailor/step2 — generate tailored resume
-│       │   └── step3/route.ts  # POST /api/tailor/step3 — evaluate tailored + score
+│       │   ├── step1/route.ts  # POST /api/tailor/step1 — extract + evaluate original; returns timing+token data
+│       │   ├── step2/route.ts  # POST /api/tailor/step2 — generate tailored resume; threads timing data
+│       │   └── step3/route.ts  # POST /api/tailor/step3 — evaluate tailored + score; logs to pipeline_runs
 │       ├── export-pdf/route.ts # POST /api/export-pdf — render PDF via React-PDF
 │       └── export-docx/route.ts# POST /api/export-docx — render DOCX via docx library
 │
@@ -84,7 +87,8 @@ resume-builder/
 │   │   └── useTailorResume.ts  # Custom React hook: all tailoring fetch logic, AbortController, all AI state; viewState: idle|loading|keyword-selection|style-editing|regen-feedback|result; accepts resumeStyle?: ResumeStyle (threaded into PDF/DOCX download bodies); isStyleEditingOpen + handleOpenStyleEditing + handleCloseStyleEditing
 │   ├── supabase/
 │   │   ├── client.ts           # Browser Supabase client (createBrowserClient via @supabase/ssr)
-│   │   └── server.ts           # Server Supabase client (createServerClient, cookie-based session)
+│   │   ├── server.ts           # Server Supabase client (createServerClient, cookie-based session)
+│   │   └── admin.ts            # Service-role admin client (lazy singleton; NEVER import client-side)
 │   ├── errors.ts               # Shared isClientError() helper — used by tailor route.ts and step1/route.ts
 │   └── resume/
 │       ├── extract-text.ts     # Parse PDF/DOCX/TXT → plain text string
@@ -108,7 +112,7 @@ resume-builder/
 │   └── migrations/
 │       └── 20260416000000_initial_schema.sql  # profiles table + RLS policies + triggers
 │
-├── middleware.ts               # Edge middleware — redirects unauthenticated requests away from /dashboard and /settings
+├── middleware.ts               # Edge middleware — auth check, disabled_at check, admin route guard
 ├── CLAUDE.md                   # Instructions for Claude Code agents
 ├── architecture.md             # This file
 ├── TASKS.md                    # Active and completed work items
@@ -164,6 +168,7 @@ resume-builder/
 | `OPENAI_TAILOR_MODEL` | No | `gpt-5-chat-latest` | Model for resume generation (step 2) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | — | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | — | Supabase anon/public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | — | Admin operations — service-role client; never expose to client |
 | `ENABLE_MOCK_PAYMENTS` | No | — | Set to `true` to enable `POST /api/billing/mock-purchase` in production; also shows warning banner in dashboard/settings |
 | `UPSTASH_REDIS_REST_URL` | No | — | Upstash Redis REST endpoint for rate limiting. If absent, rate limiting is disabled (local dev safe). |
 | `UPSTASH_REDIS_REST_TOKEN` | No | — | Upstash Redis REST token. Required together with `UPSTASH_REDIS_REST_URL`. |
@@ -361,6 +366,14 @@ Scans raw resume text line-by-line with regex patterns to detect section headers
 | `/api/export-pdf` | POST | Public | JSON: `tailoredResume`, `role?` → binary PDF |
 | `/api/export-docx` | POST | Public | JSON: `tailoredResume`, `role?` → binary DOCX |
 | `/api/billing/mock-purchase` | POST | Required | JSON: `{ product }` → grants credits via `mock_purchase_credits` RPC; 404 in production without `ENABLE_MOCK_PAYMENTS=true` |
+| `/admin/overview` | GET | Admin | KPI dashboard |
+| `/admin/users` | GET | Admin | User management |
+| `/admin/users/[id]` | GET | Admin | User detail + actions |
+| `/admin/analytics` | GET | Admin | Charts and top users |
+| `/admin/credits` | GET | Admin | Credit ledger |
+| `/admin/system` | GET | Admin | Cost and error monitoring |
+| `/api/admin/grant-credits` | POST | Admin | Grant credits to a user |
+| `/api/admin/disable-user` | POST | Admin | Disable a user account |
 
 All AI/export API routes use `export const runtime = "nodejs"` (not Edge) because resume parsing libraries and React-PDF require Node.js APIs. Auth routes use the default Edge runtime.
 
@@ -514,3 +527,56 @@ Fires `after insert or update or delete` on `credits`. Calls `refresh_credits_re
 - **Replace `mock_purchase_credits` with real Dodo webhook handler** — the RPC and `POST /api/billing/mock-purchase` route are scaffolding only. When Dodo is wired, delete the mock route and RPC, add a webhook handler that verifies signatures and calls `spend_credit` equivalents.
 - **Add refund handling when Dodo integration lands** — the `payments` table has `status` and `refunded_at` columns ready; refunds need to mark the corresponding credit rows as expired/revoked and decrement `credits_remaining`.
 - **Navbar credit count is not live-updated after mock purchase** — the settings page refreshes on navigation; the dashboard navbar requires a full page reload. Consider a client-side credit context or SWR if live updates are needed.
+- **Regenerate Supabase types after running migration 20260422** — admin pages use `getAdminClient() as any` because the generated types in `types/supabase.ts` predate the `pipeline_runs` table, `is_admin`, and `disabled_at` columns. Run `supabase gen types typescript --project-id <id> > types/supabase.ts` and remove the `as any` casts.
+- **Recharts adds ~300KB to the JS bundle** — currently loaded only inside `app/admin/` which is not user-facing. No action required unless bundle size becomes a concern.
+
+---
+
+## Admin Dashboard (MR-7)
+
+### Access control
+- `middleware.ts` checks `disabled_at` on every protected route (`/dashboard`, `/settings`, `/admin`). Disabled users are signed out and redirected to `/?reason=disabled`.
+- `app/admin/layout.tsx` re-verifies `is_admin` via the SSR client. Non-admins redirect to `/dashboard`.
+- Both API routes (`/api/admin/grant-credits`, `/api/admin/disable-user`) independently re-check `is_admin` before calling any RPC.
+
+### Admin route map
+| Route | Purpose |
+|-------|---------|
+| `/admin/overview` | KPI cards (users, runs today, avg Δ, cost today) + recent runs feed |
+| `/admin/users` | Paginated user list with email search |
+| `/admin/users/[id]` | User detail: profile, credit ledger, resume history, grant/disable actions |
+| `/admin/analytics` | Daily runs chart, score delta histogram, avg score chart, step latency chart, top users |
+| `/admin/credits` | Paginated credit ledger with source filter |
+| `/admin/system` | Monthly cost KPIs, cost chart, model config, error breakdown |
+| `POST /api/admin/grant-credits` | Calls `admin_grant_credits(p_user_id, p_count, p_reason)` |
+| `POST /api/admin/disable-user` | Calls `disable_user(p_user_id)` |
+
+### `pipeline_runs` table
+Logs every AI pipeline execution. RLS enabled with no policies (service-role access only).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid PK | |
+| `user_id` | uuid | FK → auth.users |
+| `resume_id` | uuid | FK → resumes (nullable) |
+| `is_regen` | boolean | |
+| `step1_duration_ms` | int | |
+| `step2_duration_ms` | int | |
+| `step3_duration_ms` | int | |
+| `total_duration_ms` | int | |
+| `score_before` | int | |
+| `score_after` | int | |
+| `score_delta` | int | after − before |
+| `tokens_eval1` | int | |
+| `tokens_tailor` | int | |
+| `tokens_eval2` | int | |
+| `estimated_cost_usd` | numeric(8,5) | |
+| `error_step` | text | 'step1'/'step2'/'step3' if failed |
+| `error_code` | text | Error message |
+| `created_at` | timestamptz | |
+
+### Admin RPCs (all `security definer`)
+| RPC | Purpose |
+|-----|---------|
+| `admin_grant_credits(p_user_id, p_count, p_reason)` | Inserts N credit rows with 12-month expiry |
+| `disable_user(p_user_id)` | Sets `profiles.disabled_at = now()` |

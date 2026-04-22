@@ -81,15 +81,6 @@ export default function AppNavbar({ user, credits }: AppNavbarProps) {
             )
           )}
 
-          <button
-            onClick={cycleTheme}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-surface-raised text-muted transition-all hover:border-accent/40 hover:text-accent"
-            aria-label={`Switch theme (current: ${theme})`}
-            title={`Theme: ${theme}`}
-          >
-            <ThemeIcon size={15} />
-          </button>
-
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setOpen((v) => !v)}
@@ -118,6 +109,13 @@ export default function AppNavbar({ user, credits }: AppNavbarProps) {
                   <p className="truncate text-xs text-muted">{user.email}</p>
                 </div>
                 <div className="p-1">
+                  <button
+                    onClick={cycleTheme}
+                    className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-raised"
+                  >
+                    <ThemeIcon size={14} className="text-muted" />
+                    {theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'System'} Theme
+                  </button>
                   <button
                     onClick={() => { setOpen(false); router.push('/settings') }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-raised"

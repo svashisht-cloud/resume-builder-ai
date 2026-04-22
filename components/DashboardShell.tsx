@@ -8,7 +8,6 @@ import NoCreditsModal from "@/components/NoCreditsModal";
 import { FileText, Briefcase, ArrowRight, Check, X, RefreshCw, AlertCircle, ChevronLeft, Sparkles, Download, FileDown, Upload, Info, Paintbrush, Eye, RotateCcw, MousePointerClick } from "lucide-react";
 import type { ResumeStyle } from "@/types";
 import { DEFAULT_RESUME_STYLE, ResumeStyleSchema } from "@/types";
-import { Logo } from "@/components/brand";
 
 const RESUME_PAGE_WIDTH_PX = 816;
 const PREVIEW_CARD_SCALE = 400 / RESUME_PAGE_WIDTH_PX;
@@ -349,9 +348,6 @@ export function DashboardShell() {
               }}
             >
               <div className="w-full max-w-xs text-center">
-                <div className="mb-6 flex justify-center">
-                  <Logo variant="mark" tone="dark" className="h-10 opacity-50" />
-                </div>
                 {loadingStep === 1 ? (
                   <p className="mb-6 text-2xl font-semibold tracking-tight text-foreground">
                     Tailoring your resume…

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { buildResumePdfFilename } from "@/lib/resume/filename";
 import { ResumeEvaluationSchema } from "@/types";
 import type { ResumeEvaluation, TailoredResume, ResumeStyle } from "@/types";
-import type { TailorResponse } from "@/types/api";
+import type { TailorResponse, Step1TelemetryMeta } from "@/types/api";
 
 export type LoadingStep = 0 | 1 | 2 | 3;
 
@@ -72,6 +72,7 @@ export function useTailorResume({
   const [noTransition, setNoTransition] = useState(false);
   const [regenCount, setRegenCount] = useState(0);
   const [resumeId, setResumeId] = useState<string | null>(null);
+  const [step1Meta, setStep1Meta] = useState<Step1TelemetryMeta | undefined>(undefined);
   const [isNoCreditsOpen, setIsNoCreditsOpen] = useState(false);
   const [isRegenFeedbackOpen, setIsRegenFeedbackOpen] = useState(false);
   const [isStyleEditingOpen, setIsStyleEditingOpen] = useState(false);
@@ -103,6 +104,7 @@ export function useTailorResume({
     originalEvaluation: ResumeEvaluation,
     keywords: string[],
     signal: AbortSignal,
+    step1Meta?: Step1TelemetryMeta,
   ) {
     try {
       setLoadingStep(2);
@@ -115,12 +117,13 @@ export function useTailorResume({
           jobDescriptionText: jobDescription,
           originalEvaluation,
           selectedKeywords: keywords,
+          ...(step1Meta ?? {}),
         }),
         signal,
       });
       const step2Data = await step2Res.json();
       if (!step2Res.ok) throw new Error(step2Data.error ?? "Step 2 failed.");
-      const { tailoredResume, changeLog } = step2Data;
+      const { tailoredResume, changeLog, step1DurationMs, step2DurationMs, resumeId: s2ResumeId, tokensEval1, tokensTailor, eval1CostUsd, tailorCostUsd, isRegen: s2IsRegen } = step2Data;
 
       setLoadingStep(3);
 
@@ -132,6 +135,14 @@ export function useTailorResume({
           jobDescriptionText: jobDescription,
           originalEvaluation,
           changeLog,
+          step1DurationMs,
+          step2DurationMs,
+          resumeId: s2ResumeId,
+          tokensEval1,
+          tokensTailor,
+          eval1CostUsd,
+          tailorCostUsd,
+          isRegen: s2IsRegen,
         }),
         signal,
       });
@@ -156,6 +167,7 @@ export function useTailorResume({
     selectedItemTexts: string[],
     originalEvaluation: ResumeEvaluation,
     signal: AbortSignal,
+    regenResumeId: string | null,
   ) {
     try {
       setLoadingStep(2);
@@ -169,12 +181,14 @@ export function useTailorResume({
           selectedItemTexts,
           jobDescriptionText: jobDescription,
           originalEvaluation,
+          resumeId: regenResumeId,
+          isRegen: true,
         }),
         signal,
       });
       const step2Data = await step2Res.json();
       if (!step2Res.ok) throw new Error(step2Data.error ?? "Step 2 failed.");
-      const { tailoredResume, changeLog } = step2Data;
+      const { tailoredResume, changeLog, step2DurationMs, resumeId: s2ResumeId, tokensTailor, tailorCostUsd } = step2Data;
 
       setLoadingStep(3);
 
@@ -186,6 +200,11 @@ export function useTailorResume({
           jobDescriptionText: jobDescription,
           originalEvaluation,
           changeLog,
+          step2DurationMs,
+          resumeId: s2ResumeId,
+          tokensTailor,
+          tailorCostUsd,
+          isRegen: true,
         }),
         signal,
       });
@@ -260,6 +279,15 @@ export function useTailorResume({
 
         setInitialScore(originalEvaluation.score);
 
+        const s1Meta = {
+          step1DurationMs: typeof step1Data.step1DurationMs === "number" ? step1Data.step1DurationMs as number : null,
+          tokensEval1: typeof step1Data.tokensEval1 === "number" ? step1Data.tokensEval1 as number : null,
+          eval1CostUsd: typeof step1Data.eval1CostUsd === "number" ? step1Data.eval1CostUsd as number : null,
+          resumeId: typeof step1Data.resumeId === "string" ? step1Data.resumeId as string : null,
+          isRegen: typeof step1Data.isRegen === "boolean" ? step1Data.isRegen as boolean : false,
+        };
+        setStep1Meta(s1Meta);
+
         const chips =
           originalEvaluation.missingAreas.length > 0
             ? originalEvaluation.missingAreas
@@ -267,7 +295,7 @@ export function useTailorResume({
 
         if (chips.length === 0) {
           setPendingEvalData({ resumeText, originalEvaluation });
-          await runStep2And3(resumeText, originalEvaluation, [], signal);
+          await runStep2And3(resumeText, originalEvaluation, [], signal, s1Meta);
         } else {
           setPendingEvalData({ resumeText, originalEvaluation });
           setLoadingStep(0);
@@ -337,12 +365,13 @@ export function useTailorResume({
         }
         if (!regenInitRes.ok) throw new Error(regenInitData.error ?? "Regen init failed.");
 
-        if (regenInitData.resumeId) setResumeId(regenInitData.resumeId as string);
+        const regenResumeId = typeof regenInitData.resumeId === "string" ? regenInitData.resumeId as string : null;
+        if (regenResumeId) setResumeId(regenResumeId);
         if (typeof regenInitData.regenCount === "number") setRegenCount(regenInitData.regenCount as number);
         // Regen only succeeds when paid credit exists (P0003 blocks otherwise), so mark it paid.
         setIsPaidCredit(true);
 
-        await runRegenStep2And3(snapshotTailored, feedback, selectedItemTexts, snapshotOriginalEval, signal);
+        await runRegenStep2And3(snapshotTailored, feedback, selectedItemTexts, snapshotOriginalEval, signal, regenResumeId);
       } catch (requestError) {
         if (requestError instanceof Error && requestError.name === "AbortError") return;
         setError(requestError instanceof Error ? requestError.message : "Tailoring request failed.");
@@ -356,7 +385,7 @@ export function useTailorResume({
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
     const { resumeText, originalEvaluation } = pendingEvalData;
-    void runStep2And3(resumeText, originalEvaluation, keywords, abortControllerRef.current.signal);
+    void runStep2And3(resumeText, originalEvaluation, keywords, abortControllerRef.current.signal, step1Meta);
   }
 
   function toggleKeyword(kw: string) {
@@ -440,6 +469,7 @@ export function useTailorResume({
     setIsModalOpen(false);
     setRegenCount(0);
     setResumeId(null);
+    setStep1Meta(undefined);
     setIsPaidCredit(false);
     setIsNoCreditsOpen(false);
     setIsRegenFeedbackOpen(false);

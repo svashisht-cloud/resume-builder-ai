@@ -9,6 +9,7 @@ import {
 import { extractResumeText } from "@/lib/resume/extract-text";
 import { hashJD, extractJobMeta } from "@/lib/resume/normalize";
 import { createClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, getIdentifier } from "@/lib/ratelimit";
 import {
   ChangeLogSchema,
@@ -32,6 +33,11 @@ const TailorResponseSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  let userId: string | null = null;
+  let resumeId: string | null = null;
+  let isRegen = false;
+  let creditWasSpent = false;
+
   try {
     const formData = await request.formData();
     const resumeFile = formData.get("resumeFile");
@@ -68,6 +74,7 @@ export async function POST(request: Request) {
     if (!user) {
       return Response.json({ error: "Authentication required." }, { status: 401 });
     }
+    userId = user.id;
 
     // Rate limit
     const { success: rlSuccess, reset: rlReset } = await checkRateLimit(getIdentifier(request, user.id));
@@ -101,8 +108,10 @@ export async function POST(request: Request) {
       return Response.json({ error: rpcError.message }, { status: 500 });
     }
 
-    const { resume_id: resumeId, is_regen: isRegen } = (rpcData as Array<{ resume_id: string; is_regen: boolean; regen_count: number }>)[0];
-    const creditWasSpent = !isRegen;
+    const rpcRow = (rpcData as Array<{ resume_id: string; is_regen: boolean; regen_count: number }>)[0];
+    resumeId = rpcRow.resume_id;
+    isRegen = rpcRow.is_regen;
+    creditWasSpent = !isRegen;
 
     const restoreCredit = async () => {
       if (!creditWasSpent) return;
@@ -113,6 +122,7 @@ export async function POST(request: Request) {
     };
 
     try {
+      const pipelineStart = Date.now();
       const resumeText = await extractResumeText(resumeFile);
 
       if (!resumeText.trim()) {
@@ -123,19 +133,18 @@ export async function POST(request: Request) {
         );
       }
 
-      const originalEvaluation = await evaluateResumeAgainstJDRaw(
+      const { data: originalEvaluation, usage: usageEval1 } = await evaluateResumeAgainstJDRaw(
         resumeText,
         jobDescriptionText,
       );
 
-      const generatedResult = await generateTailoredResumeFromRaw({
+      const { tailoredResume, changeLog, usage: usageTailor } = await generateTailoredResumeFromRaw({
         resumeText,
         jobDescriptionText,
         originalEvaluation,
       });
-      const { tailoredResume, changeLog } = generatedResult;
 
-      const tailoredEvaluation = await evaluateTailoredResumeAgainstJDRaw(
+      const { data: tailoredEvaluation, usage: usageEval2 } = await evaluateTailoredResumeAgainstJDRaw(
         renderTailoredResumeText(tailoredResume),
         jobDescriptionText,
       );
@@ -143,6 +152,29 @@ export async function POST(request: Request) {
         originalEvaluation,
         tailoredEvaluation,
       });
+
+      const totalDurationMs = Date.now() - pipelineStart;
+      const totalCostUsd = usageEval1.estimatedCostUsd + usageTailor.estimatedCostUsd + usageEval2.estimatedCostUsd;
+
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error: logError } = await (getAdminClient().from("pipeline_runs") as any).insert({
+          user_id: userId,
+          resume_id: resumeId,
+          is_regen: isRegen,
+          total_duration_ms: totalDurationMs,
+          score_before: scoreComparison.before,
+          score_after: scoreComparison.after,
+          score_delta: scoreComparison.delta,
+          tokens_eval1: usageEval1.totalTokens,
+          tokens_tailor: usageTailor.totalTokens,
+          tokens_eval2: usageEval2.totalTokens,
+          estimated_cost_usd: totalCostUsd,
+        });
+        if (logError) console.error("[pipeline_runs] combined route insert error:", logError);
+      } catch (logErr) {
+        console.error("[pipeline_runs] combined route failed to log run:", logErr);
+      }
 
       const response: TailorResponse = TailorResponseSchema.parse({
         tailoredResume,
@@ -161,6 +193,21 @@ export async function POST(request: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Tailoring request failed.";
+
+    if (userId) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (getAdminClient().from("pipeline_runs") as any).insert({
+          user_id: userId,
+          resume_id: resumeId,
+          is_regen: isRegen,
+          error_step: "combined",
+          error_code: message,
+        });
+      } catch {
+        // ignore logging errors
+      }
+    }
 
     if (isClientError(error)) {
       return Response.json({ error: message }, { status: 400 });

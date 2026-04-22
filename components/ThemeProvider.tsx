@@ -15,12 +15,18 @@ const ThemeContext = createContext<ThemeContextValue>({
 })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === 'undefined') return 'dark'
+  // Always initialize to 'dark' so server and client render the same HTML.
+  // The inline script in layout.tsx already sets data-theme before React loads,
+  // so visuals are correct. We sync the real stored value after mount.
+  const [theme, setThemeState] = useState<Theme>('dark')
+
+  useEffect(() => {
     const stored = localStorage.getItem('theme')
-    if (stored === 'system' || stored === 'light' || stored === 'dark') return stored
-    return 'dark'
-  })
+    if (stored === 'system' || stored === 'light' || stored === 'dark') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setThemeState(stored)
+    }
+  }, [])
 
   useEffect(() => {
     localStorage.setItem('theme', theme)
