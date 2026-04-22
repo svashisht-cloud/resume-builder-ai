@@ -191,19 +191,50 @@ export function ResumePDFDocument({
     sectionElements.experience = (
       <View key="experience" style={styles.section}>
         <PdfSectionHeader title="Work Experience" styles={styles} />
-        {resume.experience.map((exp) => (
-          <View key={exp.sourceExperienceId} style={styles.expBlock}>
-            <View style={styles.twoColRow}>
-              <Text style={styles.companyText}>{exp.company}</Text>
-              {present(exp.dates) && <Text style={styles.datesText}>{exp.dates}</Text>}
-            </View>
-            <View style={styles.twoColRow}>
-              <Text style={styles.roleText}>{exp.title}</Text>
-              {present(exp.location) && <Text style={styles.locationText}>{exp.location}</Text>}
-            </View>
-            {exp.bullets.length > 0 && <PdfBulletList items={exp.bullets.map((b) => b.text)} styles={styles} />}
-          </View>
-        ))}
+        {resume.experience
+          .reduce<{ company: string; location: string | null | undefined; entries: typeof resume.experience }[]>(
+            (acc, exp) => {
+              const last = acc[acc.length - 1];
+              if (last && last.company === exp.company) {
+                last.entries.push(exp);
+              } else {
+                acc.push({ company: exp.company, location: exp.location, entries: [exp] });
+              }
+              return acc;
+            },
+            [],
+          )
+          .map((group) =>
+            group.entries.length === 1 ? (
+              <View key={group.entries[0].sourceExperienceId} style={styles.expBlock}>
+                <View style={styles.twoColRow}>
+                  <Text style={styles.companyText}>{group.entries[0].company}</Text>
+                  {present(group.entries[0].dates) && <Text style={styles.datesText}>{group.entries[0].dates}</Text>}
+                </View>
+                <View style={styles.twoColRow}>
+                  <Text style={styles.roleText}>{group.entries[0].title}</Text>
+                  {present(group.entries[0].location) && <Text style={styles.locationText}>{group.entries[0].location}</Text>}
+                </View>
+                {group.entries[0].bullets.length > 0 && <PdfBulletList items={group.entries[0].bullets.map((b) => b.text)} styles={styles} />}
+              </View>
+            ) : (
+              <View key={group.company} style={styles.expBlock}>
+                <View style={styles.twoColRow}>
+                  <Text style={styles.companyText}>{group.company}</Text>
+                  {present(group.location) && <Text style={styles.locationText}>{group.location}</Text>}
+                </View>
+                {group.entries.map((exp, i) => (
+                  <View key={exp.sourceExperienceId} style={{ marginTop: i === 0 ? 0 : 4 }}>
+                    <View style={styles.twoColRow}>
+                      <Text style={styles.roleText}>{exp.title}</Text>
+                      {present(exp.dates) && <Text style={styles.datesText}>{exp.dates}</Text>}
+                    </View>
+                    {exp.bullets.length > 0 && <PdfBulletList items={exp.bullets.map((b) => b.text)} styles={styles} />}
+                  </View>
+                ))}
+              </View>
+            ),
+          )}
       </View>
     );
   }

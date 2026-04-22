@@ -247,48 +247,85 @@ export function ResumePreview({
           <Fragment key="experience">
             <SectionHeader title="Work Experience" />
             <div className="space-y-2" style={{ gap: itemGap }}>
-              {resume.experience.map((exp) => (
-                <div className="break-inside-avoid" key={exp.sourceExperienceId}>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span
-                      className="font-bold leading-snug text-black"
-                      style={{ fontSize: `${bodyPt + 0.5}pt`, fontFamily }}
-                    >
-                      {exp.company}
-                    </span>
-                    {present(exp.dates) && (
-                      <span
-                        className="shrink-0 font-bold leading-snug text-black"
-                        style={{ fontSize: `${bodyPt}pt`, fontFamily }}
-                      >
-                        {exp.dates}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span
-                      className="italic leading-snug text-black"
-                      style={{ fontSize: `${bodyPt + 0.5}pt`, fontFamily }}
-                    >
-                      {exp.title}
-                    </span>
-                    {present(exp.location) && (
-                      <span
-                        className="shrink-0 italic leading-snug text-black"
-                        style={{ fontSize: `${bodyPt}pt`, fontFamily }}
-                      >
-                        {exp.location}
-                      </span>
-                    )}
-                  </div>
-                  {exp.bullets.length > 0 && (
-                    <BulletList
-                      items={exp.bullets.map((b) => b.text)}
-                      idPrefix={`exp-${exp.sourceExperienceId}-bullet`}
-                    />
-                  )}
-                </div>
-              ))}
+              {(() => {
+                const groups = resume.experience.reduce<
+                  { company: string; location: string | null | undefined; entries: typeof resume.experience }[]
+                >((acc, exp) => {
+                  const last = acc[acc.length - 1];
+                  if (last && last.company === exp.company) {
+                    last.entries.push(exp);
+                  } else {
+                    acc.push({ company: exp.company, location: exp.location, entries: [exp] });
+                  }
+                  return acc;
+                }, []);
+
+                return groups.map((group) =>
+                  group.entries.length === 1 ? (
+                    <div className="break-inside-avoid" key={group.entries[0].sourceExperienceId}>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="font-bold leading-snug text-black" style={{ fontSize: `${bodyPt + 0.5}pt`, fontFamily }}>
+                          {group.entries[0].company}
+                        </span>
+                        {present(group.entries[0].dates) && (
+                          <span className="shrink-0 font-bold leading-snug text-black" style={{ fontSize: `${bodyPt}pt`, fontFamily }}>
+                            {group.entries[0].dates}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="italic leading-snug text-black" style={{ fontSize: `${bodyPt + 0.5}pt`, fontFamily }}>
+                          {group.entries[0].title}
+                        </span>
+                        {present(group.entries[0].location) && (
+                          <span className="shrink-0 italic leading-snug text-black" style={{ fontSize: `${bodyPt}pt`, fontFamily }}>
+                            {group.entries[0].location}
+                          </span>
+                        )}
+                      </div>
+                      {group.entries[0].bullets.length > 0 && (
+                        <BulletList
+                          items={group.entries[0].bullets.map((b) => b.text)}
+                          idPrefix={`exp-${group.entries[0].sourceExperienceId}-bullet`}
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <div key={group.company}>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="font-bold leading-snug text-black" style={{ fontSize: `${bodyPt + 0.5}pt`, fontFamily }}>
+                          {group.company}
+                        </span>
+                        {present(group.location) && (
+                          <span className="shrink-0 italic leading-snug text-black" style={{ fontSize: `${bodyPt}pt`, fontFamily }}>
+                            {group.location}
+                          </span>
+                        )}
+                      </div>
+                      {group.entries.map((exp, i) => (
+                        <div className="break-inside-avoid" key={exp.sourceExperienceId} style={{ marginTop: i === 0 ? 0 : itemGap }}>
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="italic leading-snug text-black" style={{ fontSize: `${bodyPt + 0.5}pt`, fontFamily }}>
+                              {exp.title}
+                            </span>
+                            {present(exp.dates) && (
+                              <span className="shrink-0 font-bold leading-snug text-black" style={{ fontSize: `${bodyPt}pt`, fontFamily }}>
+                                {exp.dates}
+                              </span>
+                            )}
+                          </div>
+                          {exp.bullets.length > 0 && (
+                            <BulletList
+                              items={exp.bullets.map((b) => b.text)}
+                              idPrefix={`exp-${exp.sourceExperienceId}-bullet`}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                );
+              })()}
             </div>
           </Fragment>
         ) : null;

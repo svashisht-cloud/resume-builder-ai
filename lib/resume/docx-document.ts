@@ -218,45 +218,93 @@ export async function buildResumeDocxBuffer(resume: TailoredResume, style: Resum
       case "experience":
         if (resume.experience.length > 0) {
           children.push(sectionHeader("Work Experience"));
-          for (const exp of resume.experience) {
-            // Line 1: Company ←→ Dates
-            const companyRuns: TextRun[] = [
-              new TextRun({ text: exp.company, bold: true, size: BODY_SZ + 1, font: FONT }),
-            ];
-            if (present(exp.dates)) {
-              companyRuns.push(new TextRun({ text: "\t", size: BODY_SZ + 1, font: FONT }));
-              companyRuns.push(
-                new TextRun({ text: exp.dates!, bold: true, size: BODY_SZ, font: FONT }),
-              );
-            }
-            children.push(
-              new Paragraph({
-                children: companyRuns,
-                tabStops: [{ type: TabStopType.RIGHT, position: RIGHT_TAB }],
-                spacing: { before: 60, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
-              }),
-            );
 
-            // Line 2: Role ←→ Location
-            const titleRuns: TextRun[] = [
-              new TextRun({ text: exp.title, italics: true, size: BODY_SZ + 1, font: FONT }),
-            ];
-            if (present(exp.location)) {
-              titleRuns.push(new TextRun({ text: "\t", size: BODY_SZ + 1, font: FONT }));
-              titleRuns.push(
-                new TextRun({ text: exp.location!, italics: true, size: BODY_SZ, font: FONT }),
-              );
+          // Group consecutive entries at the same company
+          const expGroups = resume.experience.reduce<
+            { company: string; location: string | null | undefined; entries: typeof resume.experience }[]
+          >((acc, exp) => {
+            const last = acc[acc.length - 1];
+            if (last && last.company === exp.company) {
+              last.entries.push(exp);
+            } else {
+              acc.push({ company: exp.company, location: exp.location, entries: [exp] });
             }
-            children.push(
-              new Paragraph({
-                children: titleRuns,
-                tabStops: [{ type: TabStopType.RIGHT, position: RIGHT_TAB }],
-                spacing: { before: 0, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
-              }),
-            );
+            return acc;
+          }, []);
 
-            for (const b of exp.bullets) {
-              children.push(bulletParagraph(b.text));
+          for (const group of expGroups) {
+            if (group.entries.length === 1) {
+              const exp = group.entries[0];
+              // Line 1: Company ←→ Dates
+              const companyRuns: TextRun[] = [
+                new TextRun({ text: exp.company, bold: true, size: BODY_SZ + 1, font: FONT }),
+              ];
+              if (present(exp.dates)) {
+                companyRuns.push(new TextRun({ text: "\t", size: BODY_SZ + 1, font: FONT }));
+                companyRuns.push(new TextRun({ text: exp.dates!, bold: true, size: BODY_SZ, font: FONT }));
+              }
+              children.push(
+                new Paragraph({
+                  children: companyRuns,
+                  tabStops: [{ type: TabStopType.RIGHT, position: RIGHT_TAB }],
+                  spacing: { before: 60, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
+                }),
+              );
+              // Line 2: Role ←→ Location
+              const titleRuns: TextRun[] = [
+                new TextRun({ text: exp.title, italics: true, size: BODY_SZ + 1, font: FONT }),
+              ];
+              if (present(exp.location)) {
+                titleRuns.push(new TextRun({ text: "\t", size: BODY_SZ + 1, font: FONT }));
+                titleRuns.push(new TextRun({ text: exp.location!, italics: true, size: BODY_SZ, font: FONT }));
+              }
+              children.push(
+                new Paragraph({
+                  children: titleRuns,
+                  tabStops: [{ type: TabStopType.RIGHT, position: RIGHT_TAB }],
+                  spacing: { before: 0, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
+                }),
+              );
+              for (const b of exp.bullets) {
+                children.push(bulletParagraph(b.text));
+              }
+            } else {
+              // Company header once: Company ←→ Location
+              const companyRuns: TextRun[] = [
+                new TextRun({ text: group.company, bold: true, size: BODY_SZ + 1, font: FONT }),
+              ];
+              if (present(group.location)) {
+                companyRuns.push(new TextRun({ text: "\t", size: BODY_SZ + 1, font: FONT }));
+                companyRuns.push(new TextRun({ text: group.location!, italics: true, size: BODY_SZ, font: FONT }));
+              }
+              children.push(
+                new Paragraph({
+                  children: companyRuns,
+                  tabStops: [{ type: TabStopType.RIGHT, position: RIGHT_TAB }],
+                  spacing: { before: 60, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
+                }),
+              );
+              // Each role: Title ←→ Dates, then bullets
+              for (let i = 0; i < group.entries.length; i++) {
+                const exp = group.entries[i];
+                const titleRuns: TextRun[] = [
+                  new TextRun({ text: exp.title, italics: true, size: BODY_SZ + 1, font: FONT }),
+                ];
+                if (present(exp.dates)) {
+                  titleRuns.push(new TextRun({ text: "\t", size: BODY_SZ + 1, font: FONT }));
+                  titleRuns.push(new TextRun({ text: exp.dates!, bold: true, size: BODY_SZ, font: FONT }));
+                }
+                children.push(
+                  new Paragraph({
+                    children: titleRuns,
+                    tabStops: [{ type: TabStopType.RIGHT, position: RIGHT_TAB }],
+                    spacing: { before: i === 0 ? 0 : 40, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
+                  }),
+                );
+                for (const b of exp.bullets) {
+                  children.push(bulletParagraph(b.text));
+                }
+              }
             }
           }
         }
