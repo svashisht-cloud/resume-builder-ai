@@ -47,6 +47,8 @@ Only introduce JD keywords when they are directly supported by the source resume
 Prefer stronger alignment over decorative rewriting.
 Avoid keyword stuffing, repetition, and unnatural phrasing.
 
+Never drop an experience entry entirely — every role in the source resume must appear in the output. If you must cut bullets due to page limits, reduce to 1 bullet minimum rather than removing the entry.
+
 Output format: for every optional string field that has no value, emit the key explicitly with a null value — never omit optional keys from the response object. Use [] for missing arrays.
 `;
 
@@ -74,6 +76,7 @@ If the user's feedback requests something not supported by the tailored resume, 
 - Add metrics or numbers not in the tailored resume.
 - Add skills or tools not in the tailored resume.
 - Remove entire sections present in the tailored resume.
+- Drop any experience entry — reduce to 1 bullet rather than remove entirely.
 - Drop any project entry — reduce to 1 bullet rather than remove entirely.
 
 ## Page limit (strictly enforce)
@@ -164,7 +167,7 @@ RULES:
 - evidenceIds are semantic traceability labels (e.g. 'exp-1-bullet-3') — they are NOT required to be verbatim quotes.
 
 PAGE LIMITS (strictly enforce — resume must fit one page):
-- Experience bullets: 10 total across all roles. Distribute by relevance — give more bullets to the most JD-relevant roles, fewer to older or less relevant ones. Within each role, include only the strongest JD-aligned bullets.
+- Experience bullets: 10 total across all roles. Distribute by relevance — give more bullets to the most JD-relevant roles, fewer (minimum 1) to older or less relevant ones. Never drop an experience entry entirely — every role must appear with at least 1 bullet.
 - Project bullets: maximum 2 per project. Pick the 2 that best demonstrate impact and JD alignment. Never drop a project entirely — if you must cut, reduce to 1 bullet, not 0.
 - Keep every project from the source resume. Do not omit any project entry, regardless of relevance.
 

@@ -56,10 +56,12 @@ resume-builder/
 │       └── export-docx/route.ts# POST /api/export-docx — render DOCX via docx library
 │
 ├── components/
-│   ├── DashboardShell.tsx      # PRIMARY UI: 3-panel sliding layout (idle→Panel1, loading/keyword-selection→Panel2, result/regen-feedback/style-editing→Panel3); holds regenFeedback + selectedItems + resumeStyle state; regen-feedback and style-editing views are 2-column split layouts (left controls + right live ResumePreview)
-│   ├── AppNavbar.tsx           # Authenticated top nav — avatar, z-10 nav (backdrop-blur stacking fix), dropdown with Settings + Sign Out
+│   ├── PublicHeader.tsx        # Client component — sticky public nav (Logo + Pricing link + Sign In → AuthModal); used on /pricing and legal pages
+│   ├── Footer.tsx              # Server component — 4-column footer (Product, Company, Legal, Support) + logo/copyright; used on /pricing and legal pages
+│   ├── DashboardShell.tsx      # PRIMARY UI: 3-panel sliding layout (idle→Panel1, loading/keyword-selection→Panel2, result/regen-feedback/style-editing→Panel3); holds regenFeedback + selectedItems + resumeStyle state; regen-feedback and style-editing views are 2-column split layouts (left controls + right live ResumePreview); loading spinner uses conic-gradient ring; progress bar: 33% (step1/pending) → 66% (step2) → 90% (step3)
+│   ├── AppNavbar.tsx           # Authenticated top nav — forte mark icon + "Resume Builder" text label, avatar, z-10 nav (backdrop-blur stacking fix), dropdown with Settings + Sign Out
 │   ├── LandingPage.tsx         # Marketing page — two-col hero (HeroTrailer), How It Works (text-3xl + subtitle), Testimonials, Pricing (text-3xl + "Start for free" subtitle), footer
-│   ├── AuthModal.tsx           # Google OAuth modal — always mounted, data-state open/closed CSS transition (scale+fade), ToS line
+│   ├── AuthModal.tsx           # Google OAuth modal — always mounted, data-state open/closed CSS transition (scale+fade), ToS line; uses horizontal logo at h-9
 │   ├── EditableName.tsx        # Inline-editable display name field
 │   ├── DeleteAccountButton.tsx # Danger zone delete button (used on settings page)
 │   ├── ResumePreview.tsx       # Web HTML resume renderer — accepts resumeStyle?: ResumeStyle for dynamic font/size/spacing; supports interactiveMode (SelectionCtx, hover/select bullets + skill rows with amber/cyan highlights)
@@ -163,6 +165,8 @@ resume-builder/
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | — | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | — | Supabase anon/public key |
 | `ENABLE_MOCK_PAYMENTS` | No | — | Set to `true` to enable `POST /api/billing/mock-purchase` in production; also shows warning banner in dashboard/settings |
+| `UPSTASH_REDIS_REST_URL` | No | — | Upstash Redis REST endpoint for rate limiting. If absent, rate limiting is disabled (local dev safe). |
+| `UPSTASH_REDIS_REST_TOKEN` | No | — | Upstash Redis REST token. Required together with `UPSTASH_REDIS_REST_URL`. |
 
 ---
 
@@ -225,6 +229,9 @@ POST /api/tailor/step3
               → spend_credit: FIFO by expiry, marks credit spent_at = now()
               → trigger fires, credits_remaining decremented
               → step1 returns { resumeId, isRegen: false, regenCount: 0 }
+              → if AI pipeline errors after deduction: restore_credit(resumeId) called
+                → sets spent_at = null within 5-min safety window
+                → trigger fires, credits_remaining restored
 
 4. Regeneration (same JD hash, regen_count < 2, paid credit required)
               → start_or_regen_resume: checks paid-credit gate (P0003 if free-only),
@@ -339,6 +346,10 @@ Scans raw resume text line-by-line with regex patterns to detect section headers
 | Route | Method | Auth | Purpose |
 |-------|--------|------|---------|
 | `/` | GET | Public | Landing page; redirects to `/dashboard` if signed in |
+| `/pricing` | GET | Public | Standalone pricing page — PricingCards + FAQ; CTA routes to `/dashboard` |
+| `/terms` | GET | Public | Terms of Service (placeholder — needs legal review before launch) |
+| `/privacy` | GET | Public | Privacy Policy (placeholder — needs legal review before launch) |
+| `/refund-policy` | GET | Public | Refund Policy (placeholder — needs legal review before launch) |
 | `/dashboard` | GET | Required | Main app — AppNavbar + DashboardShell |
 | `/settings` | GET | Required | Profile settings |
 | `/auth/callback` | GET | Public | OAuth code exchange → session → redirect to `/dashboard` |
@@ -447,6 +458,7 @@ Fires `after insert or update or delete` on `credits`. Calls `refresh_credits_re
 |-----|---------|
 | `spend_credit(p_resume_id)` | FIFO by expiry, `for update skip locked`; raises `P0001` if no credits |
 | `start_or_regen_resume(p_jd_hash, p_job_title, p_company_name, p_force_fresh)` | New JD → insert + spend credit; regen → checks paid credit (raises `P0003` if free-only), then increments regen_count (max 2, raises `P0002`); force_fresh → resets regen_count + spends credit; returns `(resume_id, is_regen, regen_count)` |
+| `restore_credit(p_resume_id)` | Reverses a `spend_credit` on failure; sets `spent_at = null` within a 5-min safety window; only affects the calling user's credit; trigger fires to restore `credits_remaining` |
 | `mock_purchase_credits(p_product)` | Inserts payment + N credit rows; trigger fires to update cache. **Remove when real Dodo lands.** |
 
 ---
@@ -479,7 +491,7 @@ Fires `after insert or update or delete` on `credits`. Calls `refresh_credits_re
 
 8. **AbortController for concurrent submissions**: `useTailorResume` holds an `AbortController` ref. Each new tailor submission calls `abort()` on the previous controller before creating a new one. AbortErrors are silently swallowed in all catch blocks.
 
-9. **API routes are unauthenticated**: The tailor/export API routes have no auth check — any caller with network access can use them. Route protection is at the page level only (middleware + server component redirect). This is intentional for now but means the AI endpoints are open.
+9. **All AI routes are auth-gated and rate-limited**: Every AI/export route (`/api/tailor`, `/api/tailor/step1–3`, `/api/export-pdf`, `/api/export-docx`) requires an authenticated Supabase session. Unauthenticated requests return 401 before any Redis or AI work is done. All six routes also apply an Upstash sliding-window rate limit (10 req / 60 s per user ID). When env vars `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` are absent the limiter degrades gracefully (always passes) so local dev works without Redis. Rate-limit helpers live in `lib/ratelimit.ts`.
 
 10. **Dashboard layout uses flex column**: `app/dashboard/page.tsx` wraps everything in `flex h-screen flex-col overflow-hidden`. `AppNavbar` is `flex-shrink-0`; `DashboardShell` is `flex-1 overflow-hidden`. This ensures the navbar sits solidly at the top and the 3-panel sliding layout fills the remaining viewport height without overlap.
 
@@ -493,7 +505,7 @@ Fires `after insert or update or delete` on `credits`. Calls `refresh_credits_re
 
 15. **Avatar `referrerPolicy="no-referrer"`**: Google avatar URLs (`lh3.googleusercontent.com`) return 403 without this header. `AvatarImage` is a client component that renders a plain `<img>` (not Next `<Image>`) with `referrerPolicy="no-referrer"` and an `onError` handler that falls back to an initials div.
 
-16. **`step1/route.ts` is now auth-gated**: After migration 20260419, the tailoring entry point requires an authenticated session. Returns 401 if not signed in, 402 (`no_credits`) if the user has no unspent credits, 403 (`regen_limit_reached`) if the same JD has been regenerated twice already. The combined `POST /api/tailor` route has the same gate.
+16. **All tailor/export routes are auth-gated**: After migration 20260419, step1 and the combined `/api/tailor` were auth-gated. Step2, step3, `/api/export-pdf`, and `/api/export-docx` are now gated as well — all return 401 if there is no authenticated session. Step1 additionally returns 402 (`no_credits`) or 403 (`regen_limit_reached`) depending on credit/regen state.
 
 ---
 

@@ -61,13 +61,15 @@ const TIERS: Tier[] = [
 interface PricingCardsProps {
   onCTAClick: (tier: 'free' | 'pack' | 'plus') => void
   loadingTier?: string | null
+  hideFree?: boolean
 }
 
-export default function PricingCards({ onCTAClick, loadingTier }: PricingCardsProps) {
+export default function PricingCards({ onCTAClick, loadingTier, hideFree }: PricingCardsProps) {
+  const tiers = hideFree ? TIERS.filter((t) => t.id !== 'free') : TIERS
   return (
     <>
-      <div className="grid grid-cols-1 items-stretch gap-6 md:grid-cols-3">
-        {TIERS.map((tier) => {
+      <div className={`grid grid-cols-1 items-stretch gap-6 ${tiers.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
+        {tiers.map((tier) => {
           const isLoading = loadingTier === tier.id
           return (
             <div

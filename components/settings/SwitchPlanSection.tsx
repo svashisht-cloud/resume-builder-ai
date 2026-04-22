@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import PricingCards from '@/components/pricing/PricingCards'
 import { X, Check } from 'lucide-react'
 
@@ -51,10 +52,26 @@ export default function SwitchPlanSection() {
         </div>
       )}
 
+      <p className="mb-4 text-sm text-muted">
+        You&rsquo;re on the <span className="font-medium text-foreground">Free plan</span>. Top up with credits whenever you need them — no subscription required.
+      </p>
+
       <PricingCards
         onCTAClick={handleCTAClick}
         loadingTier={purchasing}
+        hideFree
       />
+
+      <p className="mt-3 text-center text-xs text-text-dim">
+        <Link
+          href="/refund-policy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 transition-colors hover:text-foreground"
+        >
+          View refund policy
+        </Link>
+      </p>
     </div>
   )
 }

@@ -1,11 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Upload, Target, Sparkles, ArrowRight } from 'lucide-react'
 import AuthModal from './AuthModal'
 import Testimonials from './landing/Testimonials'
 import HeroTrailer from './landing/HeroTrailer'
 import PricingCards from './pricing/PricingCards'
+import Footer from './Footer'
+import { Sora } from 'next/font/google'
+
+const sora = Sora({ subsets: ['latin'], weight: ['600'] })
 
 export default function LandingPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -23,18 +28,25 @@ export default function LandingPage() {
       {/* Navbar */}
       <nav className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-display bg-gradient-to-r from-accent to-accent-secondary bg-clip-text text-lg font-bold text-transparent">
-              MockLoop
-            </span>
-            <span className="text-lg font-light text-muted">Resume Builder</span>
+          <div className="flex items-center gap-2.5">
+            <span className={`${sora.className} text-xl font-semibold tracking-tight text-foreground`}>forte</span>
+            <span className="text-border/60 select-none">/</span>
+            <span className="text-m font-medium text-muted">resume builder</span>
           </div>
-          <button
-            onClick={openModal}
-            className="rounded-lg border border-accent/60 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-all hover:bg-accent/20 hover:border-accent"
-          >
-            Sign In
-          </button>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/pricing"
+              className="text-sm text-muted transition-colors hover:text-foreground"
+            >
+              Pricing
+            </Link>
+            <button
+              onClick={openModal}
+              className="rounded-lg border border-accent/60 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-all hover:bg-accent/20 hover:border-accent"
+            >
+              Sign In
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -144,16 +156,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border/60 py-8">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6">
-          <span className="text-sm text-muted">© 2025 MockLoop Resume Builder</span>
-          <div className="flex gap-6 text-sm text-muted">
-            <a href="/privacy" className="transition-colors hover:text-foreground">Privacy</a>
-            <a href="/terms" className="transition-colors hover:text-foreground">Terms</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </>

@@ -246,7 +246,7 @@ export function ResumePDFDocument({
   }
 
   return (
-    <Document author={name} creator="Resume Builder" producer="Resume Builder" title={`${name} Resume`}>
+    <Document author={name} creator="Forte" producer="Forte" title={`${name} Resume`}>
       <Page size="LETTER" style={styles.page} wrap>
         <View style={styles.header}>
           <Text style={styles.name}>{name}</Text>

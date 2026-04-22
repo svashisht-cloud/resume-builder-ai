@@ -9,6 +9,7 @@ import {
 import { extractResumeText } from "@/lib/resume/extract-text";
 import { hashJD, extractJobMeta } from "@/lib/resume/normalize";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getIdentifier } from "@/lib/ratelimit";
 import {
   ChangeLogSchema,
   ResumeEvaluationSchema,
@@ -68,6 +69,16 @@ export async function POST(request: Request) {
       return Response.json({ error: "Authentication required." }, { status: 401 });
     }
 
+    // Rate limit
+    const { success: rlSuccess, reset: rlReset } = await checkRateLimit(getIdentifier(request, user.id));
+    if (!rlSuccess) {
+      const retryAfter = Math.max(0, Math.ceil((rlReset - Date.now()) / 1000));
+      return Response.json(
+        { error: "rate_limited", retryAfter },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
+    }
+
     const jdHash = await hashJD(jobDescriptionText);
     const { jobTitle, companyName } = extractJobMeta(jobDescriptionText);
 
@@ -84,51 +95,69 @@ export async function POST(request: Request) {
       if (rpcError.code === "P0002") {
         return Response.json({ error: "regen_limit_reached" }, { status: 403 });
       }
+      if (rpcError.code === "P0003") {
+        return Response.json({ error: "paid_credit_required" }, { status: 403 });
+      }
       return Response.json({ error: rpcError.message }, { status: 500 });
     }
 
-    const resumeText = await extractResumeText(resumeFile);
+    const { resume_id: resumeId, is_regen: isRegen } = (rpcData as Array<{ resume_id: string; is_regen: boolean; regen_count: number }>)[0];
+    const creditWasSpent = !isRegen;
 
-    if (!resumeText.trim()) {
-      return Response.json(
-        { error: "Uploaded resume text is empty." },
-        { status: 400 },
+    const restoreCredit = async () => {
+      if (!creditWasSpent) return;
+      await supabase.rpc("restore_credit", { p_resume_id: resumeId }).then(
+        undefined,
+        (e) => console.error("[restore_credit] failed for resumeId", resumeId, e),
       );
+    };
+
+    try {
+      const resumeText = await extractResumeText(resumeFile);
+
+      if (!resumeText.trim()) {
+        await restoreCredit();
+        return Response.json(
+          { error: "Uploaded resume text is empty." },
+          { status: 400 },
+        );
+      }
+
+      const originalEvaluation = await evaluateResumeAgainstJDRaw(
+        resumeText,
+        jobDescriptionText,
+      );
+
+      const generatedResult = await generateTailoredResumeFromRaw({
+        resumeText,
+        jobDescriptionText,
+        originalEvaluation,
+      });
+      const { tailoredResume, changeLog } = generatedResult;
+
+      const tailoredEvaluation = await evaluateTailoredResumeAgainstJDRaw(
+        renderTailoredResumeText(tailoredResume),
+        jobDescriptionText,
+      );
+      const scoreComparison = buildScoreComparison({
+        originalEvaluation,
+        tailoredEvaluation,
+      });
+
+      const response: TailorResponse = TailorResponseSchema.parse({
+        tailoredResume,
+        originalEvaluation,
+        tailoredEvaluation,
+        scoreComparison,
+        evaluationMode: "llm",
+        changeLog,
+      });
+
+      return Response.json(response);
+    } catch (err) {
+      await restoreCredit();
+      throw err;
     }
-
-    void rpcData; // resume_id/is_regen/regen_count available but not returned by this combined route
-
-    const originalEvaluation = await evaluateResumeAgainstJDRaw(
-      resumeText,
-      jobDescriptionText,
-    );
-
-    const generatedResult = await generateTailoredResumeFromRaw({
-      resumeText,
-      jobDescriptionText,
-      originalEvaluation,
-    });
-    const { tailoredResume, changeLog } = generatedResult;
-
-    const tailoredEvaluation = await evaluateTailoredResumeAgainstJDRaw(
-      renderTailoredResumeText(tailoredResume),
-      jobDescriptionText,
-    );
-    const scoreComparison = buildScoreComparison({
-      originalEvaluation,
-      tailoredEvaluation,
-    });
-
-    const response: TailorResponse = TailorResponseSchema.parse({
-      tailoredResume,
-      originalEvaluation,
-      tailoredEvaluation,
-      scoreComparison,
-      evaluationMode: "llm",
-      changeLog,
-    });
-
-    return Response.json(response);
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Tailoring request failed.";

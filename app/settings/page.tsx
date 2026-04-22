@@ -7,6 +7,7 @@ import SwitchPlanSection from '@/components/settings/SwitchPlanSection'
 import PaymentHistory from '@/components/settings/PaymentHistory'
 import AvatarImage from '@/components/settings/AvatarImage'
 import MockPaymentsBanner from '@/components/MockPaymentsBanner'
+import AppearanceSection from '@/components/settings/AppearanceSection'
 import { ArrowLeft, Coins, BarChart2, User } from 'lucide-react'
 
 function formatMemberSince(isoDate: string) {
@@ -175,6 +176,9 @@ export default async function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Appearance */}
+        <AppearanceSection />
 
         {/* Danger Zone */}
         <div className="rounded-xl border border-red-500/20 bg-red-950/20 p-6">

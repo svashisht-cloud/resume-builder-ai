@@ -49,6 +49,38 @@ export async function buildResumeDocxBuffer(resume: TailoredResume, style: Resum
   const LINE_HEIGHT = LINE_HEIGHT_MAP[style.bulletSpacing];
   const SEC_BEFORE = SECTION_BEFORE[style.sectionSpacing];
 
+  const expEntries = resume.experience.length;
+  const projEntries = resume.projects.length;
+  // Wrap-aware line estimate: divide each text item by chars-per-line rather than counting paragraphs.
+  // At 10.5pt Times New Roman on a ~7.5" column (marginally narrower than PDF due to twip rounding), ~88 chars/line.
+  const CHARS_PER_LINE = 88;
+  const headerLines = 2 + (resume.contact.roleSubtitle ? 1 : 0);
+  const sectionHeaders = (resume.skills.length > 0 ? 1 : 0) + (expEntries > 0 ? 1 : 0) + (projEntries > 0 ? 1 : 0) + (resume.education.length > 0 ? 1 : 0);
+  const entryHeaders = expEntries * 2 + projEntries + resume.education.length * 2;
+  const bulletLines = [
+    ...resume.experience.flatMap((e) => e.bullets.map((b) => Math.ceil(b.text.length / CHARS_PER_LINE))),
+    ...resume.projects.flatMap((p) => p.bullets.map((b) => Math.ceil(b.length / CHARS_PER_LINE))),
+    ...resume.certifications.map((c) => Math.ceil(c.length / CHARS_PER_LINE)),
+  ].reduce((sum, n) => sum + n, 0);
+  const skillLineCount = resume.skills.reduce((sum, g) => {
+    const rowText = `${g.category}: ${g.items.join(", ")}`;
+    return sum + Math.ceil(rowText.length / CHARS_PER_LINE);
+  }, 0);
+  const totalBullets = resume.experience.reduce((s, e) => s + e.bullets.length, 0)
+    + resume.projects.reduce((s, p) => s + p.bullets.length, 0)
+    + resume.certifications.length;
+  const estimatedLines = headerLines + sectionHeaders + entryHeaders + skillLineCount + bulletLines;
+  // Usable page height: 11in × 1440 twips/in − top(600) − bottom(600) = 15240 twips
+  const usableHeightTwips = 15240;
+  const lineHeightTwips = LINE_HEIGHT;
+  const estimatedCapacity = Math.floor(usableHeightTwips / lineHeightTwips);
+
+  console.log("[docx] generation stats", {
+    style: { fontFamily: style.fontFamily, bodySize: `${BODY_SZ / 2}pt`, lineHeight: `${LINE_HEIGHT}twip`, sectionSpacing: `${SEC_BEFORE}twip`, margins: "top/bottom:600 left/right:640 twip" },
+    content: { expEntries, projEntries, totalBullets, skillGroups: resume.skills.length, educationEntries: resume.education.length },
+    estimate: { lines: estimatedLines, capacityAtLineHeight: estimatedCapacity, riskOfOverflow: estimatedLines > estimatedCapacity },
+  });
+
   function sectionHeader(title: string): Paragraph {
     return new Paragraph({
       children: [new TextRun({ text: title.toUpperCase(), bold: true, size: HEADER_SZ, font: FONT })],

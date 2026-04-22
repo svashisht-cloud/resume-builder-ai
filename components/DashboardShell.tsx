@@ -5,9 +5,10 @@ import { createPortal } from "react-dom";
 import { ResumePreview } from "@/components/ResumePreview";
 import { useTailorResume } from "@/lib/hooks/useTailorResume";
 import NoCreditsModal from "@/components/NoCreditsModal";
-import { FileText, Briefcase, ArrowRight, Check, X, RefreshCw, AlertCircle, ChevronLeft, Sparkles, Download, FileDown, Printer, Upload, Info, Paintbrush, Eye, RotateCcw, MousePointerClick } from "lucide-react";
+import { FileText, Briefcase, ArrowRight, Check, X, RefreshCw, AlertCircle, ChevronLeft, Sparkles, Download, FileDown, Upload, Info, Paintbrush, Eye, RotateCcw, MousePointerClick } from "lucide-react";
 import type { ResumeStyle } from "@/types";
 import { DEFAULT_RESUME_STYLE, ResumeStyleSchema } from "@/types";
+import { Logo } from "@/components/brand";
 
 const RESUME_PAGE_WIDTH_PX = 816;
 const PREVIEW_CARD_SCALE = 400 / RESUME_PAGE_WIDTH_PX;
@@ -186,7 +187,6 @@ export function DashboardShell() {
     toggleKeyword,
     handleDownloadPdf,
     handleDownloadDocx,
-    handlePrintResume,
     handleReset,
     openModal,
     closeModal,
@@ -349,6 +349,9 @@ export function DashboardShell() {
               }}
             >
               <div className="w-full max-w-xs text-center">
+                <div className="mb-6 flex justify-center">
+                  <Logo variant="mark" tone="dark" className="h-10 opacity-50" />
+                </div>
                 {loadingStep === 1 ? (
                   <p className="mb-6 text-2xl font-semibold tracking-tight text-foreground">
                     Tailoring your resume…
@@ -378,9 +381,14 @@ export function DashboardShell() {
 
                 {loadingStep > 0 && (
                   <div className="mb-8 flex justify-center">
-                    <div className="relative h-8 w-8">
-                      <div className="absolute inset-0 animate-spin rounded-full bg-gradient-to-r from-accent to-cyan-300 [mask:radial-gradient(farthest-side,transparent_55%,black_55%)]" />
-                    </div>
+                    <div
+                      className="h-10 w-10 animate-spin rounded-full"
+                      style={{
+                        background: "conic-gradient(from 0deg, transparent 0deg, #06b6d4 300deg, #22d3ee 360deg)",
+                        WebkitMask: "radial-gradient(farthest-side, transparent 55%, black 56%)",
+                        mask: "radial-gradient(farthest-side, transparent 55%, black 56%)",
+                      }}
+                    />
                   </div>
                 )}
 
@@ -390,9 +398,8 @@ export function DashboardShell() {
                     className="h-full rounded-full"
                     style={{
                       width:
-                        loadingStep === 1 ? "10%"
-                        : loadingStep === 2 ? "45%"
-                        : loadingStep === 3 ? "80%"
+                        loadingStep === 2 ? "66%"
+                        : loadingStep === 3 ? "90%"
                         : "33%",
                       background: "linear-gradient(90deg, var(--accent), #22d3ee, var(--accent))",
                       backgroundSize: "200% 100%",
@@ -1045,14 +1052,6 @@ export function DashboardShell() {
               >
                 <FileDown size={14} />
                 {isDownloadingDocx ? "Preparing…" : "Download DOCX"}
-              </button>
-              <button
-                className="flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-transparent px-4 text-sm font-semibold text-muted transition-all hover:border-border hover:text-foreground"
-                onClick={handlePrintResume}
-                type="button"
-              >
-                <Printer size={14} />
-                Print / Save as PDF
               </button>
             </div>
             <button

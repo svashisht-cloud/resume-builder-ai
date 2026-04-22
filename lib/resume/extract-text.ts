@@ -38,6 +38,12 @@ function cleanResumeText(text: string): string {
   return text
     .split("\n")
     .filter((line) => !PAGE_MARKER_RE.test(line.trim()))
+    .map((line) =>
+      line
+        .replace(/\t{3,}/g, " ")   // 3+ consecutive tabs → single space (DOCX right-aligned tab stops)
+        .replace(/ {4,}/g, "  ")   // 4+ consecutive spaces → 2 spaces (DOCX space-based alignment)
+        .trimEnd()
+    )
     .join("\n")
     .trim();
 }

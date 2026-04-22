@@ -218,7 +218,7 @@ async function runStructuredCall<TSchema extends z.ZodType>({
 
   const responseText = choice.message.content;
 
-  console.log(`[pipeline] raw model response (${validationLabel}):`, responseText);
+  // console.log(`[pipeline] raw model response (${validationLabel}):`, responseText);
 
   if (!responseText) {
     throw new Error(`${validationLabel}: OpenAI returned no content.`);

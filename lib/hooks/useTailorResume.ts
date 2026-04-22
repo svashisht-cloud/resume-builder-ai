@@ -34,7 +34,6 @@ export interface TailorResumeState {
   toggleKeyword: (kw: string) => void;
   handleDownloadPdf: () => Promise<void>;
   handleDownloadDocx: () => Promise<void>;
-  handlePrintResume: () => void;
   handleReset: () => void;
   openModal: () => void;
   closeModal: () => void;
@@ -433,10 +432,6 @@ export function useTailorResume({
     }
   }
 
-  function handlePrintResume() {
-    if (result) window.print();
-  }
-
   function handleReset() {
     setNoTransition(true);
     setResult(null);
@@ -476,7 +471,6 @@ export function useTailorResume({
     toggleKeyword,
     handleDownloadPdf,
     handleDownloadDocx,
-    handlePrintResume,
     handleReset,
     openModal: () => setIsModalOpen(true),
     closeModal: () => setIsModalOpen(false),

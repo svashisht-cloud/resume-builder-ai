@@ -3,6 +3,7 @@ import { extractResumeText } from "@/lib/resume/extract-text";
 import { hashJD, extractJobMeta } from "@/lib/resume/normalize";
 import { createClient } from "@/lib/supabase/server";
 import { isClientError } from "@/lib/errors";
+import { checkRateLimit, getIdentifier } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -45,6 +46,16 @@ export async function POST(request: Request) {
       return Response.json({ error: "Authentication required." }, { status: 401 });
     }
 
+    // Rate limit
+    const { success: rlSuccess, reset: rlReset } = await checkRateLimit(getIdentifier(request, user.id));
+    if (!rlSuccess) {
+      const retryAfter = Math.max(0, Math.ceil((rlReset - Date.now()) / 1000));
+      return Response.json(
+        { error: "rate_limited", retryAfter },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
+    }
+
     // Hash JD + extract meta before expensive file I/O
     const jdHash = await hashJD(jobDescriptionText);
     const { jobTitle, companyName } = extractJobMeta(jobDescriptionText);
@@ -69,34 +80,52 @@ export async function POST(request: Request) {
       if (rpcError.code === "P0002") {
         return Response.json({ error: "regen_limit_reached" }, { status: 403 });
       }
+      if (rpcError.code === "P0003") {
+        return Response.json({ error: "paid_credit_required" }, { status: 403 });
+      }
       return Response.json({ error: rpcError.message }, { status: 500 });
     }
 
     const { resume_id: resumeId, is_regen: isRegen, regen_count: regenCount } = (rpcData as Array<{ resume_id: string; is_regen: boolean; regen_count: number }>)[0];
+    const creditWasSpent = !isRegen;
 
-    const { data: paidCreditData } = await supabase
-      .from("credits")
-      .select("id")
-      .eq("spent_on_resume_id", resumeId)
-      .in("source", ["resume_pack", "resume_pack_plus"])
-      .limit(1);
-    const isPaidCredit = (paidCreditData?.length ?? 0) > 0;
-
-    const resumeText = await extractResumeText(resumeFile);
-
-    if (!resumeText.trim()) {
-      return Response.json(
-        { error: "Uploaded resume text is empty." },
-        { status: 400 },
+    const restoreCredit = async () => {
+      if (!creditWasSpent) return;
+      await supabase.rpc("restore_credit", { p_resume_id: resumeId }).then(
+        undefined,
+        (e) => console.error("[restore_credit] failed for resumeId", resumeId, e),
       );
+    };
+
+    try {
+      const { data: paidCreditData } = await supabase
+        .from("credits")
+        .select("id")
+        .eq("spent_on_resume_id", resumeId)
+        .in("source", ["resume_pack", "resume_pack_plus"])
+        .limit(1);
+      const isPaidCredit = (paidCreditData?.length ?? 0) > 0;
+
+      const resumeText = await extractResumeText(resumeFile);
+
+      if (!resumeText.trim()) {
+        await restoreCredit();
+        return Response.json(
+          { error: "Uploaded resume text is empty." },
+          { status: 400 },
+        );
+      }
+
+      const originalEvaluation = await evaluateResumeAgainstJDRaw(
+        resumeText,
+        jobDescriptionText,
+      );
+
+      return Response.json({ resumeText, originalEvaluation, resumeId, isRegen, regenCount, isPaidCredit });
+    } catch (err) {
+      await restoreCredit();
+      throw err;
     }
-
-    const originalEvaluation = await evaluateResumeAgainstJDRaw(
-      resumeText,
-      jobDescriptionText,
-    );
-
-    return Response.json({ resumeText, originalEvaluation, resumeId, isRegen, regenCount, isPaidCredit });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Step 1 failed.";

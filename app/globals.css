@@ -31,6 +31,24 @@
   --text: #ffffff;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
+  /* brand tokens */
+  --forte-ink:   #0A0A0A;
+  --forte-paper: #F7F6F3;
+  --forte-stone: #DBD9D2;
+}
+
+[data-theme="light"] {
+  --background:     #f8fafc;
+  --surface:        #ffffff;
+  --surface-raised: #f1f5f9;
+  --foreground:     #0f172a;
+  --muted:          #64748b;
+  --border:         #e2e8f0;
+  --bg:             #f8fafc;
+  --surface-2:      #f1f5f9;
+  --text:           #0f172a;
+  --text-muted:     #64748b;
+  --text-dim:       #94a3b8;
 }
 
 @theme inline {
@@ -51,6 +69,10 @@
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
   --color-text-dim: var(--text-dim);
+  /* brand tokens */
+  --color-ink:   var(--forte-ink);
+  --color-paper: var(--forte-paper);
+  --color-stone: var(--forte-stone);
   /* fonts */
   --font-display: var(--font-space-grotesk), system-ui, sans-serif;
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;

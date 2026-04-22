@@ -2,6 +2,8 @@ import { z } from "zod";
 import { buildResumeDocxBuffer } from "@/lib/resume/docx-document";
 import { buildResumePdfFilename } from "@/lib/resume/filename";
 import { TailoredResumeSchema, ResumeStyleSchema } from "@/types";
+import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getIdentifier } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 
@@ -18,6 +20,23 @@ function contentDisposition(filename: string) {
 
 export async function POST(request: Request) {
   try {
+    // Auth check
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    }
+
+    // Rate limit
+    const { success: rlSuccess, reset: rlReset } = await checkRateLimit(getIdentifier(request, user.id));
+    if (!rlSuccess) {
+      const retryAfter = Math.max(0, Math.ceil((rlReset - Date.now()) / 1000));
+      return Response.json(
+        { error: "rate_limited", retryAfter },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
+    }
+
     const payload = ExportDocxRequestSchema.parse(await request.json());
     const filename = buildResumePdfFilename({
       resume: payload.tailoredResume,

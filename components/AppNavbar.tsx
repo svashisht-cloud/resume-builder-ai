@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Settings, LogOut } from 'lucide-react'
+import { Settings, LogOut, Monitor, Sun, Moon } from 'lucide-react'
+import { Sora } from 'next/font/google'
+import { useTheme, type Theme } from '@/components/ThemeProvider'
+
+const sora = Sora({ subsets: ['latin'], weight: ['600'] })
 
 interface AppNavbarUser {
   display_name: string | null
@@ -16,10 +20,20 @@ interface AppNavbarProps {
   credits?: number
 }
 
+const themeOrder: Theme[] = ['dark', 'light', 'system']
+
 export default function AppNavbar({ user, credits }: AppNavbarProps) {
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
+
+  function cycleTheme() {
+    const next = themeOrder[(themeOrder.indexOf(theme) + 1) % themeOrder.length]
+    setTheme(next)
+  }
+
+  const ThemeIcon = theme === 'light' ? Sun : theme === 'system' ? Monitor : Moon
 
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
@@ -43,12 +57,11 @@ export default function AppNavbar({ user, credits }: AppNavbarProps) {
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
         <button
           onClick={() => router.push('/dashboard')}
-          className="flex items-baseline gap-1.5 transition-opacity hover:opacity-80"
+          className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
         >
-          <span className="font-display bg-gradient-to-r from-accent to-accent-secondary bg-clip-text text-lg font-bold text-transparent">
-            MockLoop
-          </span>
-          <span className="text-lg font-light text-muted">Resume Builder</span>
+          <span className={`${sora.className} text-xl font-semibold tracking-tight text-foreground`}>forte</span>
+          <span className="text-border/60 select-none">/</span>
+          <span className="text-m font-medium text-muted">resume builder</span>
         </button>
 
         <div className="flex items-center gap-3">
@@ -67,6 +80,15 @@ export default function AppNavbar({ user, credits }: AppNavbarProps) {
               </button>
             )
           )}
+
+          <button
+            onClick={cycleTheme}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-surface-raised text-muted transition-all hover:border-accent/40 hover:text-accent"
+            aria-label={`Switch theme (current: ${theme})`}
+            title={`Theme: ${theme}`}
+          >
+            <ThemeIcon size={15} />
+          </button>
 
           <div className="relative" ref={dropdownRef}>
             <button
