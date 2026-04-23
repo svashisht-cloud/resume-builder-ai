@@ -31,6 +31,8 @@ const BODY_HSZ: Record<ResumeStyle["bodySize"], number> = { small: 19, medium: 2
 const LINE_HEIGHT_MAP: Record<ResumeStyle["bulletSpacing"], number> = { compact: 230, normal: 264, relaxed: 330 };
 // Section spacing before (twips)
 const SECTION_BEFORE: Record<ResumeStyle["sectionSpacing"], number> = { compact: 60, normal: 120, relaxed: 200 };
+// Entry block spacing after (twips) — mirrors ITEM_MB in ResumePDFDocument (pt × 20)
+const ITEM_MB_TWIPS: Record<ResumeStyle["sectionSpacing"], number> = { compact: 40, normal: 80, relaxed: 140 };
 
 function present(v: string | null | undefined): string | null {
   return v?.trim() ? v.trim() : null;
@@ -41,7 +43,7 @@ function capitalize(s: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-export async function buildResumeDocxBuffer(resume: TailoredResume, style: ResumeStyle = DEFAULT_RESUME_STYLE): Promise<Buffer> {
+export async function buildResumeDocxBuffer(resume: TailoredResume, style: ResumeStyle = DEFAULT_RESUME_STYLE, _adaptiveLevel = 0): Promise<Buffer> {
   const FONT = DOCX_FONT[style.fontFamily];
   const NAME_SZ = NAME_HSZ[style.nameSize];
   const HEADER_SZ = HEADER_HSZ[style.headerSize];
@@ -75,11 +77,25 @@ export async function buildResumeDocxBuffer(resume: TailoredResume, style: Resum
   const lineHeightTwips = LINE_HEIGHT;
   const estimatedCapacity = Math.floor(usableHeightTwips / lineHeightTwips);
 
+  // Fixed spacing not captured by line count: entry block margins + section header spacing
+  const ITEM_MB = ITEM_MB_TWIPS[style.sectionSpacing];
+  const entryBlockSpacing = (expEntries + projEntries) * ITEM_MB;
+  const sectionHeaderSpacing = sectionHeaders * SEC_BEFORE;
+  const estimatedHeightTwips = estimatedLines * lineHeightTwips + entryBlockSpacing + sectionHeaderSpacing;
+  // DOCX renders more faithfully than PDF, so only compact if clearly over the page.
+  // A single light step (compact section spacing only) is sufficient in practice.
+  const riskOfOverflow = estimatedHeightTwips > usableHeightTwips;
+
   console.log("[docx] generation stats", {
     style: { fontFamily: style.fontFamily, bodySize: `${BODY_SZ / 2}pt`, lineHeight: `${LINE_HEIGHT}twip`, sectionSpacing: `${SEC_BEFORE}twip`, margins: "top/bottom:600 left/right:640 twip" },
     content: { expEntries, projEntries, totalBullets, skillGroups: resume.skills.length, educationEntries: resume.education.length },
-    estimate: { lines: estimatedLines, capacityAtLineHeight: estimatedCapacity, riskOfOverflow: estimatedLines > estimatedCapacity },
+    estimate: { lines: estimatedLines, estimatedHeightTwips: Math.round(estimatedHeightTwips), capacityAtLineHeight: estimatedCapacity, riskOfOverflow },
   });
+
+  if (riskOfOverflow && _adaptiveLevel < 1) {
+    console.log("[docx] adaptive-fit: applying compact section spacing");
+    return buildResumeDocxBuffer(resume, { ...style, sectionSpacing: "compact" }, _adaptiveLevel + 1);
+  }
 
   function sectionHeader(title: string): Paragraph {
     return new Paragraph({

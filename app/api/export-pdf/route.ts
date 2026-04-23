@@ -3,7 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { z } from "zod";
 import { ResumePDFDocument } from "@/components/ResumePDFDocument";
 import { buildResumePdfFilename } from "@/lib/resume/filename";
-import { TailoredResumeSchema, ResumeStyleSchema, type TailoredResume } from "@/types";
+import { TailoredResumeSchema, ResumeStyleSchema, type TailoredResume, type ResumeStyle, DEFAULT_RESUME_STYLE } from "@/types";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, getIdentifier } from "@/lib/ratelimit";
 
@@ -13,11 +13,17 @@ const BULLET_LEADING: Record<string, number> = { compact: 1.15, normal: 1.27, re
 const SECTION_MT: Record<string, number> = { compact: 1, normal: 3, relaxed: 6 };
 // PDF page: 11in height, 30pt top/bottom margins → usable ≈ 11×72 − 60 = 732pt
 const PDF_USABLE_PT = 732;
+const NAME_PT: Record<string, number> = { small: 18, medium: 20, large: 22 };
+const ITEM_MB: Record<string, number> = { compact: 2, normal: 4, relaxed: 7 };
+const BULLET_ROW_MB: Record<string, number> = { compact: 1, normal: 3, relaxed: 5 };
 
-function logResumeStats(resume: TailoredResume, style: { fontFamily?: string; bodySize?: string; bulletSpacing?: string; sectionSpacing?: string }): void {
+function logResumeStats(resume: TailoredResume, style: { fontFamily?: string; nameSize?: string; bodySize?: string; bulletSpacing?: string; sectionSpacing?: string }): void {
   const bodyPt = BODY_PT[style.bodySize ?? "medium"] ?? 10.5;
   const leading = BULLET_LEADING[style.bulletSpacing ?? "normal"] ?? 1.27;
   const sectionMt = SECTION_MT[style.sectionSpacing ?? "normal"] ?? 3;
+  const namePt = NAME_PT[style.nameSize ?? "medium"] ?? 20;
+  const itemMb = ITEM_MB[style.sectionSpacing ?? "normal"] ?? 4;
+  const bulletRowMb = BULLET_ROW_MB[style.sectionSpacing ?? "normal"] ?? 3;
   const lineHeightPt = bodyPt * leading;
 
   const expEntries = resume.experience.length;
@@ -44,7 +50,15 @@ function logResumeStats(resume: TailoredResume, style: { fontFamily?: string; bo
     return sum + Math.ceil(rowText.length / CHARS_PER_LINE);
   }, 0);
   const estimatedLines = headerLines + sectionHeaders + entryHeaders + skillLineCount + bulletLines;
-  const estimatedHeightPt = estimatedLines * lineHeightPt + sectionHeaders * sectionMt;
+
+  // Fixed spacing components not accounted for by line count alone
+  const bulletRowMargins = totalBullets * bulletRowMb;                // bulletRow.marginBottom (sectionSpacing-dependent)
+  const entryBlockMargins = (expEntries + projEntries) * itemMb;      // expBlock.marginBottom = itemMb per entry
+  const headerFixedPt = namePt + 10 + 3;                             // name marginBottom + header marginBottom
+  const sectionRuleOverhead = sectionHeaders * (0.75 + 2);           // rule borderWidth + marginBottom per section
+
+  const estimatedHeightPt = estimatedLines * lineHeightPt + sectionHeaders * sectionMt
+    + bulletRowMargins + entryBlockMargins + headerFixedPt + sectionRuleOverhead;
   const estimatedCapacity = Math.floor(PDF_USABLE_PT / lineHeightPt);
 
   // Original word/char stats (useful for spotting content-density overflow)
@@ -80,6 +94,17 @@ function logResumeStats(resume: TailoredResume, style: { fontFamily?: string; bo
   });
 }
 
+// Level progression (finer-grained to avoid over-compacting):
+//   1 → compact section spacing only (saves ~8pt)
+//   2 → also compact bullet leading (saves ~65pt more)
+//   3 → also reduce body/header font size (last resort)
+function buildPdfStyle(level: 0 | 1 | 2 | 3, requested: ResumeStyle): ResumeStyle {
+  if (level === 0) return requested;
+  if (level === 1) return { ...requested, sectionSpacing: "compact" };
+  if (level === 2) return { ...requested, sectionSpacing: "compact", bulletSpacing: "compact" };
+  return { ...requested, sectionSpacing: "compact", bulletSpacing: "compact", bodySize: "small", headerSize: "small" };
+}
+
 function countPdfPages(buffer: Buffer): number {
   // Each page in a PDF has a /Type /Page object (singular).
   // /Type /Pages (plural) is the parent catalog node — excluded by the negative lookahead.
@@ -88,6 +113,30 @@ function countPdfPages(buffer: Buffer): number {
 }
 
 type PdfElement = Parameters<typeof renderToBuffer>[0];
+
+const PDF_LEVEL_LABELS = ["", "compact section spacing", "compact section + bullet spacing", "compact spacing + small text"];
+
+async function renderWithAdaptiveFit(
+  resume: TailoredResume,
+  requestedStyle: ResumeStyle,
+): Promise<{ buffer: Buffer; pageCount: number; styleLevel: number }> {
+  let lastBuffer: Buffer | null = null;
+  let lastPageCount = 0;
+  for (let level = 0; level <= 3; level++) {
+    const style = buildPdfStyle(level as 0 | 1 | 2 | 3, requestedStyle);
+    const element = React.createElement(ResumePDFDocument, { resume, resumeStyle: style }) as unknown as PdfElement;
+    const buffer = await renderToBuffer(element);
+    const pageCount = countPdfPages(buffer);
+    if (level > 0) {
+      console.log(`[export-pdf] adaptive-fit: applied level-${level} (${PDF_LEVEL_LABELS[level]}), pages: ${pageCount}`);
+    }
+    lastBuffer = buffer;
+    lastPageCount = pageCount;
+    if (pageCount <= 1) return { buffer, pageCount, styleLevel: level };
+  }
+  console.log(`[export-pdf] adaptive-fit: level-3 still ${lastPageCount} pages — resume is genuinely long`);
+  return { buffer: lastBuffer!, pageCount: lastPageCount, styleLevel: 3 };
+}
 
 export const runtime = "nodejs";
 
@@ -122,17 +171,14 @@ export async function POST(request: Request) {
     }
 
     const payload = ExportPdfRequestSchema.parse(await request.json());
-    logResumeStats(payload.tailoredResume, payload.resumeStyle ?? {});
+    const resolvedStyle = payload.resumeStyle ?? DEFAULT_RESUME_STYLE;
+    logResumeStats(payload.tailoredResume, resolvedStyle);
     const filename = buildResumePdfFilename({
       resume: payload.tailoredResume,
       role: payload.role,
     });
-    const pdfDocument = React.createElement(ResumePDFDocument, {
-      resume: payload.tailoredResume,
-      resumeStyle: payload.resumeStyle,
-    }) as unknown as PdfElement;
-    const pdfBuffer = await renderToBuffer(pdfDocument);
-    console.log("[export-pdf] page count:", countPdfPages(pdfBuffer));
+    const { buffer: pdfBuffer, pageCount } = await renderWithAdaptiveFit(payload.tailoredResume, resolvedStyle);
+    console.log("[export-pdf] page count:", pageCount);
 
     return new Response(new Uint8Array(pdfBuffer), {
       headers: {

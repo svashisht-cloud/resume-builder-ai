@@ -35,6 +35,9 @@ const BODY_PT: Record<ResumeStyle["bodySize"], number> = { small: 9.5, medium: 1
 const BULLET_LEADING: Record<ResumeStyle["bulletSpacing"], number> = { compact: 1.15, normal: 1.27, relaxed: 1.5 };
 const SECTION_MT: Record<ResumeStyle["sectionSpacing"], number> = { compact: 1, normal: 3, relaxed: 6 };
 const ITEM_MB: Record<ResumeStyle["sectionSpacing"], number> = { compact: 2, normal: 4, relaxed: 7 };
+// Margin below each bullet row — tightens with sectionSpacing so compact mode
+// reclaims ~2pt × n_bullets without touching line-height (text stays readable).
+const BULLET_ROW_MB: Record<ResumeStyle["sectionSpacing"], number> = { compact: 1, normal: 3, relaxed: 5 };
 
 function makeStyles(style: ResumeStyle) {
   const font = PDF_FONT[style.fontFamily];
@@ -44,6 +47,7 @@ function makeStyles(style: ResumeStyle) {
   const leading = BULLET_LEADING[style.bulletSpacing];
   const sectionMt = SECTION_MT[style.sectionSpacing];
   const itemMb = ITEM_MB[style.sectionSpacing];
+  const bulletRowMb = BULLET_ROW_MB[style.sectionSpacing];
 
   return StyleSheet.create({
     page: {
@@ -77,7 +81,7 @@ function makeStyles(style: ResumeStyle) {
     skillCategory: { fontSize: bodyPt + 0.5, fontFamily: font.bold, color: BLACK, width: 150 },
     skillItems: { fontSize: bodyPt, fontFamily: font.normal, color: BLACK, flex: 1 },
     projectUrl: { fontSize: 9, fontFamily: font.normal, color: "#1155CC" },
-    bulletRow: { flexDirection: "row", marginBottom: 3, paddingLeft: 4 },
+    bulletRow: { flexDirection: "row", marginBottom: bulletRowMb, paddingLeft: 4 },
     bulletMarker: { width: 8, fontSize: bodyPt, fontFamily: font.normal, color: BLACK },
     bulletText: { flex: 1, fontSize: bodyPt, fontFamily: font.normal, color: BLACK },
   });
