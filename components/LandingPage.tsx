@@ -42,7 +42,7 @@ export default function LandingPage() {
             </Link>
             <button
               onClick={openModal}
-              className="rounded-lg border border-accent/60 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-all hover:bg-accent/20 hover:border-accent"
+              className="rounded-lg border border-accent/60 bg-accent/10 px-4 py-2.5 text-sm font-medium text-accent transition-all hover:bg-accent/20 hover:border-accent"
             >
               Sign In
             </button>
@@ -51,10 +51,10 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative mx-auto max-w-6xl px-6 py-20 overflow-hidden">
+      <section className="relative mx-auto max-w-6xl overflow-hidden px-6 py-12 sm:py-20">
         {/* Radial glow behind content */}
-        <div className="pointer-events-none absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-accent/5 blur-3xl" />
-        <div className="pointer-events-none absolute -top-20 right-1/4 h-[400px] w-[400px] rounded-full bg-accent-secondary/5 blur-3xl" />
+        <div className="pointer-events-none absolute -top-40 left-1/4 h-[200px] w-[200px] rounded-full bg-accent/5 blur-3xl sm:h-[500px] sm:w-[500px]" />
+        <div className="pointer-events-none absolute -top-20 right-1/4 h-[150px] w-[150px] rounded-full bg-accent-secondary/5 blur-3xl sm:h-[400px] sm:w-[400px]" />
 
         <div className="relative grid grid-cols-1 items-center gap-12 lg:grid-cols-[9fr_11fr]">
           {/* Left: copy + CTAs */}
@@ -94,7 +94,7 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="border-t border-border/60 bg-surface py-20">
+      <section id="how-it-works" className="border-t border-border/60 bg-surface py-12 md:py-20">
         <div className="mx-auto max-w-5xl px-6">
           <div className="mb-12 text-center">
             <h2 className="font-display mb-3 text-3xl font-bold text-foreground">How It Works</h2>
@@ -146,7 +146,7 @@ export default function LandingPage() {
       <Testimonials />
 
       {/* Pricing */}
-      <section className="border-t border-border/60 py-20">
+      <section className="border-t border-border/60 py-12 md:py-20">
         <div className="mx-auto max-w-5xl px-6">
           <div className="mb-12 text-center">
             <h2 className="font-display mb-3 text-3xl font-bold text-foreground">Pricing</h2>

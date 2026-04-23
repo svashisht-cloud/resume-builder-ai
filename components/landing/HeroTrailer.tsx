@@ -117,7 +117,7 @@ export default function HeroTrailer() {
       </div>
 
       {/* Content area — panes cross-fade via absolute + opacity */}
-      <div className="relative h-[520px] overflow-hidden md:h-[560px]">
+      <div className="relative h-[360px] overflow-hidden sm:h-[520px] md:h-[560px]">
 
         {/* ── Pane 1: Upload zone (steps 0–1, 8) ── */}
         <div

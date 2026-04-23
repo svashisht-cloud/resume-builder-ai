@@ -161,7 +161,7 @@ export default async function SettingsPage() {
             <BarChart2 size={15} className="text-muted" />
             <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Usage</h2>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <p className="font-display text-4xl font-bold text-foreground">{resumesGenerated}</p>
               <p className="mt-1 text-xs text-muted">resumes generated</p>

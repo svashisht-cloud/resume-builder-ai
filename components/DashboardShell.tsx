@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ResumePreview } from "@/components/ResumePreview";
 import { useTailorResume } from "@/lib/hooks/useTailorResume";
@@ -99,7 +99,7 @@ function SizeToggle({ value, onChange }: { value: "small" | "medium" | "large"; 
           type="button"
           aria-pressed={value === v}
           onClick={() => onChange(v)}
-          className={`px-3 py-1 text-xs font-semibold transition-colors ${i < arr.length - 1 ? "border-r border-border/60" : ""} ${
+          className={`px-3 py-2 text-xs font-semibold transition-colors ${i < arr.length - 1 ? "border-r border-border/60" : ""} ${
             value === v ? "bg-accent text-background" : "text-muted hover:bg-surface-raised hover:text-foreground"
           }`}
         >
@@ -119,7 +119,7 @@ function SpacingToggle({ value, onChange }: { value: "compact" | "normal" | "rel
           type="button"
           aria-pressed={value === v}
           onClick={() => onChange(v)}
-          className={`px-3 py-1 text-xs font-semibold transition-colors ${i < arr.length - 1 ? "border-r border-border/60" : ""} ${
+          className={`px-3 py-2 text-xs font-semibold transition-colors ${i < arr.length - 1 ? "border-r border-border/60" : ""} ${
             value === v ? "bg-accent text-background" : "text-muted hover:bg-surface-raised hover:text-foreground"
           }`}
         >
@@ -138,9 +138,14 @@ export function DashboardShell() {
   const [selectedItems, setSelectedItems] = useState<Map<string, string>>(new Map());
   const [refineScale, setRefineScale] = useState(1);
   const [styleScale, setStyleScale] = useState(1);
+  const [modalScale, setModalScale] = useState(1);
   const [resumeStyle, setResumeStyle] = useState<ResumeStyle>(DEFAULT_RESUME_STYLE);
+  const [refineTab, setRefineTab] = useState<"left" | "right">("left");
+  const [styleTab, setStyleTab] = useState<"left" | "right">("left");
+  const [isMobile, setIsMobile] = useState(false);
   const refineRoRef = useRef<ResizeObserver | null>(null);
   const styleRoRef = useRef<ResizeObserver | null>(null);
+  const modalRoRef = useRef<ResizeObserver | null>(null);
 
   const refineRightRef = useCallback((el: HTMLDivElement | null) => {
     refineRoRef.current?.disconnect();
@@ -164,6 +169,24 @@ export function DashboardShell() {
     });
     ro.observe(el);
     styleRoRef.current = ro;
+  }, []);
+
+  const modalRef = useCallback((el: HTMLDivElement | null) => {
+    modalRoRef.current?.disconnect();
+    modalRoRef.current = null;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setModalScale(Math.min(1, entry.contentRect.width / RESUME_PAGE_WIDTH_PX));
+    });
+    ro.observe(el);
+    modalRoRef.current = ro;
+  }, []);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
   }, []);
 
   const {
@@ -343,7 +366,7 @@ export function DashboardShell() {
             <div
               className="absolute bottom-0 left-0 top-0 flex flex-col items-center justify-center px-4"
               style={{
-                right: viewState === "keyword-selection" ? "50%" : "0",
+                right: (!isMobile && viewState === "keyword-selection") ? "50%" : "0",
                 transition: "right 350ms ease-in-out",
               }}
             >
@@ -358,7 +381,7 @@ export function DashboardShell() {
                       Initial ATS Score
                     </p>
                     <div className="mt-3 flex items-end justify-center gap-1.5">
-                      <span className="font-mono bg-gradient-to-br from-accent to-cyan-300 bg-clip-text text-8xl font-bold leading-none tracking-tight text-transparent">
+                      <span className="font-mono bg-gradient-to-br from-accent to-cyan-300 bg-clip-text text-5xl font-bold leading-none tracking-tight text-transparent sm:text-7xl md:text-8xl">
                         {initialScore}
                       </span>
                       <span className="mb-2 text-2xl font-light text-text-dim">/100</span>
@@ -416,7 +439,7 @@ export function DashboardShell() {
 
             {/* Keywords sub-panel */}
             <div
-              className={`absolute bottom-0 right-0 top-0 w-1/2 overflow-y-auto border-l border-border/60 transition-transform duration-[350ms] ease-in-out ${
+              className={`absolute bottom-0 right-0 top-0 w-full overflow-y-auto border-l border-border/60 bg-background transition-transform duration-[350ms] ease-in-out md:w-1/2 ${
                 viewState === "keyword-selection" ? "translate-x-0" : "translate-x-full"
               }`}
             >
@@ -443,7 +466,7 @@ export function DashboardShell() {
                             key={kw}
                             type="button"
                             onClick={() => toggleKeyword(kw)}
-                            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-all ${
+                            className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-all ${
                               selected
                                 ? "border-accent/50 bg-accent/15 text-accent shadow-[0_0_8px_rgba(6,182,212,0.15)]"
                                 : "border-border/60 text-text-dim hover:border-muted/40 hover:text-muted"
@@ -489,17 +512,38 @@ export function DashboardShell() {
               viewState === "regen-feedback" ? "translate-x-0" : "translate-x-full"
             }`}>
               {result && (
-              /* ── 2-column refine layout ── */
-              <div className="flex h-full" style={{ animation: "fade-in-up 0.3s ease forwards" }}>
+              /* ── Refine layout: tabs on mobile, 2-column on desktop ── */
+              <div className="flex h-full flex-col" style={{ animation: "fade-in-up 0.3s ease forwards" }}>
 
-                {/* Left sidebar */}
-                <div className="flex w-1/2 shrink-0 flex-col overflow-hidden border-r border-border/60">
+                {/* Mobile tab bar */}
+                <div className="flex shrink-0 border-b border-border/60 md:hidden">
+                  <button
+                    type="button"
+                    onClick={() => setRefineTab("left")}
+                    className={`flex-1 py-3 text-sm font-medium transition-colors ${refineTab === "left" ? "border-b-2 border-accent text-accent" : "text-text-dim hover:text-muted"}`}
+                  >
+                    Refine
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRefineTab("right")}
+                    className={`flex-1 py-3 text-sm font-medium transition-colors ${refineTab === "right" ? "border-b-2 border-accent text-accent" : "text-text-dim hover:text-muted"}`}
+                  >
+                    Preview
+                  </button>
+                </div>
+
+                {/* Sliding track — clips off-screen panel on mobile, both visible side-by-side on desktop */}
+                <div className="flex min-h-0 flex-1 overflow-hidden">
+                <div className={`flex h-full w-[200%] shrink-0 transition-transform duration-[250ms] ease-in-out md:w-full md:translate-x-0 ${refineTab === "right" ? "-translate-x-1/2" : "translate-x-0"}`}>
+                {/* Left panel */}
+                <div className="flex h-full w-1/2 flex-col overflow-hidden border-border/60 border-b md:border-b-0 md:border-r">
                   <div className="h-px shrink-0 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
                   <div className="flex min-h-0 flex-1 flex-col px-6 py-6">
                     <button
                       type="button"
                       onClick={handleCloseRegenFeedback}
-                      className="mb-5 flex w-fit shrink-0 items-center gap-1.5 rounded-lg border border-border/60 px-3 py-1.5 text-sm font-medium text-muted transition-all hover:border-border hover:text-foreground"
+                      className="mb-5 flex w-fit shrink-0 items-center gap-1.5 rounded-lg border border-border/60 px-3 py-2.5 text-sm font-medium text-muted transition-all hover:border-border hover:text-foreground"
                     >
                       <ChevronLeft size={14} />
                       Back
@@ -588,8 +632,8 @@ export function DashboardShell() {
                   </div>
                 </div>
 
-                {/* Right column — interactive resume viewer */}
-                <div ref={refineRightRef} className="flex flex-1 flex-col overflow-hidden">
+                {/* Right panel — interactive resume viewer */}
+                <div ref={refineRightRef} className="flex h-full w-1/2 flex-col overflow-hidden">
                   <div className="flex shrink-0 items-center gap-1.5 border-b border-border/40 bg-background/90 px-8 py-2.5 backdrop-blur-sm">
                     <Eye size={12} className="text-text-dim" />
                     <span className="text-xs font-semibold uppercase tracking-widest text-text-dim">Live Preview</span>
@@ -606,6 +650,8 @@ export function DashboardShell() {
                     </div>
                   </div>
                 </div>
+                </div>
+                </div>
               </div>
               )}
             </div>
@@ -615,9 +661,30 @@ export function DashboardShell() {
               isStyleEditingOpen ? "translate-x-0" : "translate-x-full"
             }`}>
               {result && (
-                <div className="flex h-full" style={{ animation: "fade-in-up 0.3s ease forwards" }}>
-                  {/* Left sidebar — style controls */}
-                  <div className="flex w-1/2 shrink-0 flex-col overflow-hidden border-r border-border/60">
+                <div className="flex h-full flex-col" style={{ animation: "fade-in-up 0.3s ease forwards" }}>
+                  {/* Mobile tab bar */}
+                  <div className="flex shrink-0 border-b border-border/60 md:hidden">
+                    <button
+                      type="button"
+                      onClick={() => setStyleTab("left")}
+                      className={`flex-1 py-3 text-sm font-medium transition-colors ${styleTab === "left" ? "border-b-2 border-accent text-accent" : "text-text-dim hover:text-muted"}`}
+                    >
+                      Style
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStyleTab("right")}
+                      className={`flex-1 py-3 text-sm font-medium transition-colors ${styleTab === "right" ? "border-b-2 border-accent text-accent" : "text-text-dim hover:text-muted"}`}
+                    >
+                      Preview
+                    </button>
+                  </div>
+
+                  {/* Sliding track */}
+                  <div className="flex min-h-0 flex-1 overflow-hidden">
+                  <div className={`flex h-full w-[200%] shrink-0 transition-transform duration-[250ms] ease-in-out md:w-full md:translate-x-0 ${styleTab === "right" ? "-translate-x-1/2" : "translate-x-0"}`}>
+                  {/* Left panel — style controls */}
+                  <div className="flex h-full w-1/2 flex-col overflow-hidden border-border/60 border-b md:border-b-0 md:border-r">
                     <div className="h-px shrink-0 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
                     <div className="flex min-h-0 flex-1 flex-col px-6 py-6">
                       {/* Pinned top: Back button + heading */}
@@ -625,7 +692,7 @@ export function DashboardShell() {
                         <button
                           type="button"
                           onClick={handleCloseStyleEditing}
-                          className="mb-5 flex w-fit items-center gap-1.5 rounded-lg border border-border/60 px-3 py-1.5 text-sm font-medium text-muted transition-all hover:border-border hover:text-foreground"
+                          className="mb-5 flex w-fit items-center gap-1.5 rounded-lg border border-border/60 px-3 py-2.5 text-sm font-medium text-muted transition-all hover:border-border hover:text-foreground"
                         >
                           <ChevronLeft size={14} />
                           Back
@@ -724,8 +791,8 @@ export function DashboardShell() {
                     </div>
                   </div>
 
-                  {/* Right column — live preview */}
-                  <div ref={styleRightRef} className="flex flex-1 flex-col overflow-hidden">
+                  {/* Right panel — live preview */}
+                  <div ref={styleRightRef} className="flex h-full w-1/2 flex-col overflow-hidden">
                     <div className="flex shrink-0 items-center gap-1.5 border-b border-border/40 bg-background/90 px-8 py-2.5 backdrop-blur-sm">
                       <Eye size={12} className="text-text-dim" />
                       <span className="text-xs font-semibold uppercase tracking-widest text-text-dim">Live Preview</span>
@@ -735,6 +802,8 @@ export function DashboardShell() {
                         <ResumePreview resume={result.tailoredResume} resumeStyle={resumeStyle} />
                       </div>
                     </div>
+                  </div>
+                  </div>
                   </div>
                 </div>
               )}
@@ -776,8 +845,84 @@ export function DashboardShell() {
                     )}
 
                     <div className="mt-6 grid gap-6 lg:grid-cols-[3fr_2fr]" style={{ animation: "fade-in-up 0.45s ease forwards" }}>
-                      {/* ── LEFT ── */}
-                      <div className="space-y-5">
+                      {/* ── Resume preview — first in DOM = top on mobile; placed right on desktop ── */}
+                      <div className="lg:col-start-2 lg:row-start-1">
+                        <div className="sticky top-8">
+                          <div className="mb-3 flex items-center justify-between gap-2">
+                            <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+                              Tailored Resume
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                title={isPaidCredit ? "Style resume" : "Requires Resume Pack"}
+                                onClick={isPaidCredit ? () => { setStyleTab("left"); handleOpenStyleEditing(); } : undefined}
+                                disabled={!isPaidCredit}
+                                className="flex items-center gap-1 rounded-lg border border-border/60 px-2 py-2 text-xs font-medium text-muted transition-all hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                <Paintbrush size={12} />
+                                Style
+                              </button>
+                              {!isPaidCredit ? (
+                                <span
+                                  title="Requires Resume Pack or Resume Plus Pack"
+                                  className="cursor-default rounded-lg border border-border/40 bg-surface px-2.5 py-1.5 text-xs font-medium text-text-dim"
+                                >
+                                  Pack required
+                                </span>
+                              ) : regenCount < 2 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => { setRegenFeedback(""); setSelectedItems(new Map()); setRefineTab("left"); handleOpenRegenFeedback(); }}
+                                  disabled={loadingStep !== 0}
+                                  className="flex items-center gap-1.5 rounded-lg border border-accent/50 bg-accent/8 px-3 py-2 text-xs font-semibold text-accent transition-all hover:border-accent/70 hover:bg-accent/15 disabled:cursor-not-allowed disabled:border-border disabled:text-text-dim"
+                                >
+                                  <RefreshCw size={13} />
+                                  Regenerate
+                                  <span className="text-accent/50">({regenCount}/2)</span>
+                                </button>
+                              ) : (
+                                <span className="rounded-lg border border-rose-500/20 bg-rose-950/20 px-2.5 py-1.5 text-xs font-medium text-rose-400">
+                                  Limit reached (2/2)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <button
+                            aria-label="Preview tailored resume"
+                            className="group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border/60 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all hover:shadow-[0_8px_40px_rgba(6,182,212,0.15),0_8px_32px_rgba(0,0,0,0.3)] hover:border-accent/30"
+                            onClick={openModal}
+                            style={{ height: PREVIEW_CARD_HEIGHT }}
+                            type="button"
+                          >
+                            <div
+                              className="absolute top-0 blur-[3px]"
+                              style={{
+                                left: "50%",
+                                transform: `translateX(-50%) scale(${PREVIEW_CARD_SCALE})`,
+                                transformOrigin: "top center",
+                                width: RESUME_PAGE_WIDTH_PX,
+                              }}
+                            >
+                              <ResumePreview resume={result.tailoredResume} resumeStyle={resumeStyle} />
+                            </div>
+                            <div
+                              className="absolute inset-0"
+                              style={{ background: "linear-gradient(to bottom, transparent 35%, rgba(255,255,255,0.97) 80%)" }}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className="flex items-center gap-2 rounded-full bg-gradient-to-r from-accent to-cyan-400 px-5 py-2.5 text-sm font-semibold text-background shadow-[0_4px_16px_rgba(6,182,212,0.35)] transition-all group-hover:shadow-[0_4px_24px_rgba(6,182,212,0.5)]">
+                                Preview & Download
+                                <ArrowRight size={14} />
+                              </span>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* ── Scores + changelog — second in DOM = below on mobile; placed left on desktop ── */}
+                      <div className="space-y-5 lg:col-start-1 lg:row-start-1">
 
                         {/* Score comparison */}
                         <section className="overflow-hidden rounded-xl border border-border/60 bg-surface shadow-[0_2px_16px_rgba(0,0,0,0.2)]">
@@ -931,81 +1076,6 @@ export function DashboardShell() {
                         </section>
                       </div>
 
-                      {/* ── RIGHT: Resume preview ── */}
-                      <div>
-                        <div className="sticky top-8">
-                          <div className="mb-3 flex items-center justify-between gap-2">
-                            <p className="text-xs font-semibold uppercase tracking-widest text-muted">
-                              Tailored Resume
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                title={isPaidCredit ? "Style resume" : "Requires Resume Pack"}
-                                onClick={isPaidCredit ? handleOpenStyleEditing : undefined}
-                                disabled={!isPaidCredit}
-                                className="flex items-center gap-1 rounded-lg border border-border/60 px-2 py-1.5 text-xs font-medium text-muted transition-all hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
-                              >
-                                <Paintbrush size={12} />
-                                Style
-                              </button>
-                              {!isPaidCredit ? (
-                                <span
-                                  title="Requires Resume Pack or Resume Plus Pack"
-                                  className="cursor-default rounded-lg border border-border/40 bg-surface px-2.5 py-1.5 text-xs font-medium text-text-dim"
-                                >
-                                  Pack required
-                                </span>
-                              ) : regenCount < 2 ? (
-                                <button
-                                  type="button"
-                                  onClick={() => { setRegenFeedback(""); setSelectedItems(new Map()); handleOpenRegenFeedback(); }}
-                                  disabled={loadingStep !== 0}
-                                  className="flex items-center gap-1.5 rounded-lg border border-accent/50 bg-accent/8 px-3 py-1.5 text-xs font-semibold text-accent transition-all hover:border-accent/70 hover:bg-accent/15 disabled:cursor-not-allowed disabled:border-border disabled:text-text-dim"
-                                >
-                                  <RefreshCw size={13} />
-                                  Regenerate
-                                  <span className="text-accent/50">({regenCount}/2)</span>
-                                </button>
-                              ) : (
-                                <span className="rounded-lg border border-rose-500/20 bg-rose-950/20 px-2.5 py-1.5 text-xs font-medium text-rose-400">
-                                  Limit reached (2/2)
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <button
-                            aria-label="Preview tailored resume"
-                            className="group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border/60 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all hover:shadow-[0_8px_40px_rgba(6,182,212,0.15),0_8px_32px_rgba(0,0,0,0.3)] hover:border-accent/30"
-                            onClick={openModal}
-                            style={{ height: PREVIEW_CARD_HEIGHT }}
-                            type="button"
-                          >
-                            <div
-                              className="absolute top-0 blur-[3px]"
-                              style={{
-                                left: "50%",
-                                transform: `translateX(-50%) scale(${PREVIEW_CARD_SCALE})`,
-                                transformOrigin: "top center",
-                                width: RESUME_PAGE_WIDTH_PX,
-                              }}
-                            >
-                              <ResumePreview resume={result.tailoredResume} resumeStyle={resumeStyle} />
-                            </div>
-                            <div
-                              className="absolute inset-0"
-                              style={{ background: "linear-gradient(to bottom, transparent 35%, rgba(255,255,255,0.97) 80%)" }}
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="flex items-center gap-2 rounded-full bg-gradient-to-r from-accent to-cyan-400 px-5 py-2.5 text-sm font-semibold text-background shadow-[0_4px_16px_rgba(6,182,212,0.35)] transition-all group-hover:shadow-[0_4px_24px_rgba(6,182,212,0.5)]">
-                                Preview & Download
-                                <ArrowRight size={14} />
-                              </span>
-                            </div>
-                          </button>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </main>
@@ -1061,10 +1131,13 @@ export function DashboardShell() {
           </div>
 
           <div
-            className="resume-print-area mx-auto my-8 w-[816px] shadow-2xl"
+            ref={modalRef}
+            className="flex justify-center px-4 py-4 sm:px-0 sm:py-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <ResumePreview resume={result.tailoredResume} resumeStyle={resumeStyle} />
+            <div className="resume-print-area shadow-2xl" style={{ zoom: modalScale, width: RESUME_PAGE_WIDTH_PX }}>
+              <ResumePreview resume={result.tailoredResume} resumeStyle={resumeStyle} />
+            </div>
           </div>
         </div>
       )}

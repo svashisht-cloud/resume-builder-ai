@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Star, Quote } from 'lucide-react'
 
 const GAP = 24 // px — matches gap-6
-const VISIBLE = 3
 
 const testimonials = [
   {
@@ -57,23 +56,25 @@ const testimonials = [
   },
 ]
 
-const MAX_INDEX = testimonials.length - VISIBLE // 3
-
 export default function Testimonials() {
   const containerRef = useRef<HTMLDivElement>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [cardWidth, setCardWidth] = useState(0)
+  const [visibleCount, setVisibleCount] = useState(1)
 
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  // Measure container width and recompute card width on mount + resize
+  // Measure container width and recompute card width + visible count on mount + resize
   useEffect(() => {
     function measure() {
       if (containerRef.current) {
         const w = containerRef.current.clientWidth
-        setCardWidth((w - GAP * (VISIBLE - 1)) / VISIBLE)
+        const visible = w < 520 ? 1 : w < 820 ? 2 : 3
+        setVisibleCount(visible)
+        setCardWidth((w - GAP * (visible - 1)) / visible)
+        setCurrentIndex(prev => Math.min(prev, testimonials.length - visible))
       }
     }
     measure()
@@ -81,19 +82,21 @@ export default function Testimonials() {
     return () => window.removeEventListener('resize', measure)
   }, [])
 
+  const maxIndex = testimonials.length - visibleCount
+
   function goTo(idx: number) {
-    setCurrentIndex(Math.max(0, Math.min(idx, MAX_INDEX)))
+    setCurrentIndex(Math.max(0, Math.min(idx, maxIndex)))
   }
 
   const canGoBack = currentIndex > 0
-  const canGoForward = currentIndex < MAX_INDEX
+  const canGoForward = currentIndex < maxIndex
   const offset = cardWidth > 0 ? currentIndex * (cardWidth + GAP) : 0
 
   return (
-    <section id="testimonials" className="border-t border-border/60 bg-surface py-20">
+    <section id="testimonials" className="border-t border-border/60 bg-surface py-12 md:py-20">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mb-12 text-center">
-          <h2 className="font-display mb-3 text-3xl font-bold text-foreground">
+          <h2 className="font-display mb-3 text-2xl sm:text-3xl font-bold text-foreground">
             What our users are saying
           </h2>
           <p className="text-sm text-muted">Real results from real job seekers.</p>
@@ -106,7 +109,7 @@ export default function Testimonials() {
             onClick={() => goTo(currentIndex - 1)}
             disabled={!canGoBack}
             aria-label="Previous testimonials"
-            className="hidden flex-shrink-0 rounded-full border border-border bg-surface-2 p-2 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30 lg:flex"
+            className="flex flex-shrink-0 rounded-full border border-border bg-surface-2 p-3 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -127,7 +130,7 @@ export default function Testimonials() {
                 <div
                   key={t.name}
                   className="relative flex-none overflow-hidden rounded-xl border border-border/60 bg-surface-2 p-6 transition-all hover:border-accent/20 hover:shadow-[0_4px_24px_rgba(0,0,0,0.3)]"
-                  style={{ width: cardWidth > 0 ? `${cardWidth}px` : 'calc(33.333% - 16px)' }}
+                  style={{ width: cardWidth > 0 ? `${cardWidth}px` : `calc(${100 / visibleCount}% - ${GAP * (visibleCount - 1) / visibleCount}px)` }}
                 >
                   {/* Decorative quote watermark */}
                   <Quote
@@ -169,7 +172,7 @@ export default function Testimonials() {
             onClick={() => goTo(currentIndex + 1)}
             disabled={!canGoForward}
             aria-label="Next testimonials"
-            className="hidden flex-shrink-0 rounded-full border border-border bg-surface-2 p-2 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30 lg:flex"
+            className="flex flex-shrink-0 rounded-full border border-border bg-surface-2 p-3 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -178,17 +181,19 @@ export default function Testimonials() {
         </div>
 
         {/* Dots — one per stop position */}
-        <div className="mt-6 flex justify-center gap-2">
-          {Array.from({ length: MAX_INDEX + 1 }).map((_, i) => (
+        <div className="mt-6 flex justify-center gap-0">
+          {Array.from({ length: maxIndex + 1 }).map((_, i) => (
             <button
               key={i}
               type="button"
               onClick={() => goTo(i)}
               aria-label={`Go to testimonials ${i + 1}`}
-              className={`h-1.5 rounded-full transition-all duration-300 ${
+              className="flex min-h-[44px] items-center justify-center px-2"
+            >
+              <span className={`block h-1.5 rounded-full transition-all duration-300 ${
                 i === currentIndex ? 'w-6 bg-accent' : 'w-1.5 bg-border'
-              }`}
-            />
+              }`} />
+            </button>
           ))}
         </div>
       </div>

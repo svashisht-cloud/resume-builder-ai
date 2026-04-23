@@ -10,12 +10,12 @@ export default function Footer() {
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Product</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/pricing" className="text-muted transition-colors hover:text-foreground">
+                <Link href="/pricing" className="block py-1.5 text-muted transition-colors hover:text-foreground">
                   Pricing
                 </Link>
               </li>
               <li>
-                <Link href="/#how-it-works" className="text-muted transition-colors hover:text-foreground">
+                <Link href="/#how-it-works" className="block py-1.5 text-muted transition-colors hover:text-foreground">
                   How it works
                 </Link>
               </li>
@@ -26,7 +26,7 @@ export default function Footer() {
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Company</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="mailto:support@forte.app" className="text-muted transition-colors hover:text-foreground">
+                <a href="mailto:support@forte.app" className="block py-1.5 text-muted transition-colors hover:text-foreground">
                   Contact
                 </a>
               </li>
@@ -37,17 +37,17 @@ export default function Footer() {
             <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Legal</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/terms" className="text-muted transition-colors hover:text-foreground">
+                <Link href="/terms" className="block py-1.5 text-muted transition-colors hover:text-foreground">
                   Terms
                 </Link>
               </li>
               <li>
-                <Link href="/privacy" className="text-muted transition-colors hover:text-foreground">
+                <Link href="/privacy" className="block py-1.5 text-muted transition-colors hover:text-foreground">
                   Privacy
                 </Link>
               </li>
               <li>
-                <Link href="/refund-policy" className="text-muted transition-colors hover:text-foreground">
+                <Link href="/refund-policy" className="block py-1.5 text-muted transition-colors hover:text-foreground">
                   Refund Policy
                 </Link>
               </li>
@@ -60,7 +60,7 @@ export default function Footer() {
               <li>
                 <a
                   href="mailto:support@forte.app"
-                  className="text-muted transition-colors hover:text-foreground"
+                  className="block py-1.5 text-muted transition-colors hover:text-foreground"
                 >
                   support@forte.app
                 </a>
