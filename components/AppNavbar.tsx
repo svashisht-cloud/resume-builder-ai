@@ -18,11 +18,12 @@ interface AppNavbarUser {
 interface AppNavbarProps {
   user: AppNavbarUser
   credits?: number
+  plan?: 'free' | 'pro_monthly' | 'pro_annual'
 }
 
 const themeOrder: Theme[] = ['dark', 'light', 'system']
 
-export default function AppNavbar({ user, credits }: AppNavbarProps) {
+export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -56,7 +57,7 @@ export default function AppNavbar({ user, credits }: AppNavbarProps) {
 
   return (
     <>
-      <nav className="z-10 flex-shrink-0 border-b border-border/60 bg-background/95 backdrop-blur-md">
+      <nav className="z-10 flex-shrink-0 border-b border-border/60 bg-background/95 shadow-sm backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <button
             onClick={() => router.push('/dashboard')}
@@ -64,13 +65,17 @@ export default function AppNavbar({ user, credits }: AppNavbarProps) {
           >
             <span className={`${sora.className} text-xl font-semibold tracking-tight text-foreground`}>forte</span>
             <span className="text-border/60 select-none">/</span>
-            <span className="text-m font-medium text-muted">resume builder</span>
+            <span className="text-sm font-medium text-muted">resume builder</span>
           </button>
 
           <div className="flex items-center gap-3">
-            {credits !== undefined && (
+            {plan === 'pro_monthly' || plan === 'pro_annual' ? (
+              <span className="rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 text-xs font-semibold text-accent">
+                Pro
+              </span>
+            ) : credits !== undefined && (
               credits > 0 ? (
-                <span className="rounded-full border border-border bg-surface-raised px-2.5 py-1 text-xs font-medium text-muted">
+                <span className="rounded-full border border-border/80 bg-surface-raised px-2.5 py-1 text-xs font-medium text-foreground/60">
                   <span className="font-semibold text-accent">{credits}</span>
                   {' '}credit{credits !== 1 ? 's' : ''}
                 </span>
@@ -79,7 +84,7 @@ export default function AppNavbar({ user, credits }: AppNavbarProps) {
                   onClick={() => router.push('/settings')}
                   className="rounded-full border border-rose-500/30 bg-rose-950/20 px-2.5 py-1 text-xs font-medium text-rose-400 transition-colors hover:bg-rose-950/40"
                 >
-                  No credits
+                  Upgrade
                 </button>
               )
             )}

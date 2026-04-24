@@ -14,9 +14,19 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, email, avatar_url, credits_remaining')
+    .select('display_name, email, avatar_url, credits_remaining, plan_type, plan_status, plan_current_period_end')
     .eq('id', user.id)
     .single()
+
+  const planType = profile?.plan_type as string | null | undefined
+  const planStatus = profile?.plan_status as string | null | undefined
+  const planPeriodEnd = profile?.plan_current_period_end as string | null | undefined
+  const stillInPeriod = planPeriodEnd ? new Date(planPeriodEnd) > new Date() : false
+  const navPlan: 'free' | 'pro_monthly' | 'pro_annual' =
+    (planType === 'pro_monthly' || planType === 'pro_annual') &&
+    (planStatus === 'active' || (planStatus === 'cancelled' && stillInPeriod))
+      ? (planType as 'pro_monthly' | 'pro_annual')
+      : 'free'
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -28,6 +38,7 @@ export default async function DashboardPage() {
           avatar_url: profile?.avatar_url ?? null,
         }}
         credits={profile?.credits_remaining ?? 0}
+        plan={navPlan}
       />
       <DashboardShell />
     </div>

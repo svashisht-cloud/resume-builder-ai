@@ -9,11 +9,11 @@ import PublicPricingCards from '@/components/pricing/PublicPricingCards'
 export const metadata: Metadata = {
   title: 'Pricing — Forte',
   description:
-    'Simple credit-based pricing. One credit, one tailored resume. Pay only for what you use — no subscription.',
+    'Free to try. Pro for serious job seekers. Resume packs for occasional use. No surprise fees.',
   openGraph: {
     title: 'Pricing — Forte',
     description:
-      'Simple credit-based pricing. One credit, one tailored resume. Pay only for what you use — no subscription.',
+      'Free to try. Pro for serious job seekers. Resume packs for occasional use. No surprise fees.',
   },
 }
 
@@ -27,27 +27,41 @@ function Cell({ value }: { value: CellValue }) {
   return <span className="font-medium text-foreground">{value}</span>
 }
 
-const COMPARISON: Array<{ label: string; free: CellValue; pack: CellValue; plus: CellValue }> = [
-  { label: 'Credits included',       free: '1',    pack: '3',        plus: '10'       },
-  { label: 'Tailored generation',    free: true,   pack: true,       plus: true       },
-  { label: 'ATS match report',       free: true,   pack: true,       plus: true       },
-  { label: 'PDF & DOCX export',      free: true,   pack: true,       plus: true       },
-  { label: 'Regenerations per job',  free: false,  pack: 'Up to 2',  plus: 'Up to 2'  },
-  { label: 'Priority email support', free: false,  pack: true,       plus: true       },
-  { label: 'Priority queue',         free: false,  pack: false,      plus: true       },
-  { label: 'Version history',        free: false,  pack: false,      plus: true       },
+const COMPARISON: Array<{
+  label: string
+  free: CellValue
+  proM: CellValue
+  proA: CellValue
+  pack: CellValue
+  plus: CellValue
+}> = [
+  { label: 'Resumes included',       free: '1',        proM: 'Unlimited*', proA: 'Unlimited*', pack: '3 credits',  plus: '10 credits' },
+  { label: 'Regenerations per job',  free: 'Up to 5',  proM: 'Unlimited',  proA: 'Unlimited',  pack: 'Up to 5',    plus: 'Up to 5'    },
+  { label: 'ATS match report',       free: true,       proM: true,         proA: true,         pack: true,         plus: true         },
+  { label: 'PDF & DOCX export',      free: true,       proM: true,         proA: true,         pack: true,         plus: true         },
+  { label: 'Resume version history', free: false,      proM: true,         proA: true,         pack: false,        plus: true         },
+  { label: 'Priority email support', free: false,      proM: true,         proA: true,         pack: false,        plus: true         },
+  { label: 'Billing',                free: 'Free',     proM: 'Monthly',    proA: 'Annual',     pack: 'One-time',   plus: 'One-time'   },
 ]
 
 // ── FAQ ───────────────────────────────────────────────────────────────────────
 
 const FAQ_ITEMS: Array<{ q: string; a: ReactNode }> = [
   {
-    q: "What's a credit?",
-    a: "One credit unlocks one full tailored resume generation for a specific job. That includes the ATS match report, changelog, and PDF/DOCX export. Minor edits and regenerations within the same job don't consume a new credit.",
+    q: "What's the difference between Pro and Resume Pack?",
+    a: 'Pro is a monthly or annual subscription — it gives you unlimited resume tailoring for as long as you\'re subscribed, ideal if you\'re actively job searching. Resume Packs are one-time credit bundles (3 or 10 credits) that never expire within 12 months, great if you only need a few resumes.',
   },
   {
-    q: 'Do credits expire?',
-    a: 'Yes — credits expire 12 months from the date of purchase. Your free signup credit also expires 12 months from account creation.',
+    q: 'What is fair use on Pro?',
+    a: 'The typical job search involves 5–15 tailored resumes. Pro is designed to cover that comfortably and then some. A fair use cap exists only to prevent automated abuse — the vast majority of users will never approach it.',
+  },
+  {
+    q: 'Can I cancel Pro anytime?',
+    a: 'Yes. You can cancel from your settings page at any time. Your Pro access remains active until the end of the current billing period — no immediate cutoff.',
+  },
+  {
+    q: 'What happens to my credits if I upgrade to Pro?',
+    a: 'Your existing credits stay in your account and remain valid. Pro tailoring takes priority and does not consume credits, so your credits will be there if you ever downgrade.',
   },
   {
     q: 'Can I get a refund?',
@@ -63,10 +77,6 @@ const FAQ_ITEMS: Array<{ q: string; a: ReactNode }> = [
         for details.
       </>
     ),
-  },
-  {
-    q: "What if the tailored resume isn't what I wanted?",
-    a: 'You can regenerate up to 2 times per job description at no extra credit cost when you have a paid credit. Each regeneration lets you provide feedback or adjust selected keywords.',
   },
   {
     q: 'Is my resume used to train AI?',
@@ -89,17 +99,16 @@ export default function PricingPage() {
             <div className="mb-12 text-center">
               <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                <span className="text-xs font-medium text-accent">No subscription · No seat fees</span>
+                <span className="text-xs font-medium text-accent">Simple, flexible pricing</span>
               </div>
               <h1 className="font-display mb-4 text-5xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-6xl">
-                One credit,{' '}
+                The fastest way to land{' '}
                 <span className="bg-gradient-to-r from-accent to-cyan-400 bg-clip-text text-transparent">
-                  one tailored resume.
+                  your next role.
                 </span>
               </h1>
-              <p className="mx-auto max-w-md text-base leading-relaxed text-muted">
-                Buy what you need, use it when you&rsquo;re ready.
-                Credits are valid for 12 months from purchase.
+              <p className="mx-auto max-w-md text-lg leading-relaxed text-muted">
+                Free to try. Pro for serious job seekers. Packs for occasional use.
               </p>
             </div>
             <PublicPricingCards />
@@ -107,9 +116,9 @@ export default function PricingPage() {
         </section>
 
         {/* Comparison table */}
-        <section className="mx-auto max-w-5xl px-6 pb-10">
+        <section className="mx-auto max-w-5xl px-6 pb-4">
           <div className="overflow-x-auto rounded-xl border border-border/60">
-            <table className="w-full min-w-[480px] text-sm">
+            <table className="w-full min-w-[600px] text-sm">
               <thead>
                 <tr className="border-b border-border/60 bg-surface-2/50">
                   <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-muted">
@@ -119,34 +128,50 @@ export default function PricingPage() {
                     Free
                   </th>
                   <th className="bg-accent/[0.06] px-5 py-3.5 text-center">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-accent">Pack</span>
-                    <span className="ml-1.5 text-xs font-normal text-muted">$19</span>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-accent">Pro</span>
+                    <span className="ml-1.5 text-xs font-normal text-muted">$12/mo</span>
+                  </th>
+                  <th className="bg-accent/[0.06] px-5 py-3.5 text-center">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-accent">Pro Annual</span>
+                        <span className="rounded-full bg-green-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-green-400">-45%</span>
+                      </div>
+                      <span className="text-xs font-normal text-muted">$79/yr · ~$6.58/mo</span>
+                    </div>
                   </th>
                   <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-muted">
-                    Plus
-                    <span className="ml-1.5 font-normal normal-case tracking-normal">$49</span>
+                    Pack
+                    <span className="ml-1.5 font-normal normal-case tracking-normal">$9</span>
+                  </th>
+                  <th className="px-5 py-3.5 text-center text-xs font-semibold uppercase tracking-wider text-muted">
+                    Pack Plus
+                    <span className="ml-1.5 font-normal normal-case tracking-normal">$19</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {COMPARISON.map(({ label, free, pack, plus }) => (
+                {COMPARISON.map(({ label, free, proM, proA, pack, plus }) => (
                   <tr
                     key={label}
-                    className="border-b border-border/60 last:border-0 transition-colors hover:bg-surface-raised/20"
+                    className="border-b border-border/60 last:border-0 transition-colors hover:bg-surface-raised/30"
                   >
                     <td className="px-5 py-3 text-muted">{label}</td>
                     <td className="px-5 py-3 text-center"><Cell value={free} /></td>
-                    <td className="bg-accent/[0.03] px-5 py-3 text-center"><Cell value={pack} /></td>
+                    <td className="bg-accent/[0.03] px-5 py-3 text-center"><Cell value={proM} /></td>
+                    <td className="bg-accent/[0.03] px-5 py-3 text-center"><Cell value={proA} /></td>
+                    <td className="px-5 py-3 text-center"><Cell value={pack} /></td>
                     <td className="px-5 py-3 text-center"><Cell value={plus} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <p className="mt-2 text-center text-xs text-text-dim">* Fair use applies on Pro plans</p>
         </section>
 
         {/* FAQ */}
-        <section className="mx-auto max-w-2xl px-6 pb-16 pt-4">
+        <section className="mx-auto max-w-2xl px-6 pb-16 pt-8">
           <h2 className="font-display mb-6 text-center text-xl font-bold text-foreground">
             Common questions
           </h2>

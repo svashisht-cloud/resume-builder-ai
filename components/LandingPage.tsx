@@ -152,7 +152,7 @@ export default function LandingPage() {
             <h2 className="font-display mb-3 text-3xl font-bold text-foreground">Pricing</h2>
             <p className="text-sm text-muted">Start for free. No credit card required.</p>
           </div>
-          <PricingCards onCTAClick={() => openModal()} />
+          <PricingCards onAuthRequired={() => openModal()} />
         </div>
       </section>
 

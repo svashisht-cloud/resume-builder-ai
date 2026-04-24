@@ -13,6 +13,7 @@ export type ViewState = "idle" | "loading" | "keyword-selection" | "style-editin
 export interface TailorResumeState {
   result: TailorResponse | null;
   error: string;
+  warning: string | null;
   downloadError: string;
   loadingStep: LoadingStep;
   initialScore: number | null;
@@ -29,6 +30,7 @@ export interface TailorResumeState {
   isRegenFeedbackOpen: boolean;
   isStyleEditingOpen: boolean;
   isPaidCredit: boolean;
+  dismissWarning: () => void;
   handleTailorResume: () => void;
   handleGenerateResume: (keywords: string[]) => void;
   toggleKeyword: (kw: string) => void;
@@ -77,6 +79,7 @@ export function useTailorResume({
   const [isRegenFeedbackOpen, setIsRegenFeedbackOpen] = useState(false);
   const [isStyleEditingOpen, setIsStyleEditingOpen] = useState(false);
   const [isPaidCredit, setIsPaidCredit] = useState(false);
+  const [warning, setWarning] = useState<string | null>(null);
 
   useEffect(() => {
     return () => { abortControllerRef.current?.abort(); };
@@ -269,6 +272,9 @@ export function useTailorResume({
         if (step1Data.resumeId) setResumeId(step1Data.resumeId as string);
         if (typeof step1Data.regenCount === "number") setRegenCount(step1Data.regenCount as number);
         if (typeof step1Data.isPaidCredit === "boolean") setIsPaidCredit(step1Data.isPaidCredit as boolean);
+        if (step1Data.creditFallbackWarning === true) {
+          setWarning("You've used your 100 resume monthly limit. This resume used 1 credit from your balance.");
+        }
 
         const resumeText: string = step1Data.resumeText;
         const evalParsed = ResumeEvaluationSchema.safeParse(step1Data.originalEvaluation);
@@ -358,18 +364,11 @@ export function useTailorResume({
           setLoadingStep(0);
           return;
         }
-        if (regenInitRes.status === 402 && regenInitData.error === "paid_credit_required") {
-          setError("Regeneration requires a Resume Pack or Resume Plus Pack credit.");
-          setLoadingStep(0);
-          return;
-        }
         if (!regenInitRes.ok) throw new Error(regenInitData.error ?? "Regen init failed.");
 
         const regenResumeId = typeof regenInitData.resumeId === "string" ? regenInitData.resumeId as string : null;
         if (regenResumeId) setResumeId(regenResumeId);
         if (typeof regenInitData.regenCount === "number") setRegenCount(regenInitData.regenCount as number);
-        // Regen only succeeds when paid credit exists (P0003 blocks otherwise), so mark it paid.
-        setIsPaidCredit(true);
 
         await runRegenStep2And3(snapshotTailored, feedback, selectedItemTexts, snapshotOriginalEval, signal, regenResumeId);
       } catch (requestError) {
@@ -471,6 +470,7 @@ export function useTailorResume({
     setResumeId(null);
     setStep1Meta(undefined);
     setIsPaidCredit(false);
+    setWarning(null);
     setIsNoCreditsOpen(false);
     setIsRegenFeedbackOpen(false);
     setIsStyleEditingOpen(false);
@@ -496,6 +496,8 @@ export function useTailorResume({
     isRegenFeedbackOpen,
     isStyleEditingOpen,
     isPaidCredit,
+    warning,
+    dismissWarning: () => setWarning(null),
     handleTailorResume,
     handleGenerateResume,
     toggleKeyword,

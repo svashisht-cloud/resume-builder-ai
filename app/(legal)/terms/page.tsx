@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — Forte',
-  description: 'Terms of Service for Forte — the AI resume tailoring app.',
+  title: 'Terms of Service - Forte',
+  description: 'Terms of Service for Forte - the AI resume tailoring app.',
 }
 
 export default function TermsPage() {

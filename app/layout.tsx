@@ -26,7 +26,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Forte — AI resume tailoring",
+  title: "Forte - AI resume tailoring",
   description: "Paste your resume and a job description. Get a tailored, ATS-optimized version in seconds.",
   icons: [
     { rel: 'icon', url: '/brand/forte-icon-sora-dark.svg', type: 'image/svg+xml', media: '(prefers-color-scheme: light)' },
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     siteName: "Forte",
-    title: "Forte — AI resume tailoring",
+    title: "Forte - AI resume tailoring",
     description: "Paste your resume and a job description. Get a tailored, ATS-optimized version in seconds.",
   },
 };

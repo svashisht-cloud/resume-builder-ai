@@ -81,9 +81,6 @@ export async function POST(request: Request) {
       if (rpcError.code === "P0002") {
         return Response.json({ error: "regen_limit_reached" }, { status: 403 });
       }
-      if (rpcError.code === "P0003") {
-        return Response.json({ error: "paid_credit_required" }, { status: 403 });
-      }
       return Response.json({ error: rpcError.message }, { status: 500 });
     }
 
@@ -99,13 +96,40 @@ export async function POST(request: Request) {
     };
 
     try {
-      const { data: paidCreditData } = await supabase
-        .from("credits")
-        .select("id")
-        .eq("spent_on_resume_id", resumeId)
-        .in("source", ["resume_pack", "resume_pack_plus"])
-        .limit(1);
-      const isPaidCredit = (paidCreditData?.length ?? 0) > 0;
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("plan_type, plan_status, plan_current_period_end")
+        .eq("id", user.id)
+        .single();
+
+      const isActivePro =
+        (profileData?.plan_type === "pro_monthly" || profileData?.plan_type === "pro_annual") &&
+        (profileData?.plan_status === "active" || profileData?.plan_status === "cancelled") &&
+        (profileData?.plan_current_period_end == null ||
+          new Date(profileData.plan_current_period_end) > new Date());
+
+      let isPaidCredit = isActivePro;
+      if (!isPaidCredit) {
+        const { data: paidCreditData } = await supabase
+          .from("credits")
+          .select("id")
+          .eq("spent_on_resume_id", resumeId)
+          .in("source", ["resume_pack", "resume_pack_plus"])
+          .limit(1);
+        isPaidCredit = (paidCreditData?.length ?? 0) > 0;
+      }
+
+      // Pro fallback: detect when a credit was spent because the monthly limit was hit
+      let creditFallbackWarning = false;
+      if (isActivePro) {
+        const { data: fallbackData } = await supabase
+          .from("credits")
+          .select("id")
+          .eq("spent_on_resume_id", resumeId)
+          .not("spent_at", "is", null)
+          .limit(1);
+        creditFallbackWarning = (fallbackData?.length ?? 0) > 0;
+      }
 
       const resumeText = await extractResumeText(resumeFile);
 
@@ -131,6 +155,7 @@ export async function POST(request: Request) {
         isRegen,
         regenCount,
         isPaidCredit,
+        creditFallbackWarning,
         step1DurationMs,
         tokensEval1: usageEval1.totalTokens,
         eval1CostUsd: usageEval1.estimatedCostUsd,

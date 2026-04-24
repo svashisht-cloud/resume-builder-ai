@@ -3,12 +3,12 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import AppNavbar from '@/components/AppNavbar'
 import DeleteAccountButton from '@/components/DeleteAccountButton'
-import SwitchPlanSection from '@/components/settings/SwitchPlanSection'
+import MembershipSection from '@/components/settings/MembershipSection'
 import PaymentHistory from '@/components/settings/PaymentHistory'
 import AvatarImage from '@/components/settings/AvatarImage'
 import MockPaymentsBanner from '@/components/MockPaymentsBanner'
 import AppearanceSection from '@/components/settings/AppearanceSection'
-import { ArrowLeft, Coins, BarChart2, User, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, BarChart2, User, ShieldCheck } from 'lucide-react'
 
 function formatMemberSince(isoDate: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(
@@ -16,19 +16,6 @@ function formatMemberSince(isoDate: string) {
   )
 }
 
-function formatCreditExpiry(isoDate: string) {
-  return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
-    new Date(isoDate),
-  )
-}
-
-function formatCreditSource(source: string) {
-  if (source === 'free_signup') return 'Free signup'
-  if (source === 'resume_pack') return 'Resume Pack'
-  if (source === 'resume_pack_plus') return 'Resume Pack Plus'
-  if (source === 'admin_grant') return 'Admin grant'
-  return source
-}
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -43,7 +30,7 @@ export default async function SettingsPage() {
   const [profileResult, unspentCreditsResult, resumesResult, spentCreditsResult] = await Promise.all([
     supabase
       .from('profiles')
-      .select('display_name, email, avatar_url, credits_remaining, is_admin')
+      .select('display_name, email, avatar_url, credits_remaining, is_admin, plan_type, plan_status, plan_current_period_end')
       .eq('id', user.id)
       .single(),
     supabase
@@ -73,6 +60,15 @@ export default async function SettingsPage() {
   const initial = (email[0] ?? '?').toUpperCase()
 
   const creditsRemaining = profile?.credits_remaining ?? 0
+  const settingsPlanType = profile?.plan_type as string | null | undefined
+  const settingsPlanStatus = profile?.plan_status as string | null | undefined
+  const settingsPeriodEnd = profile?.plan_current_period_end as string | null | undefined
+  const settingsStillInPeriod = settingsPeriodEnd ? new Date(settingsPeriodEnd) > new Date() : false
+  const navPlan: 'free' | 'pro_monthly' | 'pro_annual' =
+    (settingsPlanType === 'pro_monthly' || settingsPlanType === 'pro_annual') &&
+    (settingsPlanStatus === 'active' || (settingsPlanStatus === 'cancelled' && settingsStillInPeriod))
+      ? (settingsPlanType as 'pro_monthly' | 'pro_annual')
+      : 'free'
   const unspentCredits = unspentCreditsResult.data ?? []
   const resumesGenerated = resumesResult.data?.length ?? 0
   const regensUsed = resumesResult.data?.reduce((s, r) => s + r.regen_count, 0) ?? 0
@@ -88,6 +84,7 @@ export default async function SettingsPage() {
           avatar_url: avatarUrl,
         }}
         credits={creditsRemaining}
+        plan={navPlan}
       />
 
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-8">
@@ -120,37 +117,14 @@ export default async function SettingsPage() {
           </div>
         </div>
 
-        {/* Credits */}
-        <div className="rounded-xl border border-border/60 bg-surface p-6">
-          <div className="mb-5 flex items-center gap-2">
-            <Coins size={15} className="text-muted" />
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Credits</h2>
-          </div>
-
-          <div className="mb-1 flex items-baseline gap-2">
-            <span className="font-display text-4xl font-bold text-foreground">{creditsRemaining}</span>
-            <span className="text-sm text-muted">credit{creditsRemaining !== 1 ? 's' : ''} remaining</span>
-          </div>
-
-          {creditsRemaining === 0 ? (
-            <p className="mt-2 text-sm text-muted">No credits remaining. Purchase a pack below.</p>
-          ) : unspentCredits.length > 0 ? (
-            <ul className="mt-3 space-y-1.5">
-              {unspentCredits.map((credit, i) => (
-                <li key={i} className="text-xs text-muted">
-                  1 credit expires{' '}
-                  <span className="font-medium text-foreground">
-                    {formatCreditExpiry(credit.expires_at as string)}
-                  </span>
-                  {' '}(from {formatCreditSource(credit.source as string)})
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-
-        {/* Buy credits */}
-        <SwitchPlanSection />
+        {/* Membership */}
+        <MembershipSection
+          planType={profile?.plan_type as string | null | undefined}
+          planStatus={profile?.plan_status as string | null | undefined}
+          periodEnd={profile?.plan_current_period_end as string | null | undefined}
+          creditsRemaining={creditsRemaining}
+          unspentCredits={unspentCredits as Array<{ source: string; expires_at: string }>}
+        />
 
         {/* Payment history — lazy-loaded on expand */}
         <PaymentHistory />

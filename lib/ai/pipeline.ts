@@ -45,6 +45,7 @@ const PRICING_PER_MILLION_TOKENS: Record<
   "gpt-4.1": { input: 2, cachedInput: 0.5, output: 8 },
   "gpt-4.1-mini": { input: 0.4, cachedInput: 0.1, output: 1.6 },
   "gpt-4.1-nano": { input: 0.1, cachedInput: 0.025, output: 0.4 },
+  "gpt-5-chat-latest": { input: 1.25, cachedInput: 0.125, output: 10.0 },
 };
 
 function formatZodError(error: z.ZodError) {
@@ -114,6 +115,9 @@ function parseModelJson(responseText: string, validationLabel: string): unknown 
 }
 
 function getPricing(model: string) {
+  if (!PRICING_PER_MILLION_TOKENS[model]) {
+    console.warn(`[pipeline] Unknown model "${model}" — falling back to gpt-4.1 pricing. Update PRICING_PER_MILLION_TOKENS.`);
+  }
   return PRICING_PER_MILLION_TOKENS[model] ?? PRICING_PER_MILLION_TOKENS["gpt-4.1"];
 }
 
@@ -158,7 +162,7 @@ function logOpenAICost({
     outputTokens,
     totalTokens: usage.total_tokens ?? inputTokens + outputTokens,
     pricingAssumptionUsdPerMillionTokens: pricing,
-    estimatedCostUsd: Number(estimatedCostUsd.toFixed(6)),
+    estimatedCostUsd: Number(estimatedCostUsd.toFixed(5)),
   });
 }
 
@@ -212,7 +216,7 @@ async function runStructuredCall<TSchema extends z.ZodType>({
     (outputTokens / 1_000_000) * pricing.output;
   const usage: PipelineUsage = {
     totalTokens: rawUsage?.total_tokens ?? inputTokens + outputTokens,
-    estimatedCostUsd: Number(estimatedCostUsd.toFixed(6)),
+    estimatedCostUsd: Number(estimatedCostUsd.toFixed(5)),
   };
 
   const choice = completion.choices[0];

@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Refund Policy — Forte',
-  description: 'Refund Policy for Forte — credit-based AI resume tailoring.',
+  title: 'Refund Policy - Forte',
+  description: 'Refund Policy for Forte - credit-based AI resume tailoring.',
 }
 
 export default function RefundPolicyPage() {

@@ -220,6 +220,8 @@ export function DashboardShell() {
     handleOpenStyleEditing,
     handleCloseStyleEditing,
     isPaidCredit,
+    warning,
+    dismissWarning,
   } = useTailorResume({ resumeFile, jobDescription, resumeStyle });
 
   function handleItemToggle(id: string, text: string) {
@@ -258,20 +260,20 @@ export function DashboardShell() {
         >
 
           {/* ── Panel 1: Dashboard ── */}
-          <div className="h-full w-screen flex-shrink-0 overflow-y-auto bg-background">
-            <main className="min-h-full px-4 py-10 text-foreground sm:px-6 lg:px-8">
-              <div className="mx-auto w-full max-w-2xl">
-                <header className="mb-8">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-accent">
+          <div className="h-full w-screen flex-shrink-0 overflow-hidden bg-background">
+            <main className="flex h-full flex-col px-4 py-5 text-foreground sm:px-6 lg:px-8">
+              <div className="mx-auto flex h-full w-full max-w-2xl flex-col">
+                <header className="mb-5 shrink-0">
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-widest text-accent">
                     AI Resume Tailoring
                   </p>
-                  <h1 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                     Tailor your resume to{" "}
                     <span className="bg-gradient-to-r from-accent to-accent-secondary bg-clip-text text-transparent">
                       any job
                     </span>
                   </h1>
-                  <p className="mt-3 text-base leading-7 text-muted">
+                  <p className="mt-2 text-sm leading-6 text-muted">
                     Upload your resume and paste a job description. The tailoring stays grounded in your actual experience.
                   </p>
                 </header>
@@ -283,13 +285,27 @@ export function DashboardShell() {
                   </div>
                 )}
 
-                <div className="overflow-hidden rounded-xl border border-border/60 bg-surface shadow-[0_2px_20px_rgba(0,0,0,0.2)]">
-                  {/* Top accent line */}
-                  <div className="h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+                {warning && (
+                  <div className="mb-6 flex items-start justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-950/20 p-4 text-sm text-amber-400">
+                    <span>{warning}</span>
+                    <button
+                      type="button"
+                      onClick={dismissWarning}
+                      className="shrink-0 text-amber-400/60 transition-colors hover:text-amber-400"
+                      aria-label="Dismiss warning"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
 
-                  <div className="space-y-6 p-6">
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/60 bg-surface shadow-[0_2px_20px_rgba(0,0,0,0.2)]">
+                  {/* Top accent line */}
+                  <div className="h-px shrink-0 bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+
+                  <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-hidden p-6">
                     {/* Resume upload */}
-                    <div>
+                    <div className="shrink-0">
                       <div className="mb-2 flex items-center gap-2">
                         <FileText size={14} className="text-accent" />
                         <label className="text-sm font-semibold text-foreground" htmlFor="resume-upload">
@@ -298,7 +314,7 @@ export function DashboardShell() {
                       </div>
                       <label
                         htmlFor="resume-upload"
-                        className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 bg-background px-4 py-6 text-center transition-colors hover:border-accent/40 hover:bg-surface/50"
+                        className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 bg-background px-4 py-6 text-center transition-colors hover:border-accent/60 hover:bg-accent/[0.03]"
                       >
                         <Upload size={20} className="text-text-dim" />
                         <span className="text-sm font-medium text-muted">
@@ -328,7 +344,7 @@ export function DashboardShell() {
                     </div>
 
                     {/* Job description */}
-                    <div>
+                    <div className="flex min-h-0 flex-1 flex-col">
                       <div className="mb-2 flex items-center gap-2">
                         <Briefcase size={14} className="text-accent" />
                         <label className="text-sm font-semibold text-foreground" htmlFor="job-description">
@@ -336,7 +352,7 @@ export function DashboardShell() {
                         </label>
                       </div>
                       <textarea
-                        className="min-h-52 w-full resize-y rounded-lg border border-border/60 bg-background px-3 py-3 text-sm leading-6 text-foreground outline-none transition placeholder:text-text-dim focus:border-accent/60 focus:ring-2 focus:ring-accent/30"
+                        className="min-h-0 flex-1 w-full resize-none rounded-lg border border-border/60 bg-background px-3 py-3 text-sm leading-6 text-foreground outline-none transition placeholder:text-text-dim focus:border-accent/60 focus:ring-2 focus:ring-accent/30"
                         id="job-description"
                         onChange={(event) => setJobDescription(event.target.value)}
                         placeholder="Paste the target job description here…"
@@ -345,7 +361,7 @@ export function DashboardShell() {
                     </div>
 
                     <button
-                      className="group flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.25)] transition-all hover:shadow-[0_4px_24px_rgba(6,182,212,0.5)] hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:from-border disabled:to-border disabled:text-text-dim disabled:shadow-none sm:w-auto"
+                      className="group flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.25)] transition-all hover:shadow-[0_4px_24px_rgba(6,182,212,0.5)] hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:from-border disabled:to-border disabled:text-text-dim disabled:shadow-none sm:w-auto"
                       disabled={!canTailor}
                       onClick={handleTailorResume}
                       type="button"
@@ -826,7 +842,7 @@ export function DashboardShell() {
                       >
                         ← Back to Dashboard
                       </button>
-                      {regenCount >= 2 && (
+                      {regenCount >= 5 && (
                         <button
                           type="button"
                           onClick={handleReset}
@@ -863,27 +879,20 @@ export function DashboardShell() {
                                 <Paintbrush size={12} />
                                 Style
                               </button>
-                              {!isPaidCredit ? (
-                                <span
-                                  title="Requires Resume Pack or Resume Plus Pack"
-                                  className="cursor-default rounded-lg border border-border/40 bg-surface px-2.5 py-1.5 text-xs font-medium text-text-dim"
-                                >
-                                  Pack required
-                                </span>
-                              ) : regenCount < 2 ? (
+                              {regenCount < 5 ? (
                                 <button
                                   type="button"
                                   onClick={() => { setRegenFeedback(""); setSelectedItems(new Map()); setRefineTab("left"); handleOpenRegenFeedback(); }}
                                   disabled={loadingStep !== 0}
                                   className="flex items-center gap-1.5 rounded-lg border border-accent/50 bg-accent/8 px-3 py-2 text-xs font-semibold text-accent transition-all hover:border-accent/70 hover:bg-accent/15 disabled:cursor-not-allowed disabled:border-border disabled:text-text-dim"
                                 >
-                                  <RefreshCw size={13} />
+                                  <RefreshCw size={14} />
                                   Regenerate
-                                  <span className="text-accent/50">({regenCount}/2)</span>
+                                  <span className="text-accent/50">({regenCount}/5)</span>
                                 </button>
                               ) : (
                                 <span className="rounded-lg border border-rose-500/20 bg-rose-950/20 px-2.5 py-1.5 text-xs font-medium text-rose-400">
-                                  Limit reached (2/2)
+                                  Limit reached (5/5)
                                 </span>
                               )}
                             </div>
@@ -957,11 +966,11 @@ export function DashboardShell() {
                               {/* Delta */}
                               <div className={`rounded-xl border p-4 transition-colors ${
                                 result.scoreComparison.delta >= 0
-                                  ? "border-emerald-500/20 bg-emerald-950/20 hover:border-emerald-500/30"
+                                  ? "border-emerald-500/30 bg-emerald-950/30 hover:border-emerald-500/40"
                                   : "border-red-500/20 bg-red-950/20 hover:border-red-500/30"
                               }`}>
                                 <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-text-dim">Improvement</p>
-                                <p className={`font-mono text-3xl font-bold ${
+                                <p className={`font-mono text-4xl font-bold ${
                                   result.scoreComparison.delta >= 0 ? "text-emerald-400" : "text-red-400"
                                 }`}>
                                   {formatScoreDelta(result.scoreComparison.delta)}
