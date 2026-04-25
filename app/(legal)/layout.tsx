@@ -6,7 +6,7 @@ export default function LegalLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <PublicHeader />
-      <main className="mx-auto max-w-3xl px-6 py-12">
+      <main className="px-6 py-12">
         {children}
       </main>
       <Footer />

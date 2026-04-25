@@ -25,6 +25,15 @@
 ## Completed (session: 2026-04-21, continued)
 - Credit restore on AI failure: `restore_credit(p_resume_id)` RPC (migration 20260421000001) restores credit within 5-min window if AI pipeline errors after `spend_credit`; called in step1/route.ts and route.ts inner try/catch; P0003 (`paid_credit_required`) now handled in both routes
 
+## Completed (session: 2026-04-25)
+- /terms layout converted from two-column sidebar+article to collapsible accordion sections matching /refund-policy pattern; one <details> per heading, collapsed by default; TermsToc.tsx removed (no longer needed)
+
+## Completed (session: 2026-04-24)
+- Terms of Service page at /terms replaced with full Termly-generated 27-section ToS
+- Sticky sidebar Table of Contents added to /terms — new Client Component components/TermsToc.tsx with IntersectionObserver scrollspy and active-section highlight
+- All 27 section anchors use semantic slugs (e.g. #dispute-resolution, #contribution-license) instead of opaque numeric IDs
+- (legal)/layout.tsx container constraint removed; privacy and refund-policy pages carry their own max-w-3xl wrappers
+
 ## Completed (session: 2026-04-21)
 - Auth gate added to step2, step3, export-pdf, export-docx (were previously unauthenticated)
 - Upstash sliding-window rate limiting (10 req / 60 s) applied to all 6 AI/export routes via lib/ratelimit.ts; gracefully degrades when env vars absent
@@ -37,7 +46,7 @@
 
 ## Next step
 - test with real resumes and tune evaluator/tailoring prompts against validation failures
-- replace placeholder legal content with lawyer-reviewed or Termly/Iubenda-generated policy before launch
+- replace placeholder content in /privacy and /refund-policy with lawyer-reviewed or Termly/Iubenda-generated policy before launch (/terms is complete)
 - wire up real payment provider (Dodo) to replace mock_purchase_credits
 
 ## Notes

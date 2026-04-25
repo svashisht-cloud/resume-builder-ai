@@ -37,6 +37,11 @@ resume-builder/
 │   ├── layout.tsx              # Root HTML shell (Space Grotesk + Inter + JetBrains Mono fonts, CSS vars, metadata)
 │   ├── globals.css             # Tailwind v4 @theme inline tokens + keyframes (gradient-flow, fade-in-up, fade-in), .animate-gradient-flow utility + print styles
 │   ├── page.tsx                # Root — shows LandingPage or redirects to /dashboard if signed in
+│   ├── (legal)/
+│   │   ├── layout.tsx          # Shared legal layout — PublicHeader + Footer; no width constraint (each page manages its own max-width)
+│   │   ├── terms/page.tsx      # /terms — full Termly 27-section ToS; collapsible accordion layout (one <details> per section, collapsed by default)
+│   │   ├── privacy/page.tsx    # /privacy — placeholder; max-w-3xl single column
+│   │   └── refund-policy/page.tsx  # /refund-policy — placeholder; max-w-3xl single column
 │   ├── dashboard/
 │   │   └── page.tsx            # Protected dashboard — fetches profile, renders AppNavbar + DashboardShell
 │   ├── settings/
@@ -368,7 +373,7 @@ Fires `after insert or update or delete` on `credits`. Calls `refresh_credits_re
 |-------|--------|------|---------|
 | `/` | GET | Public | Landing page; redirects to `/dashboard` if signed in |
 | `/pricing` | GET | Public | Standalone pricing page — PricingCards + FAQ; CTA routes to `/dashboard` |
-| `/terms` | GET | Public | Terms of Service |
+| `/terms` | GET | Public | Terms of Service — full Termly 27-section ToS; collapsible accordion layout (one section per heading, collapsed by default) |
 | `/privacy` | GET | Public | Privacy Policy |
 | `/refund-policy` | GET | Public | Refund Policy |
 | `/dashboard` | GET | Required | Main app — AppNavbar + DashboardShell |
