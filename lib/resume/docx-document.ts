@@ -43,19 +43,29 @@ function capitalize(s: string): string {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-export async function buildResumeDocxBuffer(resume: TailoredResume, style: ResumeStyle = DEFAULT_RESUME_STYLE, _adaptiveLevel = 0): Promise<Buffer> {
+type SpacingOverrides = { bulletAfter?: number; entryBefore?: number };
+
+export async function buildResumeDocxBuffer(
+  resume: TailoredResume,
+  style: ResumeStyle = DEFAULT_RESUME_STYLE,
+  _adaptiveLevel = 0,
+  _overrides: SpacingOverrides = {},
+): Promise<Buffer> {
   const FONT = DOCX_FONT[style.fontFamily];
   const NAME_SZ = NAME_HSZ[style.nameSize];
   const HEADER_SZ = HEADER_HSZ[style.headerSize];
   const BODY_SZ = BODY_HSZ[style.bodySize];
   const LINE_HEIGHT = LINE_HEIGHT_MAP[style.bulletSpacing];
   const SEC_BEFORE = SECTION_BEFORE[style.sectionSpacing];
+  const BULLET_AFTER = _overrides.bulletAfter ?? 60;
+  const ENTRY_BEFORE = _overrides.entryBefore ?? 60;
 
   const expEntries = resume.experience.length;
   const projEntries = resume.projects.length;
-  // Wrap-aware line estimate: divide each text item by chars-per-line rather than counting paragraphs.
-  // At 10.5pt Times New Roman on a ~7.5" column (marginally narrower than PDF due to twip rounding), ~88 chars/line.
-  const CHARS_PER_LINE = 88;
+  // Wrap-aware line estimate: chars per line shrinks at larger font sizes.
+  // Calibrated for Times New Roman on a ~7.5" column (left/right margins: 640 twip each).
+  const CHARS_PER_LINE_MAP: Record<ResumeStyle["bodySize"], number> = { small: 96, medium: 88, large: 80 };
+  const CHARS_PER_LINE = CHARS_PER_LINE_MAP[style.bodySize];
   const headerLines = 2 + (resume.contact.roleSubtitle ? 1 : 0);
   const sectionHeaders = (resume.skills.length > 0 ? 1 : 0) + (expEntries > 0 ? 1 : 0) + (projEntries > 0 ? 1 : 0) + (resume.education.length > 0 ? 1 : 0);
   const entryHeaders = expEntries * 2 + projEntries + resume.education.length * 2;
@@ -77,24 +87,42 @@ export async function buildResumeDocxBuffer(resume: TailoredResume, style: Resum
   const lineHeightTwips = LINE_HEIGHT;
   const estimatedCapacity = Math.floor(usableHeightTwips / lineHeightTwips);
 
-  // Fixed spacing not captured by line count: entry block margins + section header spacing
+  // Full height estimate: line content + entry block margins + section header spacing + bullet spacing.
+  // ENTRY_BEFORE is intentionally excluded: Word collapses adjacent paragraph spacing (max of
+  // after/before, not sum), so the gap at entry-to-entry boundaries is already captured by the
+  // preceding bullet's BULLET_AFTER. Including both double-counts ~60 twips per boundary.
   const ITEM_MB = ITEM_MB_TWIPS[style.sectionSpacing];
   const entryBlockSpacing = (expEntries + projEntries) * ITEM_MB;
   const sectionHeaderSpacing = sectionHeaders * SEC_BEFORE;
-  const estimatedHeightTwips = estimatedLines * lineHeightTwips + entryBlockSpacing + sectionHeaderSpacing;
-  // DOCX renders more faithfully than PDF, so only compact if clearly over the page.
-  // A single light step (compact section spacing only) is sufficient in practice.
-  const riskOfOverflow = estimatedHeightTwips > usableHeightTwips;
+  const estimatedHeightTwips =
+    estimatedLines * lineHeightTwips
+    + entryBlockSpacing
+    + sectionHeaderSpacing
+    + totalBullets * BULLET_AFTER;
+
+  const overflowTwips = estimatedHeightTwips - usableHeightTwips;
 
   console.log("[docx] generation stats", {
     style: { fontFamily: style.fontFamily, bodySize: `${BODY_SZ / 2}pt`, lineHeight: `${LINE_HEIGHT}twip`, sectionSpacing: `${SEC_BEFORE}twip`, margins: "top/bottom:600 left/right:640 twip" },
     content: { expEntries, projEntries, totalBullets, skillGroups: resume.skills.length, educationEntries: resume.education.length },
-    estimate: { lines: estimatedLines, estimatedHeightTwips: Math.round(estimatedHeightTwips), capacityAtLineHeight: estimatedCapacity, riskOfOverflow },
+    estimate: { lines: estimatedLines, estimatedHeightTwips: Math.round(estimatedHeightTwips), capacityAtLineHeight: estimatedCapacity, overflowTwips: Math.round(overflowTwips) },
+    overrides: _overrides,
   });
 
-  if (riskOfOverflow && _adaptiveLevel < 1) {
-    console.log("[docx] adaptive-fit: applying compact section spacing");
-    return buildResumeDocxBuffer(resume, { ...style, sectionSpacing: "compact" }, _adaptiveLevel + 1);
+  if (overflowTwips > 0 && _adaptiveLevel === 0) {
+    if (overflowTwips <= 600) {
+      // Small spill (~1–2 lines): tighten only bullet after-spacing
+      console.log("[docx] adaptive-fit level 1a: tightening bullet after-spacing");
+      return buildResumeDocxBuffer(resume, style, 1, { bulletAfter: 30 });
+    } else if (overflowTwips <= 1400) {
+      // Medium spill (~3–5 lines): tighten bullet after + entry before
+      console.log("[docx] adaptive-fit level 1b: tightening bullet after + entry before spacing");
+      return buildResumeDocxBuffer(resume, style, 1, { bulletAfter: 30, entryBefore: 40 });
+    } else {
+      // Large spill: fall back to compact section spacing
+      console.log("[docx] adaptive-fit level 1c: applying compact section spacing");
+      return buildResumeDocxBuffer(resume, { ...style, sectionSpacing: "compact" }, 1);
+    }
   }
 
   function sectionHeader(title: string): Paragraph {
@@ -112,7 +140,7 @@ export async function buildResumeDocxBuffer(resume: TailoredResume, style: Resum
         new TextRun({ text: capitalize(text), size: BODY_SZ, font: FONT }),
       ],
       indent: { left: 240, hanging: 160 },
-      spacing: { before: 0, after: 60, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
+      spacing: { before: 0, after: BULLET_AFTER, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
     });
   }
   const children: Paragraph[] = [];
@@ -196,7 +224,7 @@ export async function buildResumeDocxBuffer(resume: TailoredResume, style: Resum
               new Paragraph({
                 children: institutionRuns,
                 tabStops: [{ type: TabStopType.RIGHT, position: RIGHT_TAB }],
-                spacing: { before: 60, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
+                spacing: { before: ENTRY_BEFORE, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
               }),
             );
             const degreeText = [edu.degree, edu.gpa ? `GPA: ${edu.gpa}` : null]
@@ -263,7 +291,7 @@ export async function buildResumeDocxBuffer(resume: TailoredResume, style: Resum
                 new Paragraph({
                   children: companyRuns,
                   tabStops: [{ type: TabStopType.RIGHT, position: RIGHT_TAB }],
-                  spacing: { before: 60, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
+                  spacing: { before: ENTRY_BEFORE, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
                 }),
               );
               // Line 2: Role ←→ Location
@@ -297,7 +325,7 @@ export async function buildResumeDocxBuffer(resume: TailoredResume, style: Resum
                 new Paragraph({
                   children: companyRuns,
                   tabStops: [{ type: TabStopType.RIGHT, position: RIGHT_TAB }],
-                  spacing: { before: 60, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
+                  spacing: { before: ENTRY_BEFORE, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
                 }),
               );
               // Each role: Title ←→ Dates, then bullets
@@ -367,7 +395,7 @@ export async function buildResumeDocxBuffer(resume: TailoredResume, style: Resum
               new Paragraph({
                 children: projRuns,
                 tabStops: [{ type: TabStopType.RIGHT, position: RIGHT_TAB }],
-                spacing: { before: 60, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
+                spacing: { before: ENTRY_BEFORE, after: 0, line: LINE_HEIGHT, lineRule: LineRuleType.AUTO },
               }),
             );
             for (const b of proj.bullets) {

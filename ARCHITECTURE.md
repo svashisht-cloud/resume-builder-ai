@@ -35,7 +35,7 @@ Auth state managed by Supabase (Google OAuth) + middleware.ts
 resume-builder/
 ├── app/                        # Next.js App Router
 │   ├── layout.tsx              # Root HTML shell (Space Grotesk + Inter + JetBrains Mono fonts, CSS vars, metadata)
-│   ├── globals.css             # Tailwind v4 @theme inline tokens + keyframes (gradient-flow, fade-in-up, fade-in), .animate-gradient-flow utility + print styles
+│   ├── globals.css             # Tailwind v4 @theme inline tokens + keyframes (gradient-flow, fade-in-up, fade-in), .animate-gradient-flow utility + print styles; Aurora · Crimson Mono palette (dark: #FF1F4E accent, light: #D6133E; crimson ramp crimson-100…700; forte document tokens invariant)
 │   ├── page.tsx                # Root — shows LandingPage or redirects to /dashboard if signed in
 │   ├── (legal)/
 │   │   ├── layout.tsx          # Shared legal layout — PublicHeader + Footer; no width constraint (each page manages its own max-width)

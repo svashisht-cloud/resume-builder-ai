@@ -30,8 +30,8 @@ export default function AvgScoreChart({
           }}
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Line type="monotone" dataKey="before" stroke="#6366f1" name="Before" dot={false} strokeWidth={2} />
-        <Line type="monotone" dataKey="after" stroke="#06b6d4" name="After" dot={false} strokeWidth={2} />
+        <Line type="monotone" dataKey="before" stroke="#FFB0C2" name="Before" dot={false} strokeWidth={2} />
+        <Line type="monotone" dataKey="after" stroke="#FF1F4E" name="After" dot={false} strokeWidth={2} />
       </LineChart>
     </ResponsiveContainer>
   )

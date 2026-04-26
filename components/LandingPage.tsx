@@ -75,7 +75,7 @@ export default function LandingPage() {
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={openModal}
-                className="group flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-accent to-cyan-400 px-6 py-3 text-sm font-semibold text-background shadow-[0_4px_20px_rgba(6,182,212,0.3)] transition-all hover:shadow-[0_4px_28px_rgba(6,182,212,0.45)] hover:opacity-95 active:scale-[0.98]"
+                className="group flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-accent to-accent-secondary px-6 py-3 text-sm font-semibold text-background shadow-[0_4px_20px_rgba(255,31,78,0.3)] transition-all hover:shadow-[0_4px_28px_rgba(255,31,78,0.45)] hover:opacity-95 active:scale-[0.98]"
               >
                 Get Started Free
                 <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
@@ -126,7 +126,7 @@ export default function LandingPage() {
             ].map(({ icon, step, title, description }) => (
               <div
                 key={step}
-                className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border/60 bg-surface-2 p-6 transition-all hover:border-accent/30 hover:shadow-[0_4px_24px_rgba(6,182,212,0.08)]"
+                className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border/60 bg-surface-2 p-6 transition-all hover:border-accent/30 hover:shadow-[0_4px_24px_rgba(255,31,78,0.08)]"
               >
                 {/* Step number watermark */}
                 <span className="absolute right-4 top-3 font-display text-5xl font-bold text-border/60 select-none">

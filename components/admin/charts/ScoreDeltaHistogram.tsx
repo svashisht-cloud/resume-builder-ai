@@ -28,7 +28,7 @@ export default function ScoreDeltaHistogram({
             fontSize: 12,
           }}
         />
-        <Bar dataKey="count" fill="#06b6d4" name="Runs" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="count" fill="#FF1F4E" name="Runs" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )

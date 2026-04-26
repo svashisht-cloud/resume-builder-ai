@@ -168,7 +168,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
               <button
                 type="button"
                 onClick={() => setShowCancelModal(false)}
-                className="w-full rounded-lg bg-gradient-to-r from-accent to-cyan-400 py-2.5 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.3)] transition-all hover:opacity-95"
+                className="w-full rounded-lg bg-gradient-to-r from-accent to-accent-secondary py-2.5 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(255,31,78,0.3)] transition-all hover:opacity-95"
               >
                 Keep Pro
               </button>
@@ -237,10 +237,10 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
         </div>}
 
         {/* ── PRO ── */}
-        <div className="relative flex flex-col rounded-xl border border-accent/40 bg-surface px-6 py-8 shadow-[0_0_40px_rgba(6,182,212,0.12),inset_0_0_0_1px_rgba(6,182,212,0.1)]">
+        <div className="relative flex flex-col rounded-xl border border-accent/40 bg-surface px-6 py-8 shadow-[0_0_40px_rgba(255,31,78,0.12),inset_0_0_0_1px_rgba(255,31,78,0.1)]">
           <div className="absolute inset-x-0 top-0 h-px rounded-t-xl bg-gradient-to-r from-transparent via-accent/60 to-transparent" />
           <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-            <span className="rounded-full bg-gradient-to-r from-accent to-cyan-400 px-3 py-1 text-xs font-semibold text-background shadow-[0_2px_8px_rgba(6,182,212,0.4)]">
+            <span className="rounded-full bg-gradient-to-r from-accent to-accent-secondary px-3 py-1 text-xs font-semibold text-background shadow-[0_2px_8px_rgba(255,31,78,0.4)]">
               {period === 'annual' ? 'Best Value' : 'Most Popular'}
             </span>
           </div>
@@ -253,7 +253,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
                 onClick={() => setPeriod('monthly')}
                 className={`rounded-full px-3 py-1 font-medium transition-colors ${
                   period === 'monthly'
-                    ? 'bg-gradient-to-r from-accent to-cyan-400 text-background'
+                    ? 'bg-gradient-to-r from-accent to-accent-secondary text-background'
                     : 'text-muted hover:text-foreground'
                 }`}
               >
@@ -264,7 +264,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
                 onClick={() => setPeriod('annual')}
                 className={`flex items-center gap-1 rounded-full px-3 py-1 font-medium transition-colors ${
                   period === 'annual'
-                    ? 'bg-gradient-to-r from-accent to-cyan-400 text-background'
+                    ? 'bg-gradient-to-r from-accent to-accent-secondary text-background'
                     : 'text-muted hover:text-foreground'
                 }`}
               >
@@ -328,7 +328,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
                 type="button"
                 disabled={!!loadingProduct}
                 onClick={handleProCTA}
-                className="w-full rounded-lg bg-gradient-to-r from-accent to-cyan-400 py-2.5 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.3)] transition-all hover:shadow-[0_2px_16px_rgba(6,182,212,0.45)] hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-lg bg-gradient-to-r from-accent to-accent-secondary py-2.5 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(255,31,78,0.3)] transition-all hover:shadow-[0_2px_16px_rgba(255,31,78,0.45)] hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loadingProduct === proProduct ? 'Processing…' : 'Start Pro'}
               </button>

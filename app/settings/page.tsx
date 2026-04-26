@@ -8,6 +8,7 @@ import PaymentHistory from '@/components/settings/PaymentHistory'
 import AvatarImage from '@/components/settings/AvatarImage'
 import MockPaymentsBanner from '@/components/MockPaymentsBanner'
 import AppearanceSection from '@/components/settings/AppearanceSection'
+import ExperienceLevelSection from '@/components/settings/ExperienceLevelSection'
 import { ArrowLeft, BarChart2, User, ShieldCheck } from 'lucide-react'
 
 function formatMemberSince(isoDate: string) {
@@ -30,7 +31,7 @@ export default async function SettingsPage() {
   const [profileResult, unspentCreditsResult, resumesResult, spentCreditsResult] = await Promise.all([
     supabase
       .from('profiles')
-      .select('display_name, email, avatar_url, credits_remaining, is_admin, plan_type, plan_status, plan_current_period_end')
+      .select('display_name, email, avatar_url, credits_remaining, is_admin, plan_type, plan_status, plan_current_period_end, experience_level')
       .eq('id', user.id)
       .single(),
     supabase
@@ -73,6 +74,10 @@ export default async function SettingsPage() {
   const resumesGenerated = resumesResult.data?.length ?? 0
   const regensUsed = resumesResult.data?.reduce((s, r) => s + r.regen_count, 0) ?? 0
   const creditsSpentLifetime = spentCreditsResult.count ?? 0
+  const experienceLevel = (
+    profile?.experience_level === 'junior' || profile?.experience_level === 'senior'
+      ? profile.experience_level : 'mid'
+  ) as 'junior' | 'mid' | 'senior'
 
   return (
     <>
@@ -153,6 +158,9 @@ export default async function SettingsPage() {
 
         {/* Appearance */}
         <AppearanceSection />
+
+        {/* Experience Level */}
+        <ExperienceLevelSection initialLevel={experienceLevel} />
 
         {/* Admin */}
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}

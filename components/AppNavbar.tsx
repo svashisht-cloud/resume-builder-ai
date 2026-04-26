@@ -92,7 +92,7 @@ export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setOpen((v) => !v)}
-                className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border bg-surface-raised text-sm font-semibold text-foreground transition-all hover:border-accent/60 hover:shadow-[0_0_12px_rgba(6,182,212,0.25)]"
+                className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border bg-surface-raised text-sm font-semibold text-foreground transition-all hover:border-accent/60 hover:shadow-[0_0_12px_rgba(255,31,78,0.25)]"
                 aria-label="Account menu"
               >
                 {user.avatar_url ? (

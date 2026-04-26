@@ -13,66 +13,79 @@
   to   { opacity: 1; }
 }
 
+/* Aurora · Crimson Mono — dark default */
 :root {
-  /* existing tokens */
-  --background: #0a0f1e;
-  --surface: #0f1629;
-  --surface-raised: #131c35;
-  --accent: #06b6d4;
-  --accent-secondary: #6366f1;
-  --foreground: #ffffff;
-  --muted: #94a3b8;
-  --border: #1e293b;
-  /* new design-system tokens */
-  --bg: #0a0f1e;
-  --surface-2: #111827;
-  --accent-hover: #0891b2;
-  --accent-2: #6366f1;
-  --text: #ffffff;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
-  /* brand tokens */
-  --forte-ink:   #0A0A0A;
-  --forte-paper: #F7F6F3;
-  --forte-stone: #DBD9D2;
+  --background:        #0D1226;
+  --bg:                #0D1226;
+  --surface:           #141A32;
+  --surface-raised:    #1C2340;
+  --surface-2:         #1C2340;
+  --foreground:        #F3F4FA;
+  --text:              #F3F4FA;
+  --muted:             #A4ABC4;
+  --text-muted:        #A4ABC4;
+  --text-dim:          #6C748D;
+  --border:            #242C4A;
+  --accent:            #FF1F4E;
+  --accent-hover:      #E6093A;
+  --accent-secondary:  #FFB0C2;
+  --accent-2:          #FFB0C2;
+  /* Brand · resume document (unchanged across themes) */
+  --forte-ink:         #0A0A0A;
+  --forte-paper:       #F7F6F3;
+  --forte-stone:       #DBD9D2;
 }
 
 [data-theme="light"] {
-  --background:     #f8fafc;
-  --surface:        #ffffff;
-  --surface-raised: #f1f5f9;
-  --foreground:     #0f172a;
-  --muted:          #64748b;
-  --border:         #e2e8f0;
-  --bg:             #f8fafc;
-  --surface-2:      #f1f5f9;
-  --text:           #0f172a;
-  --text-muted:     #64748b;
-  --text-dim:       #94a3b8;
+  --background:        #F8F7F9;
+  --bg:                #F8F7F9;
+  --surface:           #FFFFFF;
+  --surface-raised:    #F1EDEF;
+  --surface-2:         #F1EDEF;
+  --foreground:        #0D1226;
+  --text:              #0D1226;
+  --muted:             #5A5663;
+  --text-muted:        #5A5663;
+  --text-dim:          #8E8A93;
+  --border:            #E5DFE2;
+  --accent:            #D6133E;
+  --accent-hover:      #B00A30;
+  --accent-secondary:  #A85268;
+  --accent-2:          #A85268;
 }
 
 @theme inline {
-  /* existing tokens */
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-surface-raised: var(--surface-raised);
-  --color-accent: var(--accent);
+  --color-background:       var(--background);
+  --color-surface:          var(--surface);
+  --color-surface-raised:   var(--surface-raised);
+  --color-accent:           var(--accent);
   --color-accent-secondary: var(--accent-secondary);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-border: var(--border);
-  /* new tokens */
-  --color-bg: var(--bg);
-  --color-surface-2: var(--surface-2);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-2: var(--accent-2);
-  --color-text: var(--text);
-  --color-text-muted: var(--text-muted);
-  --color-text-dim: var(--text-dim);
-  /* brand tokens */
-  --color-ink:   var(--forte-ink);
-  --color-paper: var(--forte-paper);
-  --color-stone: var(--forte-stone);
+  --color-foreground:       var(--foreground);
+  --color-muted:            var(--muted);
+  --color-border:           var(--border);
+  --color-bg:               var(--bg);
+  --color-surface-2:        var(--surface-2);
+  --color-accent-hover:     var(--accent-hover);
+  --color-accent-2:         var(--accent-2);
+  --color-text:             var(--text);
+  --color-text-muted:       var(--text-muted);
+  --color-text-dim:         var(--text-dim);
+  /* forte document tokens — alias for component use */
+  --color-ink:              var(--forte-ink);
+  --color-paper:            var(--forte-paper);
+  --color-stone:            var(--forte-stone);
+  /* forte namespace (explicit) */
+  --color-forte-ink:        #0A0A0A;
+  --color-forte-paper:      #F7F6F3;
+  --color-forte-stone:      #DBD9D2;
+  /* crimson ramp — constant across themes */
+  --color-crimson-100:      #FF5979;
+  --color-crimson-200:      #FF3A64;
+  --color-crimson-300:      #FF1F4E;
+  --color-crimson-400:      #E6093A;
+  --color-crimson-500:      #D6133E;
+  --color-crimson-600:      #B00A30;
+  --color-crimson-700:      #7A0921;
   /* fonts */
   --font-display: var(--font-space-grotesk), system-ui, sans-serif;
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
@@ -97,6 +110,11 @@ body {
 button,
 a {
   cursor: pointer;
+}
+
+*:focus-visible {
+  outline: 2px solid rgba(255, 58, 100, 0.35);
+  outline-offset: 2px;
 }
 
 /* Custom scrollbar */

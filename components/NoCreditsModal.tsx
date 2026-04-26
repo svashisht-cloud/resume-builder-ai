@@ -67,7 +67,7 @@ export default function NoCreditsModal({ open, onDismiss }: NoCreditsModalProps)
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
               onClick={handleViewPlans}
-              className="flex h-10 flex-1 items-center justify-center rounded-lg bg-gradient-to-r from-accent to-cyan-400 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.25)] transition-all hover:opacity-95 active:scale-[0.98]"
+              className="flex h-10 flex-1 items-center justify-center rounded-lg bg-gradient-to-r from-accent to-accent-secondary text-sm font-semibold text-background shadow-[0_2px_12px_rgba(255,31,78,0.25)] transition-all hover:opacity-95 active:scale-[0.98]"
             >
               View plans
             </button>

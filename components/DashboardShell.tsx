@@ -92,7 +92,7 @@ function getSectionLabel(id: string): string {
 
 function SizeToggle({ value, onChange }: { value: "small" | "medium" | "large"; onChange: (v: "small" | "medium" | "large") => void }) {
   return (
-    <div className={`flex overflow-hidden rounded-lg border transition-shadow ${value !== "medium" ? "border-accent/40 shadow-[0_0_8px_rgba(6,182,212,0.2)]" : "border-border/60"}`}>
+    <div className={`flex overflow-hidden rounded-lg border transition-shadow ${value !== "medium" ? "border-accent/40 shadow-[0_0_8px_rgba(255,31,78,0.2)]" : "border-border/60"}`}>
       {(["small", "medium", "large"] as const).map((v, i, arr) => (
         <button
           key={v}
@@ -112,7 +112,7 @@ function SizeToggle({ value, onChange }: { value: "small" | "medium" | "large"; 
 
 function SpacingToggle({ value, onChange }: { value: "compact" | "normal" | "relaxed"; onChange: (v: "compact" | "normal" | "relaxed") => void }) {
   return (
-    <div className={`flex overflow-hidden rounded-lg border transition-shadow ${value !== "normal" ? "border-accent/40 shadow-[0_0_8px_rgba(6,182,212,0.2)]" : "border-border/60"}`}>
+    <div className={`flex overflow-hidden rounded-lg border transition-shadow ${value !== "normal" ? "border-accent/40 shadow-[0_0_8px_rgba(255,31,78,0.2)]" : "border-border/60"}`}>
       {(["compact", "normal", "relaxed"] as const).map((v, i, arr) => (
         <button
           key={v}
@@ -130,7 +130,7 @@ function SpacingToggle({ value, onChange }: { value: "compact" | "normal" | "rel
   );
 }
 
-export function DashboardShell() {
+export function DashboardShell({ experienceLevel = 'mid' }: { experienceLevel?: 'junior' | 'mid' | 'senior' }) {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeFileName, setResumeFileName] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -140,6 +140,7 @@ export function DashboardShell() {
   const [styleScale, setStyleScale] = useState(1);
   const [modalScale, setModalScale] = useState(1);
   const [resumeStyle, setResumeStyle] = useState<ResumeStyle>(DEFAULT_RESUME_STYLE);
+  const [targetPages, setTargetPages] = useState<1 | 2>(1);
   const [refineTab, setRefineTab] = useState<"left" | "right">("left");
   const [styleTab, setStyleTab] = useState<"left" | "right">("left");
   const [isMobile, setIsMobile] = useState(false);
@@ -189,6 +190,8 @@ export function DashboardShell() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  const effectiveTargetPages: 1 | 2 = experienceLevel === 'senior' ? targetPages : 1;
+
   const {
     result,
     error,
@@ -222,7 +225,7 @@ export function DashboardShell() {
     isPaidCredit,
     warning,
     dismissWarning,
-  } = useTailorResume({ resumeFile, jobDescription, resumeStyle });
+  } = useTailorResume({ resumeFile, jobDescription, resumeStyle, experienceLevel, targetPages: effectiveTargetPages });
 
   function handleItemToggle(id: string, text: string) {
     setSelectedItems((prev) => {
@@ -360,8 +363,36 @@ export function DashboardShell() {
                       />
                     </div>
 
+                    {experienceLevel === 'senior' && (
+                      <div className="shrink-0">
+                        <div className="mb-1.5">
+                          <span className="text-sm font-semibold text-foreground">Resume length</span>
+                        </div>
+                        <div className="flex rounded-lg border border-border/60 bg-surface-raised p-0.5 gap-0.5 w-fit">
+                          {([1, 2] as const).map((pages) => (
+                            <button
+                              key={pages}
+                              type="button"
+                              aria-pressed={targetPages === pages}
+                              onClick={() => setTargetPages(pages)}
+                              className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+                                targetPages === pages
+                                  ? 'bg-accent text-background shadow-sm'
+                                  : 'text-muted hover:text-foreground'
+                              }`}
+                            >
+                              {pages === 1 ? '1 Page' : '2 Pages'}
+                            </button>
+                          ))}
+                        </div>
+                        {targetPages === 2 && (
+                          <p className="mt-1.5 text-xs text-muted">2-page resumes include more bullets and fuller detail.</p>
+                        )}
+                      </div>
+                    )}
+
                     <button
-                      className="group flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.25)] transition-all hover:shadow-[0_4px_24px_rgba(6,182,212,0.5)] hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:from-border disabled:to-border disabled:text-text-dim disabled:shadow-none sm:w-auto"
+                      className="group flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-accent-secondary px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(255,31,78,0.25)] transition-all hover:shadow-[0_4px_24px_rgba(255,31,78,0.5)] hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:from-border disabled:to-border disabled:text-text-dim disabled:shadow-none sm:w-auto"
                       disabled={!canTailor}
                       onClick={handleTailorResume}
                       type="button"
@@ -419,7 +450,7 @@ export function DashboardShell() {
                     <div
                       className="h-10 w-10 animate-spin rounded-full"
                       style={{
-                        background: "conic-gradient(from 0deg, transparent 0deg, #06b6d4 300deg, #22d3ee 360deg)",
+                        background: "conic-gradient(from 0deg, transparent 0deg, var(--accent) 300deg, var(--accent-secondary) 360deg)",
                         WebkitMask: "radial-gradient(farthest-side, transparent 55%, black 56%)",
                         mask: "radial-gradient(farthest-side, transparent 55%, black 56%)",
                       }}
@@ -436,11 +467,11 @@ export function DashboardShell() {
                         loadingStep === 2 ? "66%"
                         : loadingStep === 3 ? "90%"
                         : "33%",
-                      background: "linear-gradient(90deg, var(--accent), #22d3ee, var(--accent))",
+                      background: "linear-gradient(135deg, var(--accent), var(--accent-secondary))",
                       backgroundSize: "200% 100%",
                       animation: "gradient-flow 2.5s ease infinite",
                       transition: "width 700ms ease-in-out",
-                      boxShadow: "0 0 12px rgba(6,182,212,0.5)",
+                      boxShadow: "0 0 12px rgba(255,31,78,0.5)",
                     }}
                   />
                 </div>
@@ -484,7 +515,7 @@ export function DashboardShell() {
                             onClick={() => toggleKeyword(kw)}
                             className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-all ${
                               selected
-                                ? "border-accent/50 bg-accent/15 text-accent shadow-[0_0_8px_rgba(6,182,212,0.15)]"
+                                ? "border-accent/50 bg-accent/15 text-accent shadow-[0_0_8px_rgba(255,31,78,0.15)]"
                                 : "border-border/60 text-text-dim hover:border-muted/40 hover:text-muted"
                             }`}
                           >
@@ -499,7 +530,7 @@ export function DashboardShell() {
                       <button
                         type="button"
                         onClick={() => handleGenerateResume(selectedKeywords)}
-                        className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.25)] transition-all hover:opacity-95 active:scale-[0.98]"
+                        className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-accent-secondary px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(255,31,78,0.25)] transition-all hover:opacity-95 active:scale-[0.98]"
                       >
                         {selectedKeywords.length > 0
                           ? `Generate with ${selectedKeywords.length} selected`
@@ -639,7 +670,7 @@ export function DashboardShell() {
                       <button
                         type="button"
                         onClick={() => handleRegenerateWithFeedback(regenFeedback, [...selectedItems.values()])}
-                        className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.25)] transition-all hover:opacity-95 active:scale-[0.98]"
+                        className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-accent-secondary px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(255,31,78,0.25)] transition-all hover:opacity-95 active:scale-[0.98]"
                       >
                         <RefreshCw size={14} />
                         Regenerate
@@ -798,7 +829,7 @@ export function DashboardShell() {
                         <button
                           type="button"
                           onClick={handleCloseStyleEditing}
-                          className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(6,182,212,0.25)] transition-all hover:opacity-95 active:scale-[0.98]"
+                          className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-accent to-accent-secondary px-4 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(255,31,78,0.25)] transition-all hover:opacity-95 active:scale-[0.98]"
                         >
                           <Check size={14} />
                           Save style
@@ -900,7 +931,7 @@ export function DashboardShell() {
 
                           <button
                             aria-label="Preview tailored resume"
-                            className="group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border/60 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all hover:shadow-[0_8px_40px_rgba(6,182,212,0.15),0_8px_32px_rgba(0,0,0,0.3)] hover:border-accent/30"
+                            className="group relative w-full cursor-pointer overflow-hidden rounded-xl border border-border/60 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all hover:shadow-[0_8px_40px_rgba(255,31,78,0.15),0_8px_32px_rgba(0,0,0,0.3)] hover:border-accent/30"
                             onClick={openModal}
                             style={{ height: PREVIEW_CARD_HEIGHT }}
                             type="button"
@@ -921,7 +952,7 @@ export function DashboardShell() {
                               style={{ background: "linear-gradient(to bottom, transparent 35%, rgba(255,255,255,0.97) 80%)" }}
                             />
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <span className="flex items-center gap-2 rounded-full bg-gradient-to-r from-accent to-cyan-400 px-5 py-2.5 text-sm font-semibold text-background shadow-[0_4px_16px_rgba(6,182,212,0.35)] transition-all group-hover:shadow-[0_4px_24px_rgba(6,182,212,0.5)]">
+                              <span className="flex items-center gap-2 rounded-full bg-gradient-to-r from-accent to-accent-secondary px-5 py-2.5 text-sm font-semibold text-background shadow-[0_4px_16px_rgba(255,31,78,0.35)] transition-all group-hover:shadow-[0_4px_24px_rgba(255,31,78,0.5)]">
                                 Preview & Download
                                 <ArrowRight size={14} />
                               </span>
@@ -1111,7 +1142,7 @@ export function DashboardShell() {
           >
             <div className="flex flex-wrap gap-2">
               <button
-                className="flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-cyan-400 px-4 text-sm font-semibold text-background shadow-sm transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:from-border disabled:to-border disabled:text-text-dim disabled:shadow-none"
+                className="flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-accent to-accent-secondary px-4 text-sm font-semibold text-background shadow-sm transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:from-border disabled:to-border disabled:text-text-dim disabled:shadow-none"
                 disabled={isDownloadingPdf}
                 onClick={handleDownloadPdf}
                 type="button"

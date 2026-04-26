@@ -27,7 +27,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     >
       <div
         data-state={isOpen ? 'open' : 'closed'}
-        className="relative w-full max-w-[360px] overflow-hidden rounded-3xl border border-border bg-surface shadow-[0_32px_80px_rgba(0,0,0,0.7),0_0_0_1px_rgba(6,182,212,0.12)] transition-[opacity,transform] duration-[250ms] ease-out motion-reduce:transition-none data-[state=closed]:scale-95 data-[state=closed]:opacity-0 data-[state=open]:scale-100 data-[state=open]:opacity-100"
+        className="relative w-full max-w-[360px] overflow-hidden rounded-3xl border border-border bg-surface shadow-[0_32px_80px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,31,78,0.12)] transition-[opacity,transform] duration-[250ms] ease-out motion-reduce:transition-none data-[state=closed]:scale-95 data-[state=closed]:opacity-0 data-[state=open]:scale-100 data-[state=open]:opacity-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top accent line + bloom */}
