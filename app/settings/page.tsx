@@ -7,7 +7,8 @@ import MembershipSection from '@/components/settings/MembershipSection'
 import PaymentHistory from '@/components/settings/PaymentHistory'
 import AvatarImage from '@/components/settings/AvatarImage'
 import MockPaymentsBanner from '@/components/MockPaymentsBanner'
-import AppearanceSection from '@/components/settings/AppearanceSection'
+import ThemeSection from '@/components/settings/ThemeSection'
+import ExperienceLevelSection from '@/components/settings/ExperienceLevelSection'
 import { ArrowLeft, BarChart2, User, ShieldCheck } from 'lucide-react'
 
 function formatMemberSince(isoDate: string) {
@@ -30,7 +31,7 @@ export default async function SettingsPage() {
   const [profileResult, unspentCreditsResult, resumesResult, spentCreditsResult] = await Promise.all([
     supabase
       .from('profiles')
-      .select('display_name, email, avatar_url, credits_remaining, is_admin, plan_type, plan_status, plan_current_period_end')
+      .select('display_name, email, avatar_url, credits_remaining, is_admin, plan_type, plan_status, plan_current_period_end, experience_level')
       .eq('id', user.id)
       .single(),
     supabase
@@ -73,6 +74,10 @@ export default async function SettingsPage() {
   const resumesGenerated = resumesResult.data?.length ?? 0
   const regensUsed = resumesResult.data?.reduce((s, r) => s + r.regen_count, 0) ?? 0
   const creditsSpentLifetime = spentCreditsResult.count ?? 0
+  const experienceLevel = (
+    profile?.experience_level === 'junior' || profile?.experience_level === 'senior'
+      ? profile.experience_level : 'mid'
+  ) as 'junior' | 'mid' | 'senior'
 
   return (
     <>
@@ -101,10 +106,10 @@ export default async function SettingsPage() {
         <h1 className="font-display text-2xl font-bold text-foreground">Settings</h1>
 
         {/* Profile */}
-        <div className="rounded-xl border border-border/60 bg-surface p-6">
+        <div className="surface-card-quiet rounded-xl p-6">
           <div className="mb-5 flex items-center gap-2">
             <User size={15} className="text-muted" />
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Profile</h2>
+            <h2 className="font-display text-base font-semibold text-foreground">Profile</h2>
           </div>
           <div className="flex items-center gap-4">
             <AvatarImage src={avatarUrl} initial={initial} />
@@ -130,10 +135,10 @@ export default async function SettingsPage() {
         <PaymentHistory />
 
         {/* Usage */}
-        <div className="rounded-xl border border-border/60 bg-surface p-6">
+        <div className="surface-card-quiet rounded-xl p-6">
           <div className="mb-5 flex items-center gap-2">
             <BarChart2 size={15} className="text-muted" />
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Usage</h2>
+            <h2 className="font-display text-base font-semibold text-foreground">Usage</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
@@ -152,7 +157,10 @@ export default async function SettingsPage() {
         </div>
 
         {/* Appearance */}
-        <AppearanceSection />
+        <ThemeSection />
+
+        {/* Experience Level */}
+        <ExperienceLevelSection initialLevel={experienceLevel} />
 
         {/* Admin */}
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -174,8 +182,8 @@ export default async function SettingsPage() {
         )}
 
         {/* Danger Zone */}
-        <div className="rounded-xl border border-red-500/20 bg-red-950/20 p-6">
-          <h2 className="mb-1 text-sm font-semibold text-red-400">Danger Zone</h2>
+        <div className="rounded-xl border border-danger-border bg-danger-bg p-6">
+          <h2 className="mb-1 text-sm font-semibold text-danger-fg">Danger Zone</h2>
           <p className="mb-4 text-sm text-muted">Permanently delete your account and all data. This cannot be undone.</p>
           <DeleteAccountButton />
         </div>

@@ -1,7 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import ThemeSync from "@/components/ThemeSync";
+import {
+  isValidThemeId,
+  isValidThemeMode,
+  DEFAULT_THEME_ID,
+  DEFAULT_THEME_MODE,
+} from "@/lib/themes/registry";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -39,26 +47,28 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies()
+  const rawId   = cookieStore.get('theme-id')?.value   ?? ''
+  const rawMode = cookieStore.get('theme-mode')?.value ?? ''
+  const themeId   = isValidThemeId(rawId)     ? rawId   : DEFAULT_THEME_ID
+  const themeMode = isValidThemeMode(rawMode) ? rawMode : DEFAULT_THEME_MODE
+
   return (
     <html
       lang="en"
+      data-theme-id={themeId}
+      data-theme={themeMode}
       className={`h-full antialiased ${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem('theme')||'dark';if(t==='system'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.setAttribute('data-theme',t);})();`,
-          }}
-        />
-      </head>
       <body className="min-h-full bg-background font-sans text-foreground">
         <ThemeProvider>{children}</ThemeProvider>
+        <ThemeSync />
       </body>
     </html>
   );

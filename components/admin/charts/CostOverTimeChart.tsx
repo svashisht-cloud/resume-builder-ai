@@ -29,7 +29,7 @@ export default function CostOverTimeChart({ data }: { data: { date: string; cost
             return [`$${isNaN(num) ? String(v) : num.toFixed(4)}`, 'Cost']
           }}
         />
-        <Line type="monotone" dataKey="cost" stroke="#06b6d4" dot={false} strokeWidth={2} />
+        <Line type="monotone" dataKey="cost" stroke="#FF1F4E" dot={false} strokeWidth={2} />
       </LineChart>
     </ResponsiveContainer>
   )

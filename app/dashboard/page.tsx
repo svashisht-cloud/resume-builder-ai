@@ -14,7 +14,7 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('display_name, email, avatar_url, credits_remaining, plan_type, plan_status, plan_current_period_end')
+    .select('display_name, email, avatar_url, credits_remaining, plan_type, plan_status, plan_current_period_end, experience_level')
     .eq('id', user.id)
     .single()
 
@@ -40,7 +40,10 @@ export default async function DashboardPage() {
         credits={profile?.credits_remaining ?? 0}
         plan={navPlan}
       />
-      <DashboardShell />
+      <DashboardShell experienceLevel={
+        (profile?.experience_level === 'junior' || profile?.experience_level === 'senior'
+          ? profile.experience_level : 'mid') as 'junior' | 'mid' | 'senior'
+      } />
     </div>
   )
 }

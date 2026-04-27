@@ -51,10 +51,14 @@ export function useTailorResume({
   resumeFile,
   jobDescription,
   resumeStyle,
+  experienceLevel = 'mid',
+  targetPages = 1,
 }: {
   resumeFile: File | null;
   jobDescription: string;
   resumeStyle?: ResumeStyle;
+  experienceLevel?: 'junior' | 'mid' | 'senior';
+  targetPages?: 1 | 2;
 }): TailorResumeState {
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -120,6 +124,8 @@ export function useTailorResume({
           jobDescriptionText: jobDescription,
           originalEvaluation,
           selectedKeywords: keywords,
+          experienceLevel,
+          targetPages,
           ...(step1Meta ?? {}),
         }),
         signal,
@@ -186,6 +192,8 @@ export function useTailorResume({
           originalEvaluation,
           resumeId: regenResumeId,
           isRegen: true,
+          experienceLevel,
+          targetPages,
         }),
         signal,
       });
@@ -262,7 +270,7 @@ export function useTailorResume({
         }
 
         if (step1Res.status === 403 && step1Data.error === "regen_limit_reached") {
-          setError("You've reached the 2-regeneration limit for this job description. Start a new tailoring to continue.");
+          setError("You've reached the 5-regeneration limit for this job description. Start a new tailoring to continue.");
           setLoadingStep(0);
           return;
         }
@@ -360,7 +368,7 @@ export function useTailorResume({
           return;
         }
         if (regenInitRes.status === 403 && regenInitData.error === "regen_limit_reached") {
-          setError("You've reached the 2-regeneration limit for this job description. Start a new tailoring to continue.");
+          setError("You've reached the 5-regeneration limit for this job description. Start a new tailoring to continue.");
           setLoadingStep(0);
           return;
         }
@@ -403,7 +411,7 @@ export function useTailorResume({
       const response = await fetch("/api/export-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tailoredResume: result.tailoredResume, resumeStyle }),
+        body: JSON.stringify({ tailoredResume: result.tailoredResume, resumeStyle, targetPages }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => null);
@@ -434,7 +442,7 @@ export function useTailorResume({
       const response = await fetch("/api/export-docx", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tailoredResume: result.tailoredResume, resumeStyle }),
+        body: JSON.stringify({ tailoredResume: result.tailoredResume, resumeStyle, targetPages }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => null);

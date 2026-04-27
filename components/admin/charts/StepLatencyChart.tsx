@@ -29,8 +29,8 @@ export default function StepLatencyChart({
           }}
         />
         <Legend wrapperStyle={{ fontSize: 12 }} />
-        <Bar dataKey="step1" fill="#06b6d4" name="Step 1 (s)" radius={[2, 2, 0, 0]} />
-        <Bar dataKey="step2" fill="#6366f1" name="Step 2 (s)" radius={[2, 2, 0, 0]} />
+        <Bar dataKey="step1" fill="#FF1F4E" name="Step 1 (s)" radius={[2, 2, 0, 0]} />
+        <Bar dataKey="step2" fill="#FFB0C2" name="Step 2 (s)" radius={[2, 2, 0, 0]} />
         <Bar dataKey="step3" fill="#f59e0b" name="Step 3 (s)" radius={[2, 2, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>

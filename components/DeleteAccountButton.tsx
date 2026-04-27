@@ -14,7 +14,7 @@ export default function DeleteAccountButton() {
   return (
     <button
       onClick={handleClick}
-      className="rounded-lg border border-red-900/50 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-900/20"
+      className="rounded-lg border border-danger-border px-4 py-2 text-sm font-medium text-danger-fg transition-colors hover:bg-danger-bg"
     >
       Delete Account
     </button>

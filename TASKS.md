@@ -26,6 +26,9 @@
 - Credit restore on AI failure: `restore_credit(p_resume_id)` RPC (migration 20260421000001) restores credit within 5-min window if AI pipeline errors after `spend_credit`; called in step1/route.ts and route.ts inner try/catch; P0003 (`paid_credit_required`) now handled in both routes
 
 ## Completed (session: 2026-04-25)
+- Theme migrated to Aurora · Crimson Mono: `:root` and `[data-theme="light"]` CSS variable blocks replaced wholesale; crimson ramp (--color-crimson-100…700) and forte namespace added to `@theme inline`; all rgba(6,182,212,X) and `from-accent to-cyan-400` replaced across 7 component files; chart accent colors updated; forte document tokens (`--forte-ink/paper/stone`) and protected files (ResumePreview, ResumePDFDocument, DailyRunsChart) untouched
+
+
 - /terms layout converted from two-column sidebar+article to collapsible accordion sections matching /refund-policy pattern; one <details> per heading, collapsed by default; TermsToc.tsx removed (no longer needed)
 
 ## Completed (session: 2026-04-24)
@@ -43,6 +46,23 @@
 - AuthModal ToS line updated to real Links → /terms and /privacy (open in new tab)
 - SwitchPlanSection "View refund policy" link added (opens in new tab)
 - UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN added to .env.local.example
+
+## Completed (session: 2026-04-25) — Experience-level-aware resume length
+- DB migration: `profiles.experience_level` ('junior'|'mid'|'senior', default 'mid')
+- `lib/ai/prompts.ts`: `ExperienceLevel`/`TargetPages` types, `getLengthBudget()` helper, dynamic PAGE LIMITS block in both `buildTailorUserPrompt` and `buildRefineUserPrompt`; static limits removed from `REFINE_SYSTEM_PROMPT`
+- `lib/ai/pipeline.ts`: `generateTailoredResumeFromRaw` and `refineTailoredResume` accept and pass `experienceLevel` + `targetPages`
+- `app/api/tailor/step2/route.ts`: extracts `experienceLevel` + `targetPages` from request body, passes to pipeline
+- `components/settings/ExperienceLevelSection.tsx`: new segmented control (Junior/Mid/Senior) with Supabase save
+- `app/settings/page.tsx`: fetches `experience_level`, renders `ExperienceLevelSection`
+- `app/dashboard/page.tsx`: fetches `experience_level`, passes to `DashboardShell`
+- `components/DashboardShell.tsx`: `experienceLevel` prop, `targetPages` state, senior-only 1/2-page toggle
+- `lib/hooks/useTailorResume.ts`: `experienceLevel`/`targetPages` options threaded through step2, PDF, and DOCX requests
+
+## Completed (session: 2026-04-26) — Multi-theme infrastructure + Settings UI
+- PR 1: migration (theme_id + theme_mode on profiles), theme registry (lib/themes/registry.ts — 8 palettes), theme CSS (app/themes.css — 16 blocks), client utilities (lib/themes/client.ts), profile sync hook (lib/themes/use-theme-sync.ts + components/ThemeSync.tsx), globals.css migrated to [data-theme-id] selectors, layout.tsx reads cookies server-side for zero-FOUC SSR
+- PR 2: ThemeSection (palette grid + mode toggle, optimistic + DB write), AppearanceSection replaced, Footer Logo tone="auto" fix for light mode
+- Theme visual polish: `app/themes.css` chrome ramps tightened across all themes; themes 1–4 converted to monochromatic chrome; themes 1–4 secondary accents retuned to match primary hue families while themes 5–8 retained tinted chrome
+- App styling pass: added semantic status/shadow/background tokens, replaced hardcoded crimson/cyan effects on main user-facing surfaces, softened card elevation, refreshed settings typography, and added global reduced-motion handling
 
 ## Next step
 - test with real resumes and tune evaluator/tailoring prompts against validation failures

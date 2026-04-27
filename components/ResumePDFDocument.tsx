@@ -39,15 +39,17 @@ const ITEM_MB: Record<ResumeStyle["sectionSpacing"], number> = { compact: 2, nor
 // reclaims ~2pt × n_bullets without touching line-height (text stays readable).
 const BULLET_ROW_MB: Record<ResumeStyle["sectionSpacing"], number> = { compact: 1, normal: 3, relaxed: 5 };
 
-function makeStyles(style: ResumeStyle) {
+export type StyleOverrides = { bulletRowMb?: number; sectionMt?: number; itemMb?: number; leading?: number };
+
+function makeStyles(style: ResumeStyle, overrides: StyleOverrides = {}) {
   const font = PDF_FONT[style.fontFamily];
   const namePt = NAME_PT[style.nameSize];
   const headerPt = HEADER_PT[style.headerSize];
   const bodyPt = BODY_PT[style.bodySize];
-  const leading = BULLET_LEADING[style.bulletSpacing];
-  const sectionMt = SECTION_MT[style.sectionSpacing];
-  const itemMb = ITEM_MB[style.sectionSpacing];
-  const bulletRowMb = BULLET_ROW_MB[style.sectionSpacing];
+  const leading = overrides.leading ?? BULLET_LEADING[style.bulletSpacing];
+  const sectionMt = overrides.sectionMt ?? SECTION_MT[style.sectionSpacing];
+  const itemMb = overrides.itemMb ?? ITEM_MB[style.sectionSpacing];
+  const bulletRowMb = overrides.bulletRowMb ?? BULLET_ROW_MB[style.sectionSpacing];
 
   return StyleSheet.create({
     page: {
@@ -123,11 +125,13 @@ function PdfBulletList({ items, styles }: { items: string[]; styles: PdfStyles }
 export function ResumePDFDocument({
   resume,
   resumeStyle = DEFAULT_RESUME_STYLE,
+  styleOverrides,
 }: {
   resume: TailoredResume;
   resumeStyle?: ResumeStyle;
+  styleOverrides?: StyleOverrides;
 }): React.ReactElement {
-  const styles = makeStyles(resumeStyle);
+  const styles = makeStyles(resumeStyle, styleOverrides);
 
   const name = present(resume.contact.name) ?? "Resume";
 

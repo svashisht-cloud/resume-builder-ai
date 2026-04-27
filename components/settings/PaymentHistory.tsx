@@ -61,7 +61,7 @@ export default function PaymentHistory() {
   }
 
   return (
-    <div className="rounded-xl border border-border/60 bg-surface">
+    <div className="surface-card-quiet rounded-xl">
       <button
         type="button"
         onClick={handleToggle}
@@ -69,7 +69,7 @@ export default function PaymentHistory() {
       >
         <div className="flex items-center gap-2">
           <Receipt size={15} className="text-muted" />
-          <span className="font-display text-sm font-semibold uppercase tracking-wider text-muted">
+          <span className="font-display text-base font-semibold text-foreground">
             Payment History
           </span>
         </div>
@@ -90,7 +90,7 @@ export default function PaymentHistory() {
           )}
 
           {error && (
-            <p className="text-sm text-red-400">{error}</p>
+            <p className="text-sm text-danger-fg">{error}</p>
           )}
 
           {!loading && !error && payments.length === 0 && (
@@ -117,7 +117,7 @@ export default function PaymentHistory() {
                       {formatAmount(p.amount_cents, p.currency)}
                     </span>
                     {p.status !== "succeeded" && (
-                      <span className="rounded-full bg-red-950/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-400">
+                      <span className="rounded-full bg-danger-bg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-danger-fg">
                         {p.status}
                       </span>
                     )}

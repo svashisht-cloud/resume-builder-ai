@@ -14,6 +14,8 @@ import {
   REFINE_SYSTEM_PROMPT,
   TAILORED_EVAL_SYSTEM_PROMPT,
   TAILOR_SYSTEM_PROMPT,
+  type ExperienceLevel,
+  type TargetPages,
 } from "@/lib/ai/prompts";
 import {
   ChangeLogSchema,
@@ -394,11 +396,15 @@ export async function generateTailoredResumeFromRaw({
   jobDescriptionText,
   originalEvaluation,
   selectedKeywords = [],
+  experienceLevel = 'mid',
+  targetPages = 1,
 }: {
   resumeText: string;
   jobDescriptionText: string;
   originalEvaluation: ResumeEvaluation;
   selectedKeywords?: string[];
+  experienceLevel?: ExperienceLevel;
+  targetPages?: TargetPages;
 }): Promise<TailoringResultWithUsage> {
   const matchedBlock =
     originalEvaluation.matchedAreas.length > 0
@@ -430,6 +436,8 @@ export async function generateTailoredResumeFromRaw({
       resumeText,
       jobDescriptionText,
       selectedKeywords,
+      experienceLevel,
+      targetPages,
     }),
   });
 
@@ -449,12 +457,16 @@ export async function refineTailoredResume({
   selectedItemTexts,
   jobDescriptionText,
   originalEvaluation,
+  experienceLevel = 'mid',
+  targetPages = 1,
 }: {
   previousTailoredResume: TailoredResume;
   userFeedback: string;
   selectedItemTexts?: string[];
   jobDescriptionText: string;
   originalEvaluation: ResumeEvaluation;
+  experienceLevel?: ExperienceLevel;
+  targetPages?: TargetPages;
 }): Promise<TailoringResultWithUsage> {
   const renderedTailored = renderTailoredResumeText(previousTailoredResume);
 
@@ -472,6 +484,8 @@ export async function refineTailoredResume({
       selectedItemTexts,
       jobDescriptionText,
       originalEvaluation,
+      experienceLevel,
+      targetPages,
     }),
   });
 

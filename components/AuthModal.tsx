@@ -27,7 +27,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     >
       <div
         data-state={isOpen ? 'open' : 'closed'}
-        className="relative w-full max-w-[360px] overflow-hidden rounded-3xl border border-border bg-surface shadow-[0_32px_80px_rgba(0,0,0,0.7),0_0_0_1px_rgba(6,182,212,0.12)] transition-[opacity,transform] duration-[250ms] ease-out motion-reduce:transition-none data-[state=closed]:scale-95 data-[state=closed]:opacity-0 data-[state=open]:scale-100 data-[state=open]:opacity-100"
+        className="shadow-elevated relative w-full max-w-[360px] overflow-hidden rounded-3xl border border-border bg-surface transition-[opacity,transform] duration-[250ms] ease-out motion-reduce:transition-none data-[state=closed]:scale-95 data-[state=closed]:opacity-0 data-[state=open]:scale-100 data-[state=open]:opacity-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top accent line + bloom */}
@@ -37,7 +37,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         <div className="px-8 pt-10 pb-8">
           <button
             onClick={onClose}
-            className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-xl text-text-dim transition-colors hover:bg-white/5 hover:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+            className="absolute right-5 top-5 flex h-8 w-8 items-center justify-center rounded-xl text-text-dim transition-colors hover:bg-surface-raised hover:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
             aria-label="Close"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

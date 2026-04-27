@@ -41,14 +41,14 @@ export default function SwitchPlanSection() {
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border/60 bg-surface p-6 text-sm text-muted">
+      <div className="surface-card-quiet rounded-xl p-6 text-sm text-muted">
         Loading plan…
       </div>
     )
   }
 
   return (
-    <div className="rounded-xl border border-border/60 bg-surface p-6">
+    <div className="surface-card-quiet rounded-xl p-6">
       <h2 className="font-display mb-6 text-lg font-semibold text-foreground">Manage Plan</h2>
       <PricingCards currentPlan={currentPlan} cancellationScheduled={cancellationScheduled} stacked />
       <p className="mt-4 text-center text-xs text-text-dim">

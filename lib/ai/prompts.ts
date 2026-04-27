@@ -22,6 +22,33 @@ export function buildTailoredEvalUserPrompt(
   return `Evaluate this tailored resume against this job description.\n\nScoring guidance:\n- Use the raw resume text as the source of candidate evidence.\n- Use the raw job description text as the source of role expectations.\n- Give strong credit for exact JD keyword matches — literal terminology alignment is a primary ATS signal and should meaningfully improve the score.\n- Give credit for domain-implied skills that are surfaced correctly and are appropriate to the candidate's background and experience level.\n- Give extra credit when: bullets lead with JD-relevant content, the summary directly mirrors role requirements, and skills sections use JD terminology.\n- Penalize genuine gaps (experience the candidate cannot have given their background), vague or unsupported claims, and poor readability.\n- Scores of 95–100 are valid and expected for strong tailored matches. Score 97+ when keyword coverage is near-complete, bullets are JD-led, and the summary mirrors role requirements. Score 99–100 when alignment is essentially perfect. Do not compress the upper range.\n- matchedAreas: specific role-fit areas with strong explicit or inferred evidence. missingAreas: genuine gaps only — not implied skills the candidate reasonably has.\n\nRESUME TEXT:\n${resumeText}\n\nJOB DESCRIPTION TEXT:\n${jobDescriptionText}`;
 }
 
+// ── Experience-level length budgets ──────────────────────────────────────────
+
+export type ExperienceLevel = 'junior' | 'mid' | 'senior';
+export type TargetPages = 1 | 2;
+
+type LengthBudget = {
+  totalExpBulletsRange: string;
+  perRoleGuidance: string | null;
+  projectBulletsMax: number;
+  summaryLength: string;
+  skillCategoriesMax: number;
+  totalWordCountRange: string;
+};
+
+function getLengthBudget(level: ExperienceLevel, pages: TargetPages): LengthBudget {
+  if (level === 'junior') {
+    return { totalExpBulletsRange: '6–8', perRoleGuidance: null, projectBulletsMax: 2, summaryLength: '2–3 sentences', skillCategoriesMax: 3, totalWordCountRange: '330–350' };
+  }
+  if (level === 'mid') {
+    return { totalExpBulletsRange: '8–10', perRoleGuidance: null, projectBulletsMax: 2, summaryLength: '2–3 sentences', skillCategoriesMax: 5, totalWordCountRange: '330–350' };
+  }
+  if (pages === 2) {
+    return { totalExpBulletsRange: '14–18', perRoleGuidance: 'up to 6 for the most recent/relevant role, 3 max for older or less relevant ones', projectBulletsMax: 3, summaryLength: '3–4 sentences', skillCategoriesMax: 6, totalWordCountRange: '570–620' };
+  }
+  return { totalExpBulletsRange: '10–12', perRoleGuidance: 'up to 5 for the most recent/relevant role, 2 max for older or less relevant ones', projectBulletsMax: 2, summaryLength: '3–4 sentences', skillCategoriesMax: 6, totalWordCountRange: '330–350' };
+}
+
 // ── Tailoring ─────────────────────────────────────────────────────────────────
 
 // export const TAILOR_SYSTEM_PROMPT =
@@ -79,9 +106,8 @@ If the user's feedback requests something not supported by the tailored resume, 
 - Drop any experience entry — reduce to 1 bullet rather than remove entirely.
 - Drop any project entry — reduce to 1 bullet rather than remove entirely.
 
-## Page limit (strictly enforce)
-- Experience bullets: 10 total across all roles.
-- Project bullets: maximum 2 per project.
+## Page and length limits
+(Applied per-generation in the user prompt based on experience level and target page count.)
 
 Output format: for every optional string field with no value, emit the key explicitly with a null value — never omit optional keys. Use [] for missing arrays.
 `;
@@ -92,12 +118,16 @@ export function buildRefineUserPrompt({
   selectedItemTexts,
   jobDescriptionText,
   originalEvaluation,
+  experienceLevel = 'mid',
+  targetPages = 1,
 }: {
   renderedTailored: string;
   userFeedback: string;
   selectedItemTexts?: string[];
   jobDescriptionText: string;
   originalEvaluation: { matchedAreas: string[]; gaps: string[] };
+  experienceLevel?: ExperienceLevel;
+  targetPages?: TargetPages;
 }): string {
   const feedbackBlock = userFeedback.trim()
     ? `USER FEEDBACK (apply conservatively — only within what the tailored resume already contains):\n${userFeedback.trim()}`
@@ -118,6 +148,18 @@ export function buildRefineUserPrompt({
       ? `KNOWN GAPS (address only if the tailored resume already contains supporting evidence):\n${originalEvaluation.gaps.map((g, i) => `${i + 1}. ${g}`).join("\n")}`
       : "";
 
+  const budget = getLengthBudget(experienceLevel, targetPages);
+  const pageTarget = targetPages === 2 ? 'TWO pages' : 'ONE page';
+  const distributionNote = budget.perRoleGuidance
+    ? ` Distribute by relevance — ${budget.perRoleGuidance} (minimum 1 per role).`
+    : ' Distribute naturally across roles (minimum 1 per role).';
+  const pageLimitsBlock = `PAGE AND LENGTH LIMITS (strictly enforce — resume must fit ${pageTarget}):
+- Experience bullets: ${budget.totalExpBulletsRange} total across all roles.${distributionNote} Never drop an experience entry entirely.
+- Project bullets: maximum ${budget.projectBulletsMax} per project. Never drop a project entirely — reduce to 1 bullet minimum.
+- Summary: ${budget.summaryLength} only.
+- Skills: at most ${budget.skillCategoriesMax} categories. Within each, keep only JD-relevant or highly relevant items.
+- Total word count: the entire resume body (excluding contact info, section headers, and dates) must be between ${budget.totalWordCountRange} words. Expand bullets with relevant detail — action verb, context, method, and impact — to reach this range. Do not truncate or over-condense.`;
+
   return `Refine the tailored resume below based on the user's feedback. Work ONLY from the tailored resume text — do not add content not present in it.
 
 ${feedbackBlock}
@@ -127,6 +169,8 @@ ${selectedBlock}
 ${matchedBlock}
 
 ${gapsBlock}
+
+${pageLimitsBlock}
 
 PREVIOUSLY TAILORED RESUME TEXT:
 ${renderedTailored}
@@ -142,6 +186,8 @@ export function buildTailorUserPrompt({
   resumeText,
   jobDescriptionText,
   selectedKeywords = [],
+  experienceLevel = 'mid',
+  targetPages = 1,
 }: {
   matchedBlock: string;
   gapsBlock: string;
@@ -149,11 +195,26 @@ export function buildTailorUserPrompt({
   resumeText: string;
   jobDescriptionText: string;
   selectedKeywords?: string[];
+  experienceLevel?: ExperienceLevel;
+  targetPages?: TargetPages;
 }): string {
   const confirmedKeywordsBlock =
     selectedKeywords.length > 0
       ? `CANDIDATE-CONFIRMED ADDITIONAL SKILLS (not in resume but verified by candidate):\nThe candidate has confirmed they have real experience with the following. Incorporate each naturally into the tailored resume — add to the relevant skills group, weave into bullet context, or surface in the summary — wherever it fits without fabricating specifics:\n${selectedKeywords.map((k) => `- ${k}`).join("\n")}`
       : "";
+
+  const budget = getLengthBudget(experienceLevel, targetPages);
+  const pageTarget = targetPages === 2 ? 'TWO pages' : 'ONE page';
+  const distributionNote = budget.perRoleGuidance
+    ? ` Distribute by relevance — ${budget.perRoleGuidance} (minimum 1 per role).`
+    : ' Distribute naturally across roles (minimum 1 per role).';
+  const pageLimitsBlock = `PAGE AND LENGTH LIMITS (strictly enforce — resume must fit ${pageTarget}):
+- Experience bullets: ${budget.totalExpBulletsRange} total across all roles.${distributionNote} Never drop an experience entry entirely — every role must appear with at least 1 bullet.
+- Project bullets: maximum ${budget.projectBulletsMax} per project. Pick the ones that best demonstrate impact and JD alignment. Never drop a project entirely — if you must cut, reduce to 1 bullet, not 0.
+- Keep every project from the source resume. Do not omit any project entry, regardless of relevance.
+- Summary: ${budget.summaryLength} only.
+- Skills: at most ${budget.skillCategoriesMax} categories. Within each, keep only JD-relevant or highly relevant items. Do not pad.
+- Total word count: the entire resume body (excluding contact info, section headers, and dates) must be between ${budget.totalWordCountRange} words. Expand bullets with relevant detail — action verb, context, method, and impact — to reach this range. Do not truncate or over-condense.`;
 
   return `Your PRIMARY goal is to maximize ATS keyword alignment and recruiter clarity for the target role. Every bullet in the most relevant experience entries must be meaningfully rewritten — not just 1–2 words changed, but restructured to lead with the JD's exact terminology where the source resume supports it.
 
@@ -166,10 +227,7 @@ RULES:
 - Keep all substantive sections (experience, projects, education, certifications) present in the source resume.
 - evidenceIds are semantic traceability labels (e.g. 'exp-1-bullet-3') — they are NOT required to be verbatim quotes.
 
-PAGE LIMITS (strictly enforce — resume must fit one page):
-- Experience bullets: 10 total across all roles. Distribute by relevance — give more bullets to the most JD-relevant roles, fewer (minimum 1) to older or less relevant ones. Never drop an experience entry entirely — every role must appear with at least 1 bullet.
-- Project bullets: maximum 2 per project. Pick the 2 that best demonstrate impact and JD alignment. Never drop a project entirely — if you must cut, reduce to 1 bullet, not 0.
-- Keep every project from the source resume. Do not omit any project entry, regardless of relevance.
+${pageLimitsBlock}
 
 ${matchedBlock}
 

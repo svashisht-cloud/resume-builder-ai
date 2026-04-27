@@ -1,6 +1,8 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { applyTheme, getCurrentTheme } from '@/lib/themes/client'
+import { DEFAULT_THEME_MODE } from '@/lib/themes/registry'
 
 export type Theme = 'system' | 'light' | 'dark'
 
@@ -10,40 +12,36 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'dark',
+  theme: DEFAULT_THEME_MODE,
   setTheme: () => {},
 })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Always initialize to 'dark' so server and client render the same HTML.
-  // The inline script in layout.tsx already sets data-theme before React loads,
-  // so visuals are correct. We sync the real stored value after mount.
-  const [theme, setThemeState] = useState<Theme>('dark')
+  // Initialize to the server fallback so server and client render the same HTML.
+  // Sync from DOM (set server-side via cookie in layout.tsx) after mount.
+  const [theme, setThemeState] = useState<Theme>(DEFAULT_THEME_MODE)
 
   useEffect(() => {
-    const stored = localStorage.getItem('theme')
-    if (stored === 'system' || stored === 'light' || stored === 'dark') {
+    const current = getCurrentTheme()
+    if (current.mode === 'light' || current.mode === 'dark') {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setThemeState(stored)
+      setThemeState(current.mode)
     }
   }, [])
 
   useEffect(() => {
-    localStorage.setItem('theme', theme)
-    const root = document.documentElement
-
     if (theme === 'system') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      root.setAttribute('data-theme', prefersDark ? 'dark' : 'light')
+      applyTheme(getCurrentTheme().id, prefersDark ? 'dark' : 'light')
 
       const mql = window.matchMedia('(prefers-color-scheme: dark)')
       const handler = (e: MediaQueryListEvent) => {
-        root.setAttribute('data-theme', e.matches ? 'dark' : 'light')
+        applyTheme(getCurrentTheme().id, e.matches ? 'dark' : 'light')
       }
       mql.addEventListener('change', handler)
       return () => mql.removeEventListener('change', handler)
     } else {
-      root.setAttribute('data-theme', theme)
+      applyTheme(getCurrentTheme().id, theme)
     }
   }, [theme])
 

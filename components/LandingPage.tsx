@@ -26,7 +26,7 @@ export default function LandingPage() {
   return (
     <>
       {/* Navbar */}
-      <nav className="sticky top-0 z-40 border-b border-border/60 bg-background/90 backdrop-blur-md">
+      <nav className="sticky top-0 z-40 border-b border-border/50 bg-app-glass backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <div className="flex items-center gap-2.5">
             <span className={`${sora.className} text-xl font-semibold tracking-tight text-foreground`}>forte</span>
@@ -75,7 +75,7 @@ export default function LandingPage() {
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={openModal}
-                className="group flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-accent to-cyan-400 px-6 py-3 text-sm font-semibold text-background shadow-[0_4px_20px_rgba(6,182,212,0.3)] transition-all hover:shadow-[0_4px_28px_rgba(6,182,212,0.45)] hover:opacity-95 active:scale-[0.98]"
+                className="group flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-accent to-accent-hover px-6 py-3 text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:shadow-accent-strong hover:opacity-95 active:scale-[0.98]"
               >
                 Get Started Free
                 <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
@@ -94,7 +94,7 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="border-t border-border/60 bg-surface py-12 md:py-20">
+      <section id="how-it-works" className="border-t border-border/50 bg-surface/70 py-12 md:py-20">
         <div className="mx-auto max-w-5xl px-6">
           <div className="mb-12 text-center">
             <h2 className="font-display mb-3 text-3xl font-bold text-foreground">How It Works</h2>
@@ -126,7 +126,7 @@ export default function LandingPage() {
             ].map(({ icon, step, title, description }) => (
               <div
                 key={step}
-                className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border/60 bg-surface-2 p-6 transition-all hover:border-accent/30 hover:shadow-[0_4px_24px_rgba(6,182,212,0.08)]"
+                className="surface-card-quiet group relative flex h-full flex-col overflow-hidden rounded-xl p-6 transition-all hover:border-accent/30 hover:shadow-accent-soft"
               >
                 {/* Step number watermark */}
                 <span className="absolute right-4 top-3 font-display text-5xl font-bold text-border/60 select-none">
@@ -146,7 +146,7 @@ export default function LandingPage() {
       <Testimonials />
 
       {/* Pricing */}
-      <section className="border-t border-border/60 py-12 md:py-20">
+      <section className="border-t border-border/50 py-12 md:py-20">
         <div className="mx-auto max-w-5xl px-6">
           <div className="mb-12 text-center">
             <h2 className="font-display mb-3 text-3xl font-bold text-foreground">Pricing</h2>

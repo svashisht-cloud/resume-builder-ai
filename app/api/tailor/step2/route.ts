@@ -43,7 +43,14 @@ export async function POST(request: Request) {
       tokensEval1,
       eval1CostUsd,
       isRegen,
+      experienceLevel: rawExperienceLevel,
+      targetPages: rawTargetPages,
     } = body as Record<string, unknown>;
+
+    const experienceLevel = (rawExperienceLevel === 'junior' || rawExperienceLevel === 'senior')
+      ? rawExperienceLevel
+      : 'mid' as const;
+    const targetPages: 1 | 2 = rawTargetPages === 2 ? 2 : 1;
 
     const step2Start = Date.now();
 
@@ -71,6 +78,8 @@ export async function POST(request: Request) {
           : undefined,
         jobDescriptionText,
         originalEvaluation: parsedEvaluation.data,
+        experienceLevel,
+        targetPages,
       });
 
       return Response.json({
@@ -112,6 +121,8 @@ export async function POST(request: Request) {
       jobDescriptionText,
       originalEvaluation: parsedEvaluation.data,
       selectedKeywords: Array.isArray(selectedKeywords) ? selectedKeywords.filter((k: unknown) => typeof k === "string") : [],
+      experienceLevel,
+      targetPages,
     });
 
     return Response.json({

@@ -93,7 +93,7 @@ export default function Testimonials() {
   const offset = cardWidth > 0 ? currentIndex * (cardWidth + GAP) : 0
 
   return (
-    <section id="testimonials" className="border-t border-border/60 bg-surface py-12 md:py-20">
+    <section id="testimonials" className="border-t border-border/50 bg-surface/70 py-12 md:py-20">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mb-12 text-center">
           <h2 className="font-display mb-3 text-2xl sm:text-3xl font-bold text-foreground">
@@ -129,7 +129,7 @@ export default function Testimonials() {
               {testimonials.map((t) => (
                 <div
                   key={t.name}
-                  className="relative flex-none overflow-hidden rounded-xl border border-border/60 bg-surface-2 p-6 transition-all hover:border-accent/20 hover:shadow-[0_4px_24px_rgba(0,0,0,0.3)]"
+                  className="surface-card-quiet relative flex-none overflow-hidden rounded-xl p-6 transition-all hover:border-accent/20 hover:shadow-accent-soft"
                   style={{ width: cardWidth > 0 ? `${cardWidth}px` : `calc(${100 / visibleCount}% - ${GAP * (visibleCount - 1) / visibleCount}px)` }}
                 >
                   {/* Decorative quote watermark */}

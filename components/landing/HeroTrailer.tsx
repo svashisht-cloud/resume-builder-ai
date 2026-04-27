@@ -145,7 +145,7 @@ export default function HeroTrailer() {
             <div
               className={`absolute flex items-center gap-3 rounded-lg border border-border bg-surface-2 px-4 py-3 shadow-lg transition-all duration-500 ease-out ${fileAnimating ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-8 scale-90 opacity-0'}`}
             >
-              <FileText className="flex-shrink-0 text-red-400" size={24} />
+              <FileText className="flex-shrink-0 text-accent" size={24} />
               <div>
                 <p className="text-xs font-medium text-foreground">megan_connor_resume.pdf</p>
                 <p className="text-[10px] text-muted">218 KB</p>
@@ -160,8 +160,8 @@ export default function HeroTrailer() {
         >
           {/* File pill — bigger text */}
           <div className="flex flex-shrink-0 items-center gap-2.5 rounded-lg border border-border bg-surface-2 px-4 py-3">
-            <CheckCircle2 className="flex-shrink-0 text-emerald-400" size={18} />
-            <FileText className="flex-shrink-0 text-red-400" size={16} />
+            <CheckCircle2 className="flex-shrink-0 text-success-fg" size={18} />
+            <FileText className="flex-shrink-0 text-accent" size={16} />
             <span className="truncate text-sm font-medium text-foreground">
               megan_connor_resume.pdf
             </span>
@@ -186,7 +186,7 @@ export default function HeroTrailer() {
           {/* Tailor button */}
           {showTailorBtn && (
             <div className="flex-shrink-0 animate-in fade-in slide-in-from-bottom-1 duration-300">
-              <div className="rounded-lg bg-accent px-4 py-2.5 text-center text-sm font-semibold text-background">
+              <div className="rounded-lg bg-accent px-4 py-2.5 text-center text-sm font-semibold text-accent-foreground">
                 Tailor Resume →
               </div>
             </div>
@@ -195,9 +195,9 @@ export default function HeroTrailer() {
           {/* Loading shimmer */}
           {showLoading && (
             <div className="flex-shrink-0">
-              <div className="animate-pulse rounded-lg bg-accent/70 px-4 py-2.5 text-center text-sm font-semibold text-background">
+              <div className="animate-pulse rounded-lg bg-accent px-4 py-2.5 text-center text-sm font-semibold text-accent-foreground">
                 <span className="inline-flex items-center gap-2">
-                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-background/30 border-t-background" />
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-accent-foreground/30 border-t-accent-foreground" />
                   Tailoring…
                 </span>
               </div>
@@ -239,7 +239,7 @@ export default function HeroTrailer() {
             </div>
 
             <div className="mt-7 flex justify-center">
-              <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-1.5 text-sm font-bold text-emerald-400">
+              <div className="rounded-full border border-success-border bg-success-bg px-4 py-1.5 text-sm font-bold text-success-fg">
                 +{atsAfter - 62}% improvement
               </div>
             </div>
@@ -258,7 +258,7 @@ export default function HeroTrailer() {
               <div className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface-2 py-2 text-xs font-medium text-foreground">
                 Edit Resume
               </div>
-              <div className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent py-2 text-xs font-semibold text-background">
+              <div className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent py-2 text-xs font-semibold text-accent-foreground">
                 <Download size={12} />
                 Download PDF
               </div>
@@ -312,13 +312,13 @@ export default function HeroTrailer() {
                       <p className="flex-shrink-0 pl-1 text-[8px] text-slate-400">2021–Present</p>
                     </div>
                     <div className="mt-1 space-y-0.5">
-                      <p className="rounded border-l-2 border-green-400 bg-green-50 pl-1.5 text-[9px] text-slate-700">
+                      <p className="rounded border-l-2 border-success bg-success-bg pl-1.5 text-[9px] text-slate-700">
                         • Led React + TypeScript design system adopted by 8 product teams
                       </p>
-                      <p className="rounded border-l-2 border-green-400 bg-green-50 pl-1.5 text-[9px] text-slate-700">
+                      <p className="rounded border-l-2 border-success bg-success-bg pl-1.5 text-[9px] text-slate-700">
                         • Optimized Core Web Vitals; LCP improved 38% across key flows
                       </p>
-                      <p className="rounded border-l-2 border-green-400 bg-green-50 pl-1.5 text-[9px] text-slate-700">
+                      <p className="rounded border-l-2 border-success bg-success-bg pl-1.5 text-[9px] text-slate-700">
                         • Drove Next.js migration, cutting bundle size 45% site-wide
                       </p>
                       <p className="text-[9px] text-slate-600">• Mentored 3 engineers in scalable component architecture</p>
@@ -330,7 +330,7 @@ export default function HeroTrailer() {
                       <p className="flex-shrink-0 pl-1 text-[8px] text-slate-400">2019–2021</p>
                     </div>
                     <div className="mt-1 space-y-0.5">
-                      <p className="rounded border-l-2 border-green-400 bg-green-50 pl-1.5 text-[9px] text-slate-700">
+                      <p className="rounded border-l-2 border-success bg-success-bg pl-1.5 text-[9px] text-slate-700">
                         • Built Next.js marketing site; reduced TTI by 42% via code splitting
                       </p>
                       <p className="text-[9px] text-slate-600">• Integrated Figma→code pipeline, cutting design handoff 60%</p>

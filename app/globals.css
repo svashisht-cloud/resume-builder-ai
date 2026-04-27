@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./themes.css";
 
 @keyframes gradient-flow {
   0%, 100% { background-position: 0% 50%; }
@@ -13,66 +14,97 @@
   to   { opacity: 1; }
 }
 
+/* forte document tokens — invariant across all themes */
 :root {
-  /* existing tokens */
-  --background: #0a0f1e;
-  --surface: #0f1629;
-  --surface-raised: #131c35;
-  --accent: #06b6d4;
-  --accent-secondary: #6366f1;
-  --foreground: #ffffff;
-  --muted: #94a3b8;
-  --border: #1e293b;
-  /* new design-system tokens */
-  --bg: #0a0f1e;
-  --surface-2: #111827;
-  --accent-hover: #0891b2;
-  --accent-2: #6366f1;
-  --text: #ffffff;
-  --text-muted: #94a3b8;
-  --text-dim: #64748b;
-  /* brand tokens */
   --forte-ink:   #0A0A0A;
   --forte-paper: #F7F6F3;
   --forte-stone: #DBD9D2;
+  --success: #36A66F;
+  --success-foreground: #DDFBEA;
+  --success-bg: rgba(54, 166, 111, 0.12);
+  --success-border: rgba(54, 166, 111, 0.28);
+  --danger: #F06464;
+  --danger-foreground: #FFE5E5;
+  --danger-bg: rgba(240, 100, 100, 0.12);
+  --danger-border: rgba(240, 100, 100, 0.28);
+  --warning: #D99A2B;
+  --warning-foreground: #FFF3D6;
+  --warning-bg: rgba(217, 154, 43, 0.12);
+  --warning-border: rgba(217, 154, 43, 0.28);
+  --accent-foreground: var(--background);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-card: 0 12px 32px rgba(0, 0, 0, 0.18);
+  --shadow-elevated: 0 24px 64px rgba(0, 0, 0, 0.38);
+  --shadow-accent-soft: 0 10px 28px color-mix(in srgb, var(--accent) 18%, transparent);
+  --shadow-accent-strong: 0 14px 38px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 [data-theme="light"] {
-  --background:     #f8fafc;
-  --surface:        #ffffff;
-  --surface-raised: #f1f5f9;
-  --foreground:     #0f172a;
-  --muted:          #64748b;
-  --border:         #e2e8f0;
-  --bg:             #f8fafc;
-  --surface-2:      #f1f5f9;
-  --text:           #0f172a;
-  --text-muted:     #64748b;
-  --text-dim:       #94a3b8;
+  --success: #2E7D55;
+  --success-foreground: #1E5F3F;
+  --success-bg: rgba(46, 125, 85, 0.10);
+  --success-border: rgba(46, 125, 85, 0.24);
+  --danger: #B84545;
+  --danger-foreground: #9D3131;
+  --danger-bg: rgba(184, 69, 69, 0.09);
+  --danger-border: rgba(184, 69, 69, 0.22);
+  --warning: #9A6817;
+  --warning-foreground: #7B4F0B;
+  --warning-bg: rgba(154, 104, 23, 0.10);
+  --warning-border: rgba(154, 104, 23, 0.22);
+  --accent-foreground: #FFFFFF;
+  --shadow-soft: 0 1px 2px rgba(20, 20, 24, 0.05);
+  --shadow-card: 0 10px 28px rgba(20, 20, 24, 0.07);
+  --shadow-elevated: 0 24px 64px rgba(20, 20, 24, 0.16);
+  --shadow-accent-soft: 0 10px 26px color-mix(in srgb, var(--accent) 12%, transparent);
+  --shadow-accent-strong: 0 14px 34px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 @theme inline {
-  /* existing tokens */
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-surface-raised: var(--surface-raised);
-  --color-accent: var(--accent);
+  --color-background:       var(--background);
+  --color-surface:          var(--surface);
+  --color-surface-raised:   var(--surface-raised);
+  --color-accent:           var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-accent-secondary: var(--accent-secondary);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-border: var(--border);
-  /* new tokens */
-  --color-bg: var(--bg);
-  --color-surface-2: var(--surface-2);
-  --color-accent-hover: var(--accent-hover);
-  --color-accent-2: var(--accent-2);
-  --color-text: var(--text);
-  --color-text-muted: var(--text-muted);
-  --color-text-dim: var(--text-dim);
-  /* brand tokens */
-  --color-ink:   var(--forte-ink);
-  --color-paper: var(--forte-paper);
-  --color-stone: var(--forte-stone);
+  --color-foreground:       var(--foreground);
+  --color-muted:            var(--muted);
+  --color-border:           var(--border);
+  --color-success:          var(--success);
+  --color-success-fg:       var(--success-foreground);
+  --color-success-bg:       var(--success-bg);
+  --color-success-border:   var(--success-border);
+  --color-danger:           var(--danger);
+  --color-danger-fg:        var(--danger-foreground);
+  --color-danger-bg:        var(--danger-bg);
+  --color-danger-border:    var(--danger-border);
+  --color-warning:          var(--warning);
+  --color-warning-fg:       var(--warning-foreground);
+  --color-warning-bg:       var(--warning-bg);
+  --color-warning-border:   var(--warning-border);
+  --color-bg:               var(--bg);
+  --color-surface-2:        var(--surface-2);
+  --color-accent-hover:     var(--accent-hover);
+  --color-accent-2:         var(--accent-2);
+  --color-text:             var(--text);
+  --color-text-muted:       var(--text-muted);
+  --color-text-dim:         var(--text-dim);
+  /* forte document tokens — alias for component use */
+  --color-ink:              var(--forte-ink);
+  --color-paper:            var(--forte-paper);
+  --color-stone:            var(--forte-stone);
+  /* forte namespace (explicit) */
+  --color-forte-ink:        #0A0A0A;
+  --color-forte-paper:      #F7F6F3;
+  --color-forte-stone:      #DBD9D2;
+  /* crimson ramp — constant across themes */
+  --color-crimson-100:      #FF5979;
+  --color-crimson-200:      #FF3A64;
+  --color-crimson-300:      #FF1F4E;
+  --color-crimson-400:      #E6093A;
+  --color-crimson-500:      #D6133E;
+  --color-crimson-600:      #B00A30;
+  --color-crimson-700:      #7A0921;
   /* fonts */
   --font-display: var(--font-space-grotesk), system-ui, sans-serif;
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
@@ -89,7 +121,11 @@
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at 18% -10%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 32rem),
+    radial-gradient(circle at 82% 0%, color-mix(in srgb, var(--accent-secondary) 7%, transparent), transparent 30rem),
+    linear-gradient(180deg, var(--background), var(--background));
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans);
 }
@@ -97,6 +133,44 @@ body {
 button,
 a {
   cursor: pointer;
+}
+
+*:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.surface-card {
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  box-shadow: var(--shadow-card);
+}
+
+.surface-card-quiet {
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 54%, transparent);
+}
+
+.surface-card-accent {
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  box-shadow: var(--shadow-accent-soft);
+}
+
+.shadow-accent-soft {
+  box-shadow: var(--shadow-accent-soft);
+}
+
+.shadow-accent-strong {
+  box-shadow: var(--shadow-accent-strong);
+}
+
+.shadow-elevated {
+  box-shadow: var(--shadow-elevated);
+}
+
+.bg-app-glass {
+  background: color-mix(in srgb, var(--background) 88%, transparent);
 }
 
 /* Custom scrollbar */
@@ -151,5 +225,16 @@ a {
     color-adjust: exact;
     print-color-adjust: exact;
     width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }
