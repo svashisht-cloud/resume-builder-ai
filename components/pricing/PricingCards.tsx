@@ -17,11 +17,11 @@ interface PricingCardsProps {
 
 const PRO_FEATURES = [
   'Unlimited tailored resumes (fair use applies)',
-  "Unlimited edits & regenerations until it's perfect. 🔥",
+  "Unlimited edits and regenerations until it's right",
   'Full ATS match report',
   'PDF + DOCX export',
   'Resume version history',
-  'Apply to more jobs, faster — with tailored resumes for every role 🔥',
+  'Tailored resumes for every role in your search',
 ]
 
 const FREE_FEATURES = [
@@ -81,7 +81,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
         showToast(data.error ?? 'Purchase failed. Please try again.', false)
       }
     } catch {
-      showToast('Network error — please try again.', false)
+      showToast('Network error. Please try again.', false)
     } finally {
       setLoadingProduct(null)
     }
@@ -112,7 +112,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
         showToast(data.error ?? 'Purchase failed. Please try again.', false)
       }
     } catch {
-      showToast('Network error — please try again.', false)
+      showToast('Network error. Please try again.', false)
     } finally {
       setLoadingProduct(null)
     }
@@ -130,7 +130,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
         showToast(data.error ?? 'Cancellation failed. Please try again.', false)
       }
     } catch {
-      showToast('Network error — please try again.', false)
+      showToast('Network error. Please try again.', false)
     } finally {
       setLoadingProduct(null)
     }
@@ -162,7 +162,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
               ))}
             </ul>
             <p className="mb-6 text-xs text-text-dim">
-              💡 Most users create 5–15 resumes during their job search
+              Most users create 5 to 15 resumes during their job search
             </p>
             <div className="flex flex-col gap-2">
               <button
@@ -201,19 +201,23 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
       <div className={stacked ? 'flex flex-col gap-6' : 'grid grid-cols-1 items-stretch gap-6 md:grid-cols-3'}>
 
         {/* ── FREE — hidden for active Pro users ── */}
-        {!isProPlan && <div className="surface-card-quiet flex flex-col rounded-xl px-6 py-8">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="text-xs font-semibold uppercase tracking-widest text-muted">Free</div>
-            <span className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-medium text-muted">Free forever</span>
+        {!isProPlan && <div className="surface-card-quiet flex flex-col rounded-xl px-6 py-7">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Free</div>
+            <span className="rounded-full border border-border/60 bg-surface/75 px-2.5 py-1 text-[10px] font-medium text-muted">Free forever</span>
           </div>
-          <div className="mb-6 flex items-baseline gap-1.5">
-            <span className="font-display text-4xl font-bold text-foreground">$0</span>
+          <div className="mb-5">
+            <div className="mb-2 flex items-baseline gap-1.5">
+              <span className="font-display text-4xl font-bold text-foreground">$0</span>
+            </div>
+            <p className="text-sm leading-6 text-muted">
+              For trying the product with one tailored resume.
+            </p>
           </div>
-          <p className="mb-5 text-sm text-muted">Try Forte risk-free with 1 tailored resume</p>
 
-          <ul className="mb-8 flex-1 space-y-3">
+          <ul className="mb-6 flex-1 space-y-2.5">
             {FREE_FEATURES.map((f) => (
-              <li key={f} className="flex items-start gap-2.5 text-sm text-foreground/70">
+              <li key={f} className="flex items-start gap-2.5 text-sm text-foreground/75">
                 <Check size={15} className="mt-0.5 shrink-0 text-accent" />
                 {f}
               </li>
@@ -221,7 +225,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
           </ul>
 
           {currentPlan === 'free' ? (
-            <div className="mt-auto rounded-lg border border-border/60 py-2.5 text-center text-sm font-medium text-muted">
+            <div className="mt-auto rounded-lg border border-border/60 bg-surface/72 py-3 text-center text-sm font-medium text-muted">
               Current plan
             </div>
           ) : (
@@ -229,7 +233,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
               type="button"
               disabled={!!loadingProduct}
               onClick={() => onAuthRequired?.()}
-              className="mt-auto rounded-lg border border-accent/50 py-2.5 text-sm font-semibold text-accent transition-all hover:bg-accent/10 hover:border-accent disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-auto rounded-lg border border-accent/45 bg-surface/72 py-3 text-sm font-semibold text-accent transition-all hover:bg-accent/10 hover:border-accent disabled:cursor-not-allowed disabled:opacity-50"
             >
               Get started free
             </button>
@@ -237,9 +241,10 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
         </div>}
 
         {/* ── PRO ── */}
-        <div className="surface-card-accent relative flex flex-col rounded-xl px-6 py-8">
+        <div className="surface-card-accent relative flex flex-col rounded-xl px-6 py-7 md:-my-2 md:py-9">
+          <div className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_45%)]" />
           <div className="absolute inset-x-0 top-0 h-px rounded-t-xl bg-gradient-to-r from-transparent via-accent/60 to-transparent" />
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+          <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2">
             <span className="rounded-full bg-gradient-to-r from-accent to-accent-hover px-3 py-1 text-xs font-semibold text-accent-foreground shadow-accent-soft">
               {period === 'annual' ? 'Best Value' : 'Most Popular'}
             </span>
@@ -276,9 +281,9 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
             </div>
           </div>
 
-          <div className="mb-2 flex items-center justify-between">
-            <div className="text-xs font-semibold uppercase tracking-widest text-muted">Pro</div>
-            <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">Subscription</span>
+          <div className="relative mb-2 flex items-center justify-between">
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Pro</div>
+            <span className="rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-[10px] font-medium text-accent">Subscription</span>
           </div>
           <div className="mb-1 flex items-baseline gap-1.5">
             {period === 'monthly' ? (
@@ -293,29 +298,35 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
               </>
             )}
           </div>
-          {period === 'annual' && (
-            <div className="mb-1 flex items-center gap-2">
-              <span className="text-xs text-muted">~$6.58/month</span>
-              <span className="rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-semibold text-success-fg">
-                Save 45%
+          <div className="mb-1 flex min-h-[24px] items-center gap-2">
+            {period === 'annual' ? (
+              <>
+                <span className="text-xs text-muted">~$6.58/month</span>
+                <span className="rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-semibold text-success-fg">
+                  Save 45%
+                </span>
+              </>
+            ) : (
+              <span aria-hidden="true" className="invisible text-xs">
+                placeholder
               </span>
-            </div>
-          )}
-          <p className="mb-5 text-sm italic text-muted">
-            Apply to more jobs, faster — without rewriting your resume each time
+            )}
+          </div>
+          <p className="mb-4 max-w-xs text-sm leading-6 text-muted">
+            Built for active job searches with repeated tailoring, faster iteration, and clean exports.
           </p>
 
-          <ul className="mb-4 flex-1 space-y-3">
+          <ul className="mb-4 flex-1 space-y-2.5">
             {PRO_FEATURES.map((f) => (
-              <li key={f} className="flex items-start gap-2.5 text-sm text-foreground/70">
+              <li key={f} className="flex items-start gap-2.5 text-sm text-foreground/80">
                 <Check size={15} className="mt-0.5 shrink-0 text-accent" />
                 {f}
               </li>
             ))}
           </ul>
 
-          <p className="mb-6 text-center text-xs italic text-text-dim">
-            Most users generate 5–15 resumes per job search
+          <p className="mb-5 text-center text-xs italic text-text-dim">
+            Most users generate 5 to 15 resumes per job search
           </p>
 
           <div className="mt-auto">
@@ -328,7 +339,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
                 type="button"
                 disabled={!!loadingProduct}
                 onClick={handleProCTA}
-                className="w-full rounded-lg bg-gradient-to-r from-accent to-accent-hover py-2.5 text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:shadow-accent-strong hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-lg bg-gradient-to-r from-accent to-accent-hover py-3 text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:shadow-accent-strong hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loadingProduct === proProduct ? 'Processing…' : 'Start Pro'}
               </button>
@@ -357,20 +368,24 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
         </div>
 
         {/* ── RESUME PACK ── */}
-        <div className="surface-card-quiet flex flex-col rounded-xl px-6 py-8">
-          <div className="mb-2 flex items-center justify-between">
-            <div className="text-xs font-semibold uppercase tracking-widest text-muted">Resume Pack</div>
-            <span className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-medium text-muted">One-time purchase</span>
+        <div className="surface-card-quiet flex flex-col rounded-xl px-6 py-7">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Resume Pack</div>
+            <span className="rounded-full border border-border/60 bg-surface/75 px-2.5 py-1 text-[10px] font-medium text-muted">One-time purchase</span>
           </div>
-          <div className="mb-6 flex items-baseline gap-1.5">
-            <span className="font-display text-4xl font-bold text-foreground">$9</span>
-            <span className="text-sm text-text-dim">/ one-time</span>
+          <div className="mb-5">
+            <div className="mb-2 flex items-baseline gap-1.5">
+              <span className="font-display text-4xl font-bold text-foreground">$9</span>
+              <span className="text-sm text-text-dim">/ one-time</span>
+            </div>
+            <p className="text-sm leading-6 text-muted">
+              For a few targeted applications without a subscription.
+            </p>
           </div>
-          <p className="mb-5 text-sm text-muted">No subscription needed</p>
 
-          <ul className="mb-8 flex-1 space-y-3">
+          <ul className="mb-6 flex-1 space-y-2.5">
             {PACK_FEATURES.map((f) => (
-              <li key={f} className="flex items-start gap-2.5 text-sm text-foreground/70">
+              <li key={f} className="flex items-start gap-2.5 text-sm text-foreground/75">
                 <Check size={15} className="mt-0.5 shrink-0 text-accent" />
                 {f}
               </li>
@@ -382,7 +397,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
               type="button"
               disabled={!!loadingProduct}
               onClick={() => handleCreditCTA('resume_pack')}
-              className="w-full rounded-lg border border-accent/50 py-2.5 text-sm font-semibold text-accent transition-all hover:bg-accent/10 hover:border-accent disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-lg border border-accent/45 bg-surface/72 py-3 text-sm font-semibold text-accent transition-all hover:bg-accent/10 hover:border-accent disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loadingProduct === 'resume_pack' ? 'Processing…' : 'Buy Pack'}
             </button>

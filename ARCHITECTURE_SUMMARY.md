@@ -1,125 +1,78 @@
 # Architecture Summary
 
-`ARCHITECTURE.md` is the full architecture source of truth. `TASKS.md` is the source of truth for current status, completed work, and next steps.
+`ARCHITECTURE.md` is the full technical reference. `TASKS.md` is the current-state and next-steps reference.
 
-## 1-Page App Summary
-- Forte is a Next.js App Router app that tailors resumes against job descriptions using OpenAI.
-- Main flow: upload resume (`.pdf`, `.docx`, `.txt`) + paste raw JD -> evaluate original -> tailor structured resume -> re-evaluate -> preview/export.
-- Tailoring must be truthful and evidence-grounded in the source resume.
+## 1-page app summary
+- Forte is a Next.js App Router app for truthful, evidence-grounded resume tailoring.
+- Main flow: upload resume + paste raw job description -> evaluate original -> tailor structured resume -> re-evaluate -> preview/export.
 - Auth is Supabase Google OAuth with SSR cookie sessions.
-- Supabase stores profiles, resumes, credits, payments, and admin pipeline telemetry.
-- Exports generate recruiter-ready PDF and DOCX aligned with the HTML preview.
+- Data lives in Supabase; AI runs through OpenAI; exports are PDF and DOCX.
 
-## Core Product Flow
-| Step | Route/Code | Output |
+## Core flow
+| Step | Route | Result |
 |---|---|---|
-| Analyze | `POST /api/tailor/step1` | raw resume text, original evaluation, credit/Pro gate result |
-| Confirm gaps | `DashboardShell` | candidate-selected real missing skills |
-| Tailor | `POST /api/tailor/step2` | `TailoredResume` + `ChangeLog` |
+| Analyze | `POST /api/tailor/step1` | extracted resume text, original evaluation, credit/plan gate result |
+| Confirm | `DashboardShell` | user-selected missing keywords or gaps |
+| Tailor | `POST /api/tailor/step2` | `TailoredResume` + changelog |
 | Re-score | `POST /api/tailor/step3` | tailored evaluation + score comparison |
-| Export | `POST /api/export-pdf`, `POST /api/export-docx` | binary PDF/DOCX |
+| Export | `POST /api/export-pdf`, `POST /api/export-docx` | recruiter-ready files |
 
-## Important Routes
+## Main routes
 | Route | Purpose |
 |---|---|
-| `/` | Public landing page with full-viewport resume-first hero; redirects signed-in users to `/dashboard` |
+| `/` | Public landing page; redirects signed-in users to `/dashboard` |
 | `/pricing` | Public pricing page |
-| `/terms`, `/privacy`, `/refund-policy` | Legal pages; privacy/refund still need final reviewed content |
+| `/terms`, `/privacy`, `/refund-policy` | Public legal pages with accordion-style content |
 | `/dashboard` | Protected tailoring UI |
-| `/settings` | Protected profile, plan, usage, theme, experience level, danger zone |
-| `/auth/callback` | Supabase OAuth code exchange |
-| `/api/tailor/*` | AI pipeline and regeneration gates |
-| `/api/export-pdf`, `/api/export-docx` | Authenticated exports |
+| `/settings` | Protected profile, credits, plan, theme, and experience-level settings |
+| `/admin/*` | Protected admin dashboards and actions |
+| `/api/tailor/*` | AI pipeline endpoints |
+| `/api/export-*` | Authenticated export endpoints |
 | `/api/billing/mock-*` | Mock billing scaffolding only |
-| `/admin/*`, `/api/admin/*` | Admin dashboards/actions with layered admin checks |
 
-## Important Components
+## Main UI surfaces
 | Component | Role |
 |---|---|
-| `LandingPage` | Public marketing page; full-viewport hero, How It Works, testimonials, pricing, footer |
-| `InteractiveHeroPreview` | Resume-first landing hero scene; ATS fit animates from 63 to 94 on preview interaction, rewrite callout appears from highlighted bullet |
-| `HeroTrailer` | Animated product walkthrough reused in How It Works; respects reduced motion |
-| `DashboardShell` | Primary 3-panel tailoring UI, keyword confirmation, regenerate/refine, style editing |
-| `useTailorResume` | Client fetch/state orchestration for step1/2/3, regen, export downloads |
-| `ResumePreview` | HTML resume renderer and modal preview |
-| `ResumePDFDocument` | React-PDF renderer |
-| `AppNavbar` | Authenticated navigation |
-| `ThemeSync` | Client profile/cookie theme synchronization to prevent FOUC |
-| `PricingCards` | Free/Pro/pack cards and mock purchase/cancel hooks |
-| `ExperienceLevelSection` | Profile-level resume length preference |
+| `LandingPage` | Public marketing page with resume-first hero, How It Works, customer reviews, pricing, footer |
+| `InteractiveHeroPreview` | Static resume preview card; mobile ATS footer attached below the resume, desktop ATS side card |
+| `HeroTrailer` | Animated walkthrough used inside How It Works |
+| `TiltCard` | How It Works tilt interaction with localized edge and corner border lighting only |
+| `Testimonials` | Customer review carousel; mobile arrows below the card, side arrows on larger screens |
+| `PricingCards` | Free / Pro / Resume Pack pricing cards with mock purchase/cancel hooks |
+| `DashboardShell` | Main tailoring workspace |
+| `ResumePreview` | HTML resume renderer |
+| `ResumePDFDocument` | PDF renderer |
+| `ThemeSync` | Client-side theme/profile sync |
 
-## Important Libraries
+## Important libraries
 | Area | Files |
 |---|---|
 | AI | `lib/ai/client.ts`, `lib/ai/pipeline.ts`, `lib/ai/prompts.ts` |
-| Schemas | `types/resume.ts`, `types/resume-style.ts`, `types/api.ts` |
-| Supabase | `lib/supabase/client.ts`, `lib/supabase/server.ts`, `lib/supabase/admin.ts` |
-| Rate limit | `lib/ratelimit.ts` |
-| Resume parsing/rendering | `lib/resume/*`, `components/ResumePreview.tsx`, `components/ResumePDFDocument.tsx` |
+| Resume parsing/export | `lib/resume/*`, `components/ResumePreview.tsx`, `components/ResumePDFDocument.tsx` |
 | Themes | `lib/themes/*`, `app/themes.css`, `app/globals.css` |
+| Supabase | `lib/supabase/client.ts`, `lib/supabase/server.ts`, `lib/supabase/admin.ts` |
+| Shared schemas | `types/resume.ts`, `types/resume-style.ts`, `types/api.ts` |
+| Rate limiting | `lib/ratelimit.ts` |
 
-## Database/RPC Summary
-- `profiles`: user profile, credits cache, Pro plan fields, theme fields, experience level.
-- `resumes`: server-created resume records keyed by user + normalized JD hash; tracks regeneration count.
-- `payments`: mock one-time pack payments; Pro products do not insert here.
-- `credits`: one row per credit; FIFO spend and 12-month expiry.
-- `pipeline_runs`: service-role telemetry for AI/admin reporting.
+## Database and billing summary
+- `profiles` stores identity, credits cache, plan fields, theme fields, admin flags, and `experience_level`.
+- `resumes` tracks normalized resume/JD runs and regeneration count.
+- `credits` stores individual credit rows with FIFO spend and expiry.
+- `payments` stores mock purchase records.
+- `pipeline_runs` stores admin telemetry.
 - Key RPCs: `start_or_regen_resume`, `spend_credit`, `restore_credit`, `mock_purchase_credits`, `activate_subscription`, `cancel_subscription`, `reset_monthly_usage`.
-- Known RPC error codes: `P0001 -> no_credits`, `P0002 -> regen_limit_reached`, `P0004 -> fair_use_limit_reached`.
-- `P0003` / `paid_credit_required` was removed and must not be reintroduced.
+- Known RPC errors:
+  - `P0001 -> no_credits`
+  - `P0002 -> regen_limit_reached`
+  - `P0004 -> fair_use_limit_reached`
 
-## AI Pipeline Summary
-- Production path is `evaluate -> tailor -> re-evaluate`.
-- Raw resume text and raw JD text are the scoring/tailoring truth.
-- `lib/ai/pipeline.ts` calls OpenAI using structured output and validates with Zod.
-- Responses may need markdown fence stripping, control-character cleanup, first-object extraction, and schema validation.
-- `types/resume.ts` schemas are the contract for `ResumeEvaluation`, `TailoredResume`, and changelog output.
-- Section order is detected deterministically from raw resume text and preserved across renderers.
-- Refinement/regeneration works from the previously tailored resume and user feedback, not new unsupported content.
+## Theme and export summary
+- Theme is driven by `theme-id` and `theme-mode` cookies plus profile persistence.
+- Default theme is `charcoal-periwinkle` in `light` mode.
+- Resume document tokens stay fixed across themes.
+- HTML preview, PDF, and DOCX should remain aligned in content and layout.
 
-## Billing/Credits Summary
-- Free signup grants 1 credit.
-- Resume Pack grants 3 credits; Pack Plus grants 10 credits.
-- Pro monthly/annual gets 100 resumes/month fair-use cap.
-- Free/pack users spend credits for new JD tailoring.
-- Regen does not spend a new credit.
-- Regen limit is 5 per resume.
-- Mock billing routes require `ENABLE_MOCK_PAYMENTS=true` and are scaffolding pending real Dodo webhook integration.
-
-## Theme System Summary
-- Root layout reads `theme-id` and `theme-mode` cookies server-side and sets HTML data attributes.
-- `app/themes.css` defines 8 palettes x 2 modes.
-- Default theme is `charcoal-periwinkle` in `light` mode for first-time visitors and future profiles.
-- Theme chrome ramps are tightened across all palettes; themes 1-4 use monochromatic chrome, while themes 5-8 retain tinted chrome.
-- Themes 1-4 use secondary accents in the same hue family as their primary accent.
-- `ThemeSection` writes profile DB values and cookies optimistically.
-- `ThemeSync` reconciles profile theme values client-side.
-- Forte document tokens (`--forte-ink`, `--forte-paper`, `--forte-stone`) are invariant and should not be themed.
-
-## Export System Summary
-- HTML preview, PDF, and DOCX should remain visually/content aligned.
-- PDF uses `@react-pdf/renderer`.
-- DOCX uses `docx`.
-- Export routes are authenticated and rate-limited.
-- Resume style and target page settings are threaded into exports.
-
-## Admin/Dashboard Summary
-- `middleware.ts` protects dashboard/settings/admin and checks disabled users.
-- `app/admin/layout.tsx` rechecks `is_admin`.
-- Admin API routes independently check admin status before RPC calls.
-- Admin pages read `pipeline_runs`, users, credits, usage, costs, and errors.
-
-## Known TODOs From TASKS.md
-- Test with real resumes and tune evaluator/tailoring prompts against validation failures.
-- Replace placeholder `/privacy` and `/refund-policy` content with final reviewed policy content.
-- Replace mock billing with real Dodo provider/webhook integration.
-- Regenerate Supabase types after recent migrations if admin code still relies on `as any`.
-
-## Codex Config
-`.codex/config.toml` currently uses:
-
-```toml
-model = "gpt-5.4"
-approval_policy = "on-request"
-sandbox_mode = "workspace-write"
-```
+## Current known work left
+- Replace mock billing with real Dodo billing/webhooks.
+- Test with real resumes and keep tuning evaluator/tailoring prompts.
+- Rename `middleware.ts` to the new Next.js `proxy` convention when convenient; current build warns but still passes.

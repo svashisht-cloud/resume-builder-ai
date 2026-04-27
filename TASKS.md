@@ -1,92 +1,99 @@
 # TASKS.md
 
 ## Current status
-- MR-4 real AI pipeline implemented
-- MR-6 LLM evaluator-based before/after scoring implemented
-- /api/tailor parses uploaded .txt, .pdf, or .docx resumes
-- /api/tailor evaluates raw resume text against raw JD before and after tailoring
-- /api/tailor no longer parses job descriptions; JD text is used raw
-- /api/tailor no longer parses resumes; tailoring returns structured resume output directly from raw resume/JD text
-- /api/tailor returns originalEvaluation, tailoredEvaluation, scoreComparison, and evaluationMode
-- /api/tailor preserves source projects after generation if the model drops them
-- polished resume preview implemented for tailored results
-- /api/export-pdf generates direct recruiter-ready PDF downloads
-- browser print remains available as Print / Save as PDF fallback
-- schemas updated for OpenAI structured output required fields (no .optional() — only .nullable())
-- AI pipeline logs raw model JSON, strips markdown fences, parses a single JSON object, and validates with Zod
-- /api/tailor uses raw resume/JD text as scoring and tailoring truth
-- deterministic scoring.ts and scorer-aware tailoring plan removed
-- sectionOrder detected from raw resume text (deterministic regex), preserved across all three renderers
-- roleSubtitle (parenthetical subtitle under name) extracted and rendered in HTML preview, PDF, and DOCX
-- experience column layout corrected: company+dates on line 1, role+location on line 2 (all three renderers)
-- project URL rendered inline in header (name + techStack + URL on one line); only URL text is clickable
-- PDF spacing tuned: bullet marginBottom 3pt, expBlock marginBottom 4pt, name marginBottom 10pt, lineHeight 1.27
+- MR-4 real AI pipeline is implemented
+- MR-6 evaluator-based before/after scoring is implemented
+- `/api/tailor` accepts `.txt`, `.pdf`, and `.docx` resume uploads
+- Raw resume text and raw JD text are the scoring and tailoring truth
+- Production pipeline is `evaluate -> tailor -> re-evaluate`
+- Tailoring returns structured resume output directly from raw resume/JD text
+- Responses include `originalEvaluation`, `tailoredEvaluation`, `scoreComparison`, and `evaluationMode`
+- AI output is parsed defensively and validated with Zod
+- Section order is detected from raw resume text and preserved across HTML, PDF, and DOCX
+- Role subtitle, experience layout, and inline project URL behavior are aligned across all three renderers
+- Public landing page is in its current resume-first marketing state with stabilized desktop/mobile behavior
+- Theme system, experience-level-aware length controls, auth gating, admin surfaces, and mock billing scaffolding are all live
 
 ## Completed (session: 2026-04-26) - Landing page hero refresh
-- Hero auto-playing `HeroTrailer` moved out of the landing hero and replaced with `components/landing/InteractiveHeroPreview.tsx`
-- `components/LandingPage.tsx` now treats the hero-right area as a live product preview, while `How It Works` was restructured into a two-column feature section pairing the existing `HeroTrailer` animation with stronger ATS-fit explanatory copy
-- Existing auth modal, pricing, testimonials, trailer behavior, and resume/PDF flows left unchanged
+- `HeroTrailer` was removed from the hero and replaced with `components/landing/InteractiveHeroPreview.tsx`
+- `components/LandingPage.tsx` now treats the hero-right area as a static product preview, while `How It Works` reuses the trailer in a separate explanatory section
+- Existing auth modal, pricing, testimonials, and export flows were left intact
 
 ## Completed (session: 2026-04-27) - Resume-first hero preview polish
-- `components/landing/InteractiveHeroPreview.tsx` simplified to a resume-only hero scene with no top labels, helper text, or step controls
-- ATS fit overlay animates 63 -> 94 on preview hover/focus/tap; highlighted resume bullet opens an evidence-backed rewrite callout
-- Resume scene uses theme-aware accent/accent-secondary background treatment while keeping the document itself recruiter-style and fictional
-- Landing hero now fills the first viewport below the navbar via `min-h-[calc(100vh-65px)]`
-- `ARCHITECTURE.md` and `ARCHITECTURE_SUMMARY.md` updated to describe the final landing hero structure
+- `components/landing/InteractiveHeroPreview.tsx` now renders a compact recruiter-style fictional resume with accent-highlighted skills and grounded ATS before/after proof
+- Hero preview uses a mobile ATS footer attached beneath the resume card and a desktop ATS side card beside the resume
+- Landing hero fills the first viewport below the navbar via `min-h-[calc(100vh-65px)]`
+- `ARCHITECTURE.md` and `ARCHITECTURE_SUMMARY.md` were updated to describe the hero structure
 
 ## Completed (session: 2026-04-27) - Landing hero/mobile ATS + tilt polish
-- `components/landing/InteractiveHeroPreview.tsx` now docks the mobile ATS score as a footer attached beneath the resume preview while preserving the existing desktop side-card layout
-- `components/landing/TiltCard.tsx` now uses localized cursor-following edge highlights instead of tinting entire borders, producing a tighter Stripe-style hover response while keeping reduced-motion fallback intact
-- `components/LandingPage.tsx` received a moderate polish pass for hero rhythm, CTA spacing, trust/stats wrapping, and How It Works card spacing/border treatment without changing the overall desktop composition
+- `components/landing/InteractiveHeroPreview.tsx` now docks the mobile ATS score as a footer attached beneath the resume preview while preserving the desktop side-card layout
+- `components/landing/TiltCard.tsx` now uses localized cursor-following edge highlights instead of tinting entire borders
+- `components/LandingPage.tsx` received a moderate polish pass for hero rhythm, CTA spacing, trust/stats wrapping, and How It Works card spacing
+
+## Completed (session: 2026-04-27) - Landing page visual unification
+- Added reusable landing surface, kicker, eyebrow, and glow utilities in `app/globals.css`
+- `components/LandingPage.tsx` now uses a stronger editorial hero, a unified proof band, more intentional How It Works framing, and clearer section headers
+- `components/landing/Testimonials.tsx`, `components/pricing/PricingCards.tsx`, and `components/Footer.tsx` were restyled into the same visual system
+
+## Completed (session: 2026-04-27) - Landing page consistency cleanup
+- `components/landing/Testimonials.tsx` keeps the newer Customer Reviews framing while preserving the simpler testimonial card/carousel format
+- `components/pricing/PricingCards.tsx` now anchors the Pro badge correctly above the card, removes the extra fit callout, and shortens plan copy and spacing
+- `components/LandingPage.tsx` tightens the hero trust-chip row to stay on one line on smaller widths and normalizes visible marketing copy punctuation
+- `components/landing/HeroTrailer.tsx` copy was normalized the same way
+
+## Completed (session: 2026-04-27) - Pricing radius + footer hybrid refinement
+- `components/pricing/PricingCards.tsx` uses tighter `rounded-xl` pricing card geometry while keeping the newer spacing cleanup and fixed Pro badge placement
+- `components/Footer.tsx` now uses an open footer layout with four link columns and a shorter brand sentence row below
+
+## Completed (session: 2026-04-27) - Landing section header alignment
+- Added `landing-eyebrow` in `app/globals.css` as a lighter alternative to the pill-style section kicker
+- `components/LandingPage.tsx` and `components/landing/Testimonials.tsx` now use the eyebrow treatment for How It Works, Customer Reviews, and Pricing
+- Pricing header alignment now uses the same max-width page rail as the other landing sections, with pricing cards still constrained in a narrower centered wrapper
+
+## Completed (session: 2026-04-27) - Landing polish review fixes
+- `components/landing/TiltCard.tsx` now keeps the How It Works hover effect to localized edge/corner border lighting only, with no glare overlay
+- `components/LandingPage.tsx` removes the How It Works hover shadow and tightens the hero trust-chip row for very narrow screens
+- `components/landing/Testimonials.tsx` moves carousel arrows below the testimonial card on mobile while preserving side arrows on larger screens
+
+## Completed (session: 2026-04-25) - Legal pages expanded
+- `/terms` now uses accordion sections for the full Termly-generated Terms of Service
+- `/privacy` and `/refund-policy` now use full accordion-style policy content instead of placeholder copy
+- Legal pages retain the public shell and their own centered content width
 
 ## Completed (session: 2026-04-21, continued)
-- Credit restore on AI failure: `restore_credit(p_resume_id)` RPC (migration 20260421000001) restores credit within 5-min window if AI pipeline errors after `spend_credit`; called in step1/route.ts and route.ts inner try/catch; P0003 (`paid_credit_required`) now handled in both routes
+- Credit restore on AI failure: `restore_credit(p_resume_id)` RPC restores credit or decrements Pro usage within the safety window if the AI pipeline fails after `spend_credit`
+- `P0003` / `paid_credit_required` was removed and must stay removed
 
-## Completed (session: 2026-04-25)
-- Theme migrated to Aurora · Crimson Mono: `:root` and `[data-theme="light"]` CSS variable blocks replaced wholesale; crimson ramp (--color-crimson-100…700) and forte namespace added to `@theme inline`; all rgba(6,182,212,X) and `from-accent to-cyan-400` replaced across 7 component files; chart accent colors updated; forte document tokens (`--forte-ink/paper/stone`) and protected files (ResumePreview, ResumePDFDocument, DailyRunsChart) untouched
+## Completed (session: 2026-04-25) - Theme migration
+- Theme system migrated to user-selectable palettes backed by cookies and profile persistence
+- `app/themes.css`, `lib/themes/*`, `components/ThemeSync.tsx`, and settings theme controls now provide 8 palettes x 2 modes
+- Default theme was changed to `charcoal-periwinkle` in `light` mode
+- Resume document tokens remain invariant across all themes
 
+## Completed (session: 2026-04-25) - Experience-level-aware resume length
+- DB migration added `profiles.experience_level` with `junior | mid | senior`
+- AI prompts and pipeline now accept `experienceLevel` and `targetPages`
+- Settings and dashboard now expose and thread the experience-level/length controls through tailoring and export flows
 
-- /terms layout converted from two-column sidebar+article to collapsible accordion sections matching /refund-policy pattern; one <details> per heading, collapsed by default; TermsToc.tsx removed (no longer needed)
+## Completed (session: 2026-04-21) - Auth, rate limits, pricing, and legal shell
+- Auth gates were added to step2, step3, export-pdf, and export-docx
+- Upstash sliding-window rate limiting was applied to AI and export routes with graceful-disable behavior when env vars are absent
+- Public `/pricing` page was added with FAQ, public header, and footer
+- Footer was extracted into `components/Footer.tsx`
+- Auth modal and plan management surfaces now link to the public legal pages
 
-## Completed (session: 2026-04-24)
-- Terms of Service page at /terms replaced with full Termly-generated 27-section ToS
-- Sticky sidebar Table of Contents added to /terms — new Client Component components/TermsToc.tsx with IntersectionObserver scrollspy and active-section highlight
-- All 27 section anchors use semantic slugs (e.g. #dispute-resolution, #contribution-license) instead of opaque numeric IDs
-- (legal)/layout.tsx container constraint removed; privacy and refund-policy pages carry their own max-w-3xl wrappers
-
-## Completed (session: 2026-04-21)
-- Auth gate added to step2, step3, export-pdf, export-docx (were previously unauthenticated)
-- Upstash sliding-window rate limiting (10 req / 60 s) applied to all 6 AI/export routes via lib/ratelimit.ts; gracefully degrades when env vars absent
-- Public /pricing page at app/pricing/page.tsx — PricingCards + 5-item FAQ, PublicHeader, 4-column Footer
-- Legal pages scaffolded at /terms, /privacy, /refund-policy (placeholder content — needs lawyer review before launch)
-- Footer extracted from LandingPage inline to components/Footer.tsx (4-column: Product, Company, Legal, Support)
-- AuthModal ToS line updated to real Links → /terms and /privacy (open in new tab)
-- SwitchPlanSection "View refund policy" link added (opens in new tab)
-- UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN added to .env.local.example
-
-## Completed (session: 2026-04-25) — Experience-level-aware resume length
-- DB migration: `profiles.experience_level` ('junior'|'mid'|'senior', default 'mid')
-- `lib/ai/prompts.ts`: `ExperienceLevel`/`TargetPages` types, `getLengthBudget()` helper, dynamic PAGE LIMITS block in both `buildTailorUserPrompt` and `buildRefineUserPrompt`; static limits removed from `REFINE_SYSTEM_PROMPT`
-- `lib/ai/pipeline.ts`: `generateTailoredResumeFromRaw` and `refineTailoredResume` accept and pass `experienceLevel` + `targetPages`
-- `app/api/tailor/step2/route.ts`: extracts `experienceLevel` + `targetPages` from request body, passes to pipeline
-- `components/settings/ExperienceLevelSection.tsx`: new segmented control (Junior/Mid/Senior) with Supabase save
-- `app/settings/page.tsx`: fetches `experience_level`, renders `ExperienceLevelSection`
-- `app/dashboard/page.tsx`: fetches `experience_level`, passes to `DashboardShell`
-- `components/DashboardShell.tsx`: `experienceLevel` prop, `targetPages` state, senior-only 1/2-page toggle
-- `lib/hooks/useTailorResume.ts`: `experienceLevel`/`targetPages` options threaded through step2, PDF, and DOCX requests
-
-## Completed (session: 2026-04-26) — Multi-theme infrastructure + Settings UI
-- PR 1: migration (theme_id + theme_mode on profiles), theme registry (lib/themes/registry.ts — 8 palettes), theme CSS (app/themes.css — 16 blocks), client utilities (lib/themes/client.ts), profile sync hook (lib/themes/use-theme-sync.ts + components/ThemeSync.tsx), globals.css migrated to [data-theme-id] selectors, layout.tsx reads cookies server-side for zero-FOUC SSR
-- PR 2: ThemeSection (palette grid + mode toggle, optimistic + DB write), AppearanceSection replaced, Footer Logo tone="auto" fix for light mode
-- Theme visual polish: `app/themes.css` chrome ramps tightened across all themes; themes 1–4 converted to monochromatic chrome; themes 1–4 secondary accents retuned to match primary hue families while themes 5–8 retained tinted chrome
-- App styling pass: added semantic status/shadow/background tokens, replaced hardcoded crimson/cyan effects on main user-facing surfaces, softened card elevation, refreshed settings typography, and added global reduced-motion handling
+## Completed (session: 2026-04-26) - Admin and theme infrastructure
+- Admin dashboards/actions are live under `/admin` with middleware, layout, and route-level checks
+- `pipeline_runs` telemetry supports admin usage, cost, and error reporting
+- Theme sync is server-cookie driven in the root layout to avoid FOUC
 
 ## Next step
-- test with real resumes and tune evaluator/tailoring prompts against validation failures
-- replace placeholder content in /privacy and /refund-policy with lawyer-reviewed or Termly/Iubenda-generated policy before launch (/terms is complete)
-- wire up real payment provider (Dodo) to replace mock_purchase_credits
+- Replace mock billing routes with real Dodo integration and verified webhook handling
+- Test with real resumes and keep tuning evaluator/tailoring prompts against validation failures
+- Rename `middleware.ts` to the Next.js `proxy` convention to remove the current build warning
+- Review legal copy/contact details before launch if a final legal pass is still required
 
 ## Notes
-- using Next.js app router
-- requires OPENAI_API_KEY
-- evaluator/tailor models default to gpt-5-chat-latest and can be overridden with OPENAI_EVAL_MODEL / OPENAI_TAILOR_MODEL
+- Next.js App Router project
+- Requires `OPENAI_API_KEY`
+- Default AI models are `gpt-4.1-mini` for evaluation and `gpt-5-chat-latest` for tailoring unless overridden by env vars

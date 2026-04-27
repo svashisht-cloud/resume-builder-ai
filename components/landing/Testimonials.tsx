@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Star, Quote } from 'lucide-react'
 
-const GAP = 24 // px — matches gap-6
+const GAP = 24
 
 const testimonials = [
   {
     quote:
-      'Landed my first FAANG interview after two weeks using this. The tailored bullets actually sounded like me — not a generic AI rewrite.',
+      'Landed my first FAANG interview after two weeks using this. The tailored bullets actually sounded like me, not a generic AI rewrite.',
     name: 'Priya S.',
     role: 'Senior Software Engineer',
     initials: 'PS',
@@ -48,7 +48,7 @@ const testimonials = [
   },
   {
     quote:
-      "Finally a resume tool that doesn't just stuff keywords. It rewrites with intent — and the before/after diff is genuinely useful.",
+      "Finally a resume tool that doesn't just stuff keywords. It rewrites with intent, and the before-and-after diff is genuinely useful.",
     name: 'Sam L.',
     role: 'Engineering Manager',
     initials: 'SL',
@@ -93,31 +93,34 @@ export default function Testimonials() {
   const offset = cardWidth > 0 ? currentIndex * (cardWidth + GAP) : 0
 
   return (
-    <section id="testimonials" className="border-t border-border/50 bg-surface/70 py-12 md:py-20">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="mb-12 text-center">
-          <h2 className="font-display mb-3 text-2xl sm:text-3xl font-bold text-foreground">
-            What our users are saying
+    <section id="testimonials" className="relative border-t border-border/50 bg-surface/70 py-16 md:py-24">
+      <div className="landing-section-glow" />
+      <div className="relative mx-auto max-w-6xl px-6">
+        <div className="mb-10 max-w-2xl">
+          <div className="landing-eyebrow mb-4">Customer reviews</div>
+          <h2 className="font-display mb-3 text-3xl font-bold text-foreground sm:text-[2.1rem]">
+            Stronger applications without the generic AI voice
           </h2>
-          <p className="text-sm text-muted">Real results from real job seekers.</p>
+          <p className="text-sm leading-6 text-muted sm:text-base">
+            People use Forte when they want speed, clearer ATS fit, and a rewrite that still
+            sounds like their own work history.
+          </p>
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Left chevron */}
           <button
             type="button"
             onClick={() => goTo(currentIndex - 1)}
             disabled={!canGoBack}
             aria-label="Previous testimonials"
-            className="flex flex-shrink-0 rounded-full border border-border bg-surface-2 p-3 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30"
+            className="hidden flex-shrink-0 rounded-full border border-border bg-surface-2 p-3 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30 sm:flex"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
 
-          {/* Track */}
-          <div ref={containerRef} className="flex-1 overflow-hidden">
+          <div ref={containerRef} className="min-w-0 flex-1 overflow-hidden">
             <div
               className="flex"
               style={{
@@ -132,14 +135,12 @@ export default function Testimonials() {
                   className="surface-card-quiet relative flex-none overflow-hidden rounded-xl p-6 transition-all hover:border-accent/20 hover:shadow-accent-soft"
                   style={{ width: cardWidth > 0 ? `${cardWidth}px` : `calc(${100 / visibleCount}% - ${GAP * (visibleCount - 1) / visibleCount}px)` }}
                 >
-                  {/* Decorative quote watermark */}
                   <Quote
                     className="absolute right-4 top-4 text-accent/15"
                     size={28}
                     aria-hidden="true"
                   />
 
-                  {/* Stars */}
                   <div className="mb-3 flex items-center gap-0.5">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star key={i} size={14} className="fill-yellow-400 text-yellow-400" />
@@ -166,13 +167,12 @@ export default function Testimonials() {
             </div>
           </div>
 
-          {/* Right chevron */}
           <button
             type="button"
             onClick={() => goTo(currentIndex + 1)}
             disabled={!canGoForward}
             aria-label="Next testimonials"
-            className="flex flex-shrink-0 rounded-full border border-border bg-surface-2 p-3 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30"
+            className="hidden flex-shrink-0 rounded-full border border-border bg-surface-2 p-3 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30 sm:flex"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -180,8 +180,32 @@ export default function Testimonials() {
           </button>
         </div>
 
-        {/* Dots — one per stop position */}
-        <div className="mt-6 flex justify-center gap-0">
+        <div className="mt-5 flex justify-center gap-3 sm:hidden">
+          <button
+            type="button"
+            onClick={() => goTo(currentIndex - 1)}
+            disabled={!canGoBack}
+            aria-label="Previous testimonials"
+            className="rounded-full border border-border bg-surface-2 p-3 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => goTo(currentIndex + 1)}
+            disabled={!canGoForward}
+            aria-label="Next testimonials"
+            className="rounded-full border border-border bg-surface-2 p-3 text-muted transition-colors hover:border-accent hover:text-accent disabled:cursor-default disabled:opacity-30"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="mt-4 flex justify-center gap-0 sm:mt-6">
           {Array.from({ length: maxIndex + 1 }).map((_, i) => (
             <button
               key={i}

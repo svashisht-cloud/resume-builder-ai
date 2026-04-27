@@ -201,17 +201,6 @@ export default function TiltCard({
           />
         </div>
       )}
-      {/* Glare overlay */}
-      {!prefersReducedMotion && (
-        <div
-          className="pointer-events-none absolute inset-0 rounded-[inherit]"
-          style={{
-            opacity: active ? 1 : 0,
-            transition: 'opacity 200ms',
-            background: `radial-gradient(circle at ${pointer.xPercent}% ${pointer.yPercent}%, rgba(255,255,255,0.07), transparent 60%)`,
-          }}
-        />
-      )}
     </div>
   )
 }

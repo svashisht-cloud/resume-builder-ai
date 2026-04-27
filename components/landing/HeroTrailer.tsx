@@ -16,7 +16,7 @@ const STEP_DURATIONS = [1000, 1500, 1500, 3000, 1000, 800, 2500, 4000, 500]
 const TOTAL_STEPS = STEP_DURATIONS.length
 
 const JD_TEXT =
-  'Senior Frontend Engineer — React, TypeScript, Next.js. 5+ years building scalable design systems and component libraries. Deep focus on performance optimization and Core Web Vitals. Strong grasp of accessibility (WCAG 2.1), modern bundlers, and CI/CD workflows. Remote-friendly. Collaborative culture, high ownership.'
+  'Senior Frontend Engineer - React, TypeScript, Next.js. 5+ years building scalable design systems and component libraries. Deep focus on performance optimization and Core Web Vitals. Strong grasp of accessibility (WCAG 2.1), modern bundlers, and CI/CD workflows. Remote-friendly. Collaborative culture, high ownership.'
 
 export default function HeroTrailer() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -136,7 +136,7 @@ export default function HeroTrailer() {
             </div>
             <div className="text-center">
               <p className="text-sm font-semibold text-foreground">Drop your resume here</p>
-              <p className="mt-1.5 text-xs text-muted">PDF, DOCX, or TXT — up to 5 MB</p>
+              <p className="mt-1.5 text-xs text-muted">PDF, DOCX, or TXT. Up to 5 MB</p>
             </div>
             <div className="rounded-lg border border-border bg-surface-2 px-6 py-2 text-xs font-medium text-foreground">
               Browse files
@@ -283,7 +283,7 @@ export default function HeroTrailer() {
                   <div className="flex-1 border-t border-slate-200" />
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <p className="text-[9px] font-semibold text-slate-800">B.S. Computer Science — UC Berkeley</p>
+                  <p className="text-[9px] font-semibold text-slate-800">B.S. Computer Science, UC Berkeley</p>
                   <p className="flex-shrink-0 pl-1 text-[8px] text-slate-400">2019</p>
                 </div>
               </div>
@@ -308,7 +308,7 @@ export default function HeroTrailer() {
                 <div className="space-y-2">
                   <div>
                     <div className="flex items-baseline justify-between">
-                      <p className="text-[10px] font-semibold text-slate-800">Senior Frontend Engineer — Acme Corp</p>
+                      <p className="text-[10px] font-semibold text-slate-800">Senior Frontend Engineer, Acme Corp</p>
                       <p className="flex-shrink-0 pl-1 text-[8px] text-slate-400">2021–Present</p>
                     </div>
                     <div className="mt-1 space-y-0.5">
@@ -326,7 +326,7 @@ export default function HeroTrailer() {
                   </div>
                   <div>
                     <div className="flex items-baseline justify-between">
-                      <p className="text-[10px] font-semibold text-slate-800">Frontend Developer — Beacon Labs</p>
+                      <p className="text-[10px] font-semibold text-slate-800">Frontend Developer, Beacon Labs</p>
                       <p className="flex-shrink-0 pl-1 text-[8px] text-slate-400">2019–2021</p>
                     </div>
                     <div className="mt-1 space-y-0.5">
