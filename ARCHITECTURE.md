@@ -36,7 +36,7 @@ resume-builder/
 ├── app/                        # Next.js App Router
 │   ├── layout.tsx              # Root HTML shell (Space Grotesk + Inter + JetBrains Mono fonts, CSS vars, metadata)
 │   ├── globals.css             # Tailwind v4 @theme inline tokens + keyframes; imports themes.css; :root holds only --forte-ink/paper/stone; crimson ramp crimson-100…700 in @theme inline; forte document tokens invariant
-│   ├── themes.css              # 16 CSS blocks — 8 palettes × 2 modes using [data-theme-id="<id>"] and [data-theme-id="<id>"][data-theme="light"] selectors
+│   ├── themes.css              # 16 CSS blocks — 8 palettes × 2 modes using [data-theme-id="<id>"] selectors; tightened chrome ramps; themes 1–4 use monochromatic chrome with same-family secondary accents; themes 5–8 keep tinted chrome
 │   ├── page.tsx                # Root — shows LandingPage or redirects to /dashboard if signed in
 │   ├── (legal)/
 │   │   ├── layout.tsx          # Shared legal layout — PublicHeader + Footer; no width constraint (each page manages its own max-width)
@@ -72,7 +72,7 @@ resume-builder/
 ├── components/
 │   ├── PublicHeader.tsx        # Client component — sticky public nav (Logo + Pricing link + Sign In → AuthModal); used on /pricing and legal pages
 │   ├── Footer.tsx              # Server component — 4-column footer (Product, Company, Legal, Support) + logo/copyright; used on /pricing and legal pages
-│   ├── DashboardShell.tsx      # PRIMARY UI: 3-panel sliding layout; Regenerate button gated only by regen_count >= 2 (isPaidCredit gate removed); Style button still requires isPaidCredit
+│   ├── DashboardShell.tsx      # PRIMARY UI: 3-panel sliding layout; Regenerate button gated only by regen_count >= 5 (isPaidCredit gate removed); Style button still requires isPaidCredit
 │   ├── ThemeSync.tsx           # Null-render client component that calls useThemeSync — mounted in root layout for cross-device sync
 │   ├── AppNavbar.tsx           # Authenticated top nav — forte mark icon + "Resume Builder" text label, avatar, z-10 nav (backdrop-blur stacking fix), dropdown with Settings + Sign Out
 │   ├── LandingPage.tsx         # Marketing page — two-col hero (HeroTrailer), How It Works, Testimonials, Pricing (uses PricingCards), footer
@@ -94,7 +94,7 @@ resume-builder/
 │
 ├── lib/
 │   ├── themes/
-│   │   ├── registry.ts         # THEMES array (8 entries), DEFAULT_THEME_ID/MODE, isValidThemeId/isValidThemeMode
+│   │   ├── registry.ts         # THEMES array (8 entries), DEFAULT_THEME_ID/MODE (charcoal-periwinkle/light), isValidThemeId/isValidThemeMode
 │   │   ├── client.ts           # Browser utilities: applyTheme(id, mode), getCurrentTheme() — writes cookies + html data attrs
 │   │   └── use-theme-sync.ts   # useThemeSync hook — on mount, fetches profile theme_id/theme_mode and calls applyTheme if diverged
 │   ├── ai/
@@ -245,7 +245,7 @@ POST /api/tailor/step3
               → Fair-use cap: 100/month (P0004 → fair_use_limit_reached 402)
               → restore_credit: decrements plan_monthly_usage within 5-min window
 
-2. Regen    → start_or_regen_resume: check regen_count (P0002 if >= 2)
+2. Regen    → start_or_regen_resume: check regen_count (P0002 if >= 5)
               → No monthly_usage increment for regen (only for new JD / force_fresh)
 
 3. Force-fresh → reset regen_count=0 + increment plan_monthly_usage
@@ -269,14 +269,14 @@ POST /api/tailor/step3
                 → sets spent_at = null within 5-min safety window
                 → trigger fires, credits_remaining restored
 
-4. Regeneration (same JD hash, regen_count < 2)
+4. Regeneration (same JD hash, regen_count < 5)
               → start_or_regen_resume: checks P0002 only (P0003 removed — all credits allow regen)
               → increments regen_count, no credit spent
-              → regen-init returns { resumeId, regenCount: 1 or 2 }
+              → regen-init returns { resumeId, regenCount: 1 through 5 }
 
-5. Regen limit (regen_count >= 2)
+5. Regen limit (regen_count >= 5)
               → start_or_regen_resume raises P0002 → regen-init returns 403 regen_limit_reached
-              → UI shows "Limit reached (2/2)" badge
+              → UI shows "Limit reached (5/5)" badge
 
 6. No credits (credits_remaining = 0 and new JD)
               → spend_credit raises P0001 → step1 returns 402 no_credits
@@ -285,7 +285,7 @@ POST /api/tailor/step3
 
 **Error codes:**
 - `P0001` → `no_credits` (402) — no credits available
-- `P0002` → `regen_limit_reached` (403) — regen_count >= 2
+- `P0002` → `regen_limit_reached` (403) — regen_count >= 5
 - `P0004` → `fair_use_limit_reached` (402) — Pro user at 100 resumes/month
 - ~~`P0003`~~ — removed; `paid_credit_required` no longer exists
 
@@ -309,8 +309,8 @@ POST /api/tailor/step3
 | `plan_current_period_end` | timestamptz | Pro subscription period end; null = no period limit |
 | `plan_monthly_usage` | int not null default 0 | Resumes generated this billing cycle (Pro only) |
 | `plan_usage_reset_at` | timestamptz | When monthly_usage was last reset to 0 |
-| `theme_id` | text not null default 'aurora-crimson' | Selected palette; check constraint lists all 8 valid IDs |
-| `theme_mode` | text not null default 'dark' | `dark` or `light` |
+| `theme_id` | text not null default 'charcoal-periwinkle' | Selected palette; check constraint lists all 8 valid IDs |
+| `theme_mode` | text not null default 'light' | `dark` or `light` |
 
 ### `resumes` (server-side only — no client insert/update policy)
 
@@ -321,7 +321,7 @@ POST /api/tailor/step3
 | `job_description_hash` | text | SHA-256 of normalised JD text |
 | `job_title` | text | Extracted from JD (nullable) |
 | `company_name` | text | Extracted from JD (nullable) |
-| `regen_count` | int default 0 | Incremented on each regen; capped at 2 |
+| `regen_count` | int default 0 | Incremented on each regen; capped at 5 |
 | `created_at` | timestamptz | |
 | `last_generated_at` | timestamptz | Updated on every regen |
 
@@ -413,11 +413,11 @@ Fires `after insert or update or delete` on `credits`. Calls `refresh_credits_re
 
 | Tier | Price | Resume allowance | Regen limit |
 |------|-------|-----------------|-------------|
-| Free | $0 | 1 (one free credit) | 2 per resume |
-| Resume Pack | $9 one-time | 3 credits | 2 per resume |
-| Resume Pack Plus | $19 one-time | 10 credits | 2 per resume |
-| Pro Monthly | $12/month | 100/month (fair use) | 2 per resume |
-| Pro Annual | $79/year | 100/month (fair use) | 2 per resume |
+| Free | $0 | 1 (one free credit) | 5 per resume |
+| Resume Pack | $9 one-time | 3 credits | 5 per resume |
+| Resume Pack Plus | $19 one-time | 10 credits | 5 per resume |
+| Pro Monthly | $12/month | 100/month (fair use) | 5 per resume |
+| Pro Annual | $79/year | 100/month (fair use) | 5 per resume |
 
 Pack Plus is not shown as a primary card in `PricingCards.tsx` — it surfaces as an upsell link inside the Resume Pack card ("10 credits for $19").
 

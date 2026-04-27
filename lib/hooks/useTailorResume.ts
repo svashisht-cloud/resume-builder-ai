@@ -270,7 +270,7 @@ export function useTailorResume({
         }
 
         if (step1Res.status === 403 && step1Data.error === "regen_limit_reached") {
-          setError("You've reached the 2-regeneration limit for this job description. Start a new tailoring to continue.");
+          setError("You've reached the 5-regeneration limit for this job description. Start a new tailoring to continue.");
           setLoadingStep(0);
           return;
         }
@@ -368,7 +368,7 @@ export function useTailorResume({
           return;
         }
         if (regenInitRes.status === 403 && regenInitData.error === "regen_limit_reached") {
-          setError("You've reached the 2-regeneration limit for this job description. Start a new tailoring to continue.");
+          setError("You've reached the 5-regeneration limit for this job description. Start a new tailoring to continue.");
           setLoadingStep(0);
           return;
         }

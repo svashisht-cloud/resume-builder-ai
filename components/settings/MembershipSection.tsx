@@ -42,10 +42,10 @@ export default function MembershipSection({
   return (
     <div className="space-y-5">
       {/* Plan status card */}
-      <div className="rounded-xl border border-border/60 bg-surface p-6">
+      <div className="surface-card-quiet rounded-xl p-6">
         <div className="mb-5 flex items-center gap-2">
           <Coins size={16} className="text-muted" />
-          <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Membership</h2>
+          <h2 className="font-display text-base font-semibold text-foreground">Membership</h2>
         </div>
 
         {/* Plan badge + status */}
@@ -58,7 +58,7 @@ export default function MembershipSection({
                     Pro
                   </span>
                   {cancellationScheduled && (
-                    <span className="rounded-full border border-amber-500/30 bg-amber-950/20 px-2 py-0.5 text-xs font-medium text-amber-400">
+                    <span className="rounded-full border border-warning-border bg-warning-bg px-2 py-0.5 text-xs font-medium text-warning-fg">
                       Cancellation scheduled
                     </span>
                   )}

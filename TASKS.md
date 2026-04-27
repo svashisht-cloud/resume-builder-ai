@@ -61,6 +61,8 @@
 ## Completed (session: 2026-04-26) — Multi-theme infrastructure + Settings UI
 - PR 1: migration (theme_id + theme_mode on profiles), theme registry (lib/themes/registry.ts — 8 palettes), theme CSS (app/themes.css — 16 blocks), client utilities (lib/themes/client.ts), profile sync hook (lib/themes/use-theme-sync.ts + components/ThemeSync.tsx), globals.css migrated to [data-theme-id] selectors, layout.tsx reads cookies server-side for zero-FOUC SSR
 - PR 2: ThemeSection (palette grid + mode toggle, optimistic + DB write), AppearanceSection replaced, Footer Logo tone="auto" fix for light mode
+- Theme visual polish: `app/themes.css` chrome ramps tightened across all themes; themes 1–4 converted to monochromatic chrome; themes 1–4 secondary accents retuned to match primary hue families while themes 5–8 retained tinted chrome
+- App styling pass: added semantic status/shadow/background tokens, replaced hardcoded crimson/cyan effects on main user-facing surfaces, softened card elevation, refreshed settings typography, and added global reduced-motion handling
 
 ## Next step
 - test with real resumes and tune evaluator/tailoring prompts against validation failures

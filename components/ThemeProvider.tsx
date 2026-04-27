@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 import { applyTheme, getCurrentTheme } from '@/lib/themes/client'
+import { DEFAULT_THEME_MODE } from '@/lib/themes/registry'
 
 export type Theme = 'system' | 'light' | 'dark'
 
@@ -11,14 +12,14 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'dark',
+  theme: DEFAULT_THEME_MODE,
   setTheme: () => {},
 })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Initialize to 'dark' so server and client render the same HTML.
+  // Initialize to the server fallback so server and client render the same HTML.
   // Sync from DOM (set server-side via cookie in layout.tsx) after mount.
-  const [theme, setThemeState] = useState<Theme>('dark')
+  const [theme, setThemeState] = useState<Theme>(DEFAULT_THEME_MODE)
 
   useEffect(() => {
     const current = getCurrentTheme()

@@ -43,10 +43,10 @@ export default function ExperienceLevelSection({ initialLevel }: { initialLevel:
   const description = LEVELS.find((l) => l.value === level)?.description ?? ''
 
   return (
-    <div className="rounded-xl border border-border/60 bg-surface p-6">
+    <div className="surface-card-quiet rounded-xl p-6">
       <div className="mb-5 flex items-center gap-2">
         <Briefcase size={15} className="text-muted" />
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Experience Level</h2>
+        <h2 className="font-display text-base font-semibold text-foreground">Experience level</h2>
       </div>
 
       <div className="flex items-center justify-between">
@@ -60,7 +60,7 @@ export default function ExperienceLevelSection({ initialLevel }: { initialLevel:
               onClick={() => void handleChange(value)}
               className={`flex items-center rounded-md px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-60 ${
                 level === value
-                  ? 'bg-accent text-background shadow-sm'
+                  ? 'bg-accent text-accent-foreground shadow-sm'
                   : 'text-muted hover:text-foreground'
               }`}
             >
@@ -73,7 +73,7 @@ export default function ExperienceLevelSection({ initialLevel }: { initialLevel:
       <p className="mt-3 text-xs text-muted">{description}</p>
 
       {saving && <p className="mt-2 text-xs text-muted">Saving…</p>}
-      {saveError && <p className="mt-2 text-xs text-red-400">{saveError}</p>}
+      {saveError && <p className="mt-2 text-xs text-danger-fg">{saveError}</p>}
     </div>
   )
 }

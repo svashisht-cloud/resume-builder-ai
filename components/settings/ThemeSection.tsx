@@ -78,17 +78,17 @@ export default function ThemeSection() {
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border/60 bg-surface p-6 text-sm text-muted">
+      <div className="surface-card-quiet rounded-xl p-6 text-sm text-muted">
         Loading appearance…
       </div>
     )
   }
 
   return (
-    <div className="rounded-xl border border-border/60 bg-surface p-6">
+    <div className="surface-card-quiet rounded-xl p-6">
       <div className="mb-1 flex items-center gap-2">
         <Palette size={15} className="text-muted" />
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Appearance</h2>
+        <h2 className="font-display text-base font-semibold text-foreground">Appearance</h2>
       </div>
       <p className="mb-5 text-xs text-text-dim">
         Pick a palette and mode. Changes apply instantly and sync across your devices.
@@ -103,7 +103,7 @@ export default function ThemeSection() {
             onClick={() => void handleModeChange('dark')}
             className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
               themeMode === 'dark'
-                ? 'bg-accent text-background shadow-sm'
+                ? 'bg-accent text-accent-foreground shadow-sm'
                 : 'text-muted hover:text-foreground'
             }`}
           >
@@ -115,7 +115,7 @@ export default function ThemeSection() {
             onClick={() => void handleModeChange('light')}
             className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
               themeMode === 'light'
-                ? 'bg-accent text-background shadow-sm'
+                ? 'bg-accent text-accent-foreground shadow-sm'
                 : 'text-muted hover:text-foreground'
             }`}
           >
@@ -156,7 +156,7 @@ export default function ThemeSection() {
 
               {selected && (
                 <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-accent">
-                  <Check size={10} className="text-background" strokeWidth={3} />
+                  <Check size={10} className="text-accent-foreground" strokeWidth={3} />
                 </span>
               )}
             </button>
@@ -165,7 +165,7 @@ export default function ThemeSection() {
       </div>
 
       {saveError && (
-        <p className="mt-3 text-xs text-red-400">{saveError}</p>
+        <p className="mt-3 text-xs text-danger-fg">{saveError}</p>
       )}
     </div>
   )

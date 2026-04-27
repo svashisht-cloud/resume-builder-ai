@@ -57,7 +57,7 @@ export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
 
   return (
     <>
-      <nav className="z-10 flex-shrink-0 border-b border-border/60 bg-background/95 shadow-sm backdrop-blur-md">
+      <nav className="z-10 flex-shrink-0 border-b border-border/50 bg-app-glass backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <button
             onClick={() => router.push('/dashboard')}
@@ -82,7 +82,7 @@ export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
               ) : (
                 <button
                   onClick={() => router.push('/settings')}
-                  className="rounded-full border border-rose-500/30 bg-rose-950/20 px-2.5 py-1 text-xs font-medium text-rose-400 transition-colors hover:bg-rose-950/40"
+                  className="rounded-full border border-danger-border bg-danger-bg px-2.5 py-1 text-xs font-medium text-danger-fg transition-colors hover:border-danger"
                 >
                   Upgrade
                 </button>
@@ -92,7 +92,7 @@ export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setOpen((v) => !v)}
-                className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border bg-surface-raised text-sm font-semibold text-foreground transition-all hover:border-accent/60 hover:shadow-[0_0_12px_rgba(255,31,78,0.25)]"
+                className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border bg-surface-raised text-sm font-semibold text-foreground transition-all hover:border-accent/60 hover:shadow-accent-soft"
                 aria-label="Account menu"
               >
                 {user.avatar_url ? (
@@ -110,7 +110,7 @@ export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
 
               {/* Desktop dropdown — hidden on mobile */}
               {open && (
-                <div className="absolute right-0 top-11 z-50 hidden w-56 overflow-hidden rounded-xl border border-border/80 bg-surface shadow-[0_16px_48px_rgba(0,0,0,0.5)] md:block">
+                <div className="shadow-elevated absolute right-0 top-11 z-50 hidden w-56 overflow-hidden rounded-xl border border-border/70 bg-surface md:block">
                   <div className="border-b border-border/60 px-4 py-3">
                     <p className="truncate text-sm font-medium text-foreground">
                       {user.display_name ?? 'User'}
@@ -164,7 +164,7 @@ export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
 
       {/* Slide-up bottom sheet — mobile only */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-50 md:hidden rounded-t-2xl border-t border-border/60 bg-surface shadow-[0_-8px_40px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-out pb-[env(safe-area-inset-bottom,0px)] ${
+        className={`shadow-elevated fixed bottom-0 left-0 right-0 z-50 md:hidden rounded-t-2xl border-t border-border/60 bg-surface transition-transform duration-300 ease-out pb-[env(safe-area-inset-bottom,0px)] ${
           open ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
@@ -197,7 +197,7 @@ export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
           </button>
           <button
             onClick={handleSignOut}
-            className="flex w-full items-center gap-4 rounded-xl px-4 py-4 text-left text-rose-400 transition-colors hover:bg-surface-raised active:bg-surface-raised"
+            className="flex w-full items-center gap-4 rounded-xl px-4 py-4 text-left text-danger-fg transition-colors hover:bg-surface-raised active:bg-surface-raised"
           >
             <LogOut size={18} />
             <span className="text-sm font-medium">Sign Out</span>

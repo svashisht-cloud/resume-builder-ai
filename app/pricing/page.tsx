@@ -103,7 +103,7 @@ export default function PricingPage() {
               </div>
               <h1 className="font-display mb-4 text-5xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-6xl">
                 The fastest way to land{' '}
-                <span className="bg-gradient-to-r from-accent to-cyan-400 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-accent to-accent-secondary bg-clip-text text-transparent">
                   your next role.
                 </span>
               </h1>
@@ -135,7 +135,7 @@ export default function PricingPage() {
                     <div className="flex flex-col items-center gap-0.5">
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-semibold uppercase tracking-wider text-accent">Pro Annual</span>
-                        <span className="rounded-full bg-green-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-green-400">-45%</span>
+                        <span className="rounded-full bg-success-bg px-1.5 py-0.5 text-[10px] font-semibold text-success-fg">-45%</span>
                       </div>
                       <span className="text-xs font-normal text-muted">$79/yr · ~$6.58/mo</span>
                     </div>

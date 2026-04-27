@@ -144,7 +144,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
     <div className="w-full">
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-border/60 bg-surface p-8 shadow-2xl">
+          <div className="shadow-elevated w-full max-w-md rounded-2xl border border-border/60 bg-surface p-8">
             <h2 className="font-display mb-3 text-xl font-bold text-foreground">Are you sure you want to cancel Pro?</h2>
             <p className="mb-5 text-sm text-muted">
               You&apos;ll lose access to tools that help you apply faster and land more interviews.
@@ -156,7 +156,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
                 'Stay consistent across all your applications',
               ].map((f) => (
                 <li key={f} className="flex items-start gap-2.5 text-sm text-muted">
-                  <span className="mt-0.5 shrink-0 text-red-400">✕</span>
+                  <span className="mt-0.5 shrink-0 text-danger">✕</span>
                   {f}
                 </li>
               ))}
@@ -168,7 +168,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
               <button
                 type="button"
                 onClick={() => setShowCancelModal(false)}
-                className="w-full rounded-lg bg-gradient-to-r from-accent to-accent-secondary py-2.5 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(255,31,78,0.3)] transition-all hover:opacity-95"
+                className="w-full rounded-lg bg-gradient-to-r from-accent to-accent-hover py-2.5 text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:opacity-95"
               >
                 Keep Pro
               </button>
@@ -190,8 +190,8 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
         <div
           className={`mb-6 rounded-lg border px-4 py-3 text-sm font-medium ${
             toast.ok
-              ? 'border-emerald-500/30 bg-emerald-950/20 text-emerald-400'
-              : 'border-red-500/30 bg-red-950/20 text-red-400'
+              ? 'border-success-border bg-success-bg text-success-fg'
+              : 'border-danger-border bg-danger-bg text-danger-fg'
           }`}
         >
           {toast.message}
@@ -201,7 +201,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
       <div className={stacked ? 'flex flex-col gap-6' : 'grid grid-cols-1 items-stretch gap-6 md:grid-cols-3'}>
 
         {/* ── FREE — hidden for active Pro users ── */}
-        {!isProPlan && <div className="flex flex-col rounded-xl border border-border/60 bg-surface px-6 py-8">
+        {!isProPlan && <div className="surface-card-quiet flex flex-col rounded-xl px-6 py-8">
           <div className="mb-2 flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-widest text-muted">Free</div>
             <span className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-medium text-muted">Free forever</span>
@@ -237,10 +237,10 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
         </div>}
 
         {/* ── PRO ── */}
-        <div className="relative flex flex-col rounded-xl border border-accent/40 bg-surface px-6 py-8 shadow-[0_0_40px_rgba(255,31,78,0.12),inset_0_0_0_1px_rgba(255,31,78,0.1)]">
+        <div className="surface-card-accent relative flex flex-col rounded-xl px-6 py-8">
           <div className="absolute inset-x-0 top-0 h-px rounded-t-xl bg-gradient-to-r from-transparent via-accent/60 to-transparent" />
           <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-            <span className="rounded-full bg-gradient-to-r from-accent to-accent-secondary px-3 py-1 text-xs font-semibold text-background shadow-[0_2px_8px_rgba(255,31,78,0.4)]">
+            <span className="rounded-full bg-gradient-to-r from-accent to-accent-hover px-3 py-1 text-xs font-semibold text-accent-foreground shadow-accent-soft">
               {period === 'annual' ? 'Best Value' : 'Most Popular'}
             </span>
           </div>
@@ -253,7 +253,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
                 onClick={() => setPeriod('monthly')}
                 className={`rounded-full px-3 py-1 font-medium transition-colors ${
                   period === 'monthly'
-                    ? 'bg-gradient-to-r from-accent to-accent-secondary text-background'
+                    ? 'bg-gradient-to-r from-accent to-accent-secondary text-accent-foreground'
                     : 'text-muted hover:text-foreground'
                 }`}
               >
@@ -264,13 +264,13 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
                 onClick={() => setPeriod('annual')}
                 className={`flex items-center gap-1 rounded-full px-3 py-1 font-medium transition-colors ${
                   period === 'annual'
-                    ? 'bg-gradient-to-r from-accent to-accent-secondary text-background'
+                    ? 'bg-gradient-to-r from-accent to-accent-secondary text-accent-foreground'
                     : 'text-muted hover:text-foreground'
                 }`}
               >
                 Annual
                 {period !== 'annual' && (
-                  <span className="text-[10px] font-bold text-green-400">-45%</span>
+                  <span className="text-[10px] font-bold text-success-fg">-45%</span>
                 )}
               </button>
             </div>
@@ -296,7 +296,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
           {period === 'annual' && (
             <div className="mb-1 flex items-center gap-2">
               <span className="text-xs text-muted">~$6.58/month</span>
-              <span className="rounded-full bg-green-500/15 px-2 py-0.5 text-[10px] font-semibold text-green-400">
+              <span className="rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-semibold text-success-fg">
                 Save 45%
               </span>
             </div>
@@ -328,7 +328,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
                 type="button"
                 disabled={!!loadingProduct}
                 onClick={handleProCTA}
-                className="w-full rounded-lg bg-gradient-to-r from-accent to-accent-secondary py-2.5 text-sm font-semibold text-background shadow-[0_2px_12px_rgba(255,31,78,0.3)] transition-all hover:shadow-[0_2px_16px_rgba(255,31,78,0.45)] hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-lg bg-gradient-to-r from-accent to-accent-hover py-2.5 text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:shadow-accent-strong hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loadingProduct === proProduct ? 'Processing…' : 'Start Pro'}
               </button>
@@ -357,7 +357,7 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
         </div>
 
         {/* ── RESUME PACK ── */}
-        <div className="flex flex-col rounded-xl border border-border/60 bg-surface px-6 py-8">
+        <div className="surface-card-quiet flex flex-col rounded-xl px-6 py-8">
           <div className="mb-2 flex items-center justify-between">
             <div className="text-xs font-semibold uppercase tracking-widest text-muted">Resume Pack</div>
             <span className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] font-medium text-muted">One-time purchase</span>

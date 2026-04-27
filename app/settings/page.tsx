@@ -106,10 +106,10 @@ export default async function SettingsPage() {
         <h1 className="font-display text-2xl font-bold text-foreground">Settings</h1>
 
         {/* Profile */}
-        <div className="rounded-xl border border-border/60 bg-surface p-6">
+        <div className="surface-card-quiet rounded-xl p-6">
           <div className="mb-5 flex items-center gap-2">
             <User size={15} className="text-muted" />
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Profile</h2>
+            <h2 className="font-display text-base font-semibold text-foreground">Profile</h2>
           </div>
           <div className="flex items-center gap-4">
             <AvatarImage src={avatarUrl} initial={initial} />
@@ -135,10 +135,10 @@ export default async function SettingsPage() {
         <PaymentHistory />
 
         {/* Usage */}
-        <div className="rounded-xl border border-border/60 bg-surface p-6">
+        <div className="surface-card-quiet rounded-xl p-6">
           <div className="mb-5 flex items-center gap-2">
             <BarChart2 size={15} className="text-muted" />
-            <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Usage</h2>
+            <h2 className="font-display text-base font-semibold text-foreground">Usage</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
@@ -182,8 +182,8 @@ export default async function SettingsPage() {
         )}
 
         {/* Danger Zone */}
-        <div className="rounded-xl border border-red-500/20 bg-red-950/20 p-6">
-          <h2 className="mb-1 text-sm font-semibold text-red-400">Danger Zone</h2>
+        <div className="rounded-xl border border-danger-border bg-danger-bg p-6">
+          <h2 className="mb-1 text-sm font-semibold text-danger-fg">Danger Zone</h2>
           <p className="mb-4 text-sm text-muted">Permanently delete your account and all data. This cannot be undone.</p>
           <DeleteAccountButton />
         </div>

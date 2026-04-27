@@ -37,7 +37,7 @@ export default function NoCreditsModal({ open, onDismiss }: NoCreditsModalProps)
       aria-labelledby="no-credits-title"
     >
       <div
-        className="relative mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-border/80 bg-surface shadow-[0_24px_64px_rgba(0,0,0,0.6)]"
+        className="shadow-elevated relative mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-border/80 bg-surface"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
@@ -67,7 +67,7 @@ export default function NoCreditsModal({ open, onDismiss }: NoCreditsModalProps)
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
               onClick={handleViewPlans}
-              className="flex h-10 flex-1 items-center justify-center rounded-lg bg-gradient-to-r from-accent to-accent-secondary text-sm font-semibold text-background shadow-[0_2px_12px_rgba(255,31,78,0.25)] transition-all hover:opacity-95 active:scale-[0.98]"
+              className="flex h-10 flex-1 items-center justify-center rounded-lg bg-gradient-to-r from-accent to-accent-hover text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:opacity-95 active:scale-[0.98]"
             >
               View plans
             </button>
