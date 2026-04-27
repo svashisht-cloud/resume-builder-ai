@@ -34,6 +34,11 @@
 - Landing hero now fills the first viewport below the navbar via `min-h-[calc(100vh-65px)]`
 - `ARCHITECTURE.md` and `ARCHITECTURE_SUMMARY.md` updated to describe the final landing hero structure
 
+## Completed (session: 2026-04-27) - Landing hero/mobile ATS + tilt polish
+- `components/landing/InteractiveHeroPreview.tsx` now docks the mobile ATS score as a footer attached beneath the resume preview while preserving the existing desktop side-card layout
+- `components/landing/TiltCard.tsx` now uses localized cursor-following edge highlights instead of tinting entire borders, producing a tighter Stripe-style hover response while keeping reduced-motion fallback intact
+- `components/LandingPage.tsx` received a moderate polish pass for hero rhythm, CTA spacing, trust/stats wrapping, and How It Works card spacing/border treatment without changing the overall desktop composition
+
 ## Completed (session: 2026-04-21, continued)
 - Credit restore on AI failure: `restore_credit(p_resume_id)` RPC (migration 20260421000001) restores credit within 5-min window if AI pipeline errors after `spend_credit`; called in step1/route.ts and route.ts inner try/catch; P0003 (`paid_credit_required`) now handled in both routes
 

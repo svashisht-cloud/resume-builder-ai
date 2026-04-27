@@ -33,7 +33,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-2.5">
             <span className={`${sora.className} text-xl font-semibold tracking-tight text-foreground`}>forte</span>
             <span className="text-border/60 select-none">/</span>
-            <span className="text-m font-medium text-muted">resume builder</span>
+            <span className="text-sm font-medium text-muted">resume builder</span>
           </div>
           <div className="flex items-center gap-4">
             <Link
@@ -53,43 +53,43 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative mx-auto flex min-h-[calc(100vh-65px)] max-w-6xl items-center overflow-hidden px-6 py-8 sm:py-10">
+      <section className="relative mx-auto flex min-h-[calc(100vh-65px)] max-w-6xl items-center overflow-hidden px-6 py-10 sm:py-12 lg:py-14">
         {/* Radial glow behind content */}
         <div className="pointer-events-none absolute -top-40 left-1/4 h-[200px] w-[200px] rounded-full bg-accent/5 blur-3xl sm:h-[500px] sm:w-[500px]" />
         <div className="pointer-events-none absolute -top-20 right-1/4 h-[150px] w-[150px] rounded-full bg-accent-secondary/5 blur-3xl sm:h-[400px] sm:w-[400px]" />
 
-        <div className="relative grid w-full grid-cols-1 items-center gap-12 lg:grid-cols-[9fr_11fr]">
+        <div className="relative grid w-full grid-cols-1 items-center gap-10 lg:grid-cols-[9fr_11fr] lg:gap-14">
           {/* Left: copy + CTAs */}
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1">
               <span className="h-1.5 w-1.5 rounded-full bg-accent" />
               <span className="text-xs font-medium text-accent">AI-powered tailoring</span>
             </div>
-            <h1 className="font-display mb-5 text-4xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem]">
+            <h1 className="font-display mb-4 text-4xl font-bold leading-[1.08] tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem]">
               Tailor your resume to{' '}
               <span className="bg-gradient-to-r from-accent to-accent-secondary bg-clip-text text-transparent">
                 any job in seconds
               </span>
             </h1>
-            <p className="mb-10 max-w-xl text-lg leading-relaxed text-muted">
+            <p className="mb-8 max-w-xl text-base leading-7 text-muted sm:text-lg sm:leading-relaxed">
               Paste your resume and a job description. Get a tailored, ATS-optimized version instantly — with a diff showing exactly what changed.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={openModal}
-                className="group flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-accent to-accent-hover px-6 py-3 text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:shadow-accent-strong hover:opacity-95 active:scale-[0.98]"
+                className="group flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-accent to-accent-hover px-6 py-3.5 text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:shadow-accent-strong hover:opacity-95 active:scale-[0.98]"
               >
                 Get Started Free
                 <ArrowRight size={15} className="transition-transform group-hover:translate-x-0.5" />
               </button>
               <button
                 onClick={scrollToHowItWorks}
-                className="rounded-xl border border-border bg-surface-raised px-6 py-3 text-sm font-medium text-muted transition-all hover:border-border/80 hover:text-foreground"
+                className="rounded-xl border border-border bg-surface-raised px-6 py-3.5 text-sm font-medium text-muted transition-all hover:border-border/80 hover:text-foreground"
               >
                 See How It Works
               </button>
             </div>
-            <div className="mt-6 flex items-center gap-x-4">
+            <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
               <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted sm:text-sm">
                 <CheckCircle2 size={13} className="flex-shrink-0 text-success" />
                 No credit card
@@ -103,7 +103,7 @@ export default function LandingPage() {
                 Instant results
               </span>
             </div>
-            <div className="mt-6 flex items-center gap-6 border-t border-border/40 pt-5">
+            <div className="mt-7 flex items-center gap-5 border-t border-border/40 pt-5 sm:gap-6">
               <div>
                 <p className="text-xl font-bold text-foreground">12k+</p>
                 <p className="text-xs text-muted">Users</p>
@@ -126,7 +126,7 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="border-t border-border/50 bg-surface/70 py-12 md:py-20">
+      <section id="how-it-works" className="border-t border-border/50 bg-surface/70 py-14 md:py-20">
         <div className="mx-auto max-w-6xl px-6">
           <div className="mb-12 text-center">
             <h2 className="font-display mb-3 text-3xl font-bold text-foreground">How It Works</h2>
@@ -134,7 +134,7 @@ export default function LandingPage() {
           </div>
           <div className="mb-10 grid items-center gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(300px,0.92fr)]">
             <HeroTrailer />
-            <div className="surface-card-quiet rounded-[1.75rem] p-6 sm:p-8">
+            <div className="surface-card-quiet rounded-[1.875rem] p-6 sm:p-8">
               <h3 className="font-display text-3xl font-bold leading-tight text-foreground">
                 Your resume, tailored to the job — in 30 seconds
               </h3>
@@ -148,7 +148,7 @@ export default function LandingPage() {
                   'Keywords and skills from the job description get woven in naturally.',
                   'See a before/after ATS score and a diff of every change — you stay in control.',
                 ].map((item) => (
-                  <div key={item} className="flex items-start gap-3 rounded-2xl border border-border/70 bg-surface px-4 py-3">
+                  <div key={item} className="flex items-start gap-3 rounded-2xl border border-border/70 bg-surface/80 px-4 py-3.5">
                     <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-accent" />
                     <p className="text-sm leading-6 text-foreground">{item}</p>
                   </div>
@@ -182,7 +182,7 @@ export default function LandingPage() {
             ].map(({ icon, step, title, description }) => (
               <TiltCard
                 key={step}
-                className="surface-card-quiet group relative flex h-full flex-col overflow-hidden rounded-xl p-6 hover:border-accent/30 hover:shadow-accent-soft"
+                className="surface-card-quiet group flex h-full flex-col overflow-hidden rounded-2xl p-6 transition-[box-shadow,border-color] duration-300 hover:border-accent/30 hover:shadow-accent-soft sm:p-7"
               >
                 {/* Step number watermark */}
                 <span className="absolute right-4 top-3 font-display text-5xl font-bold text-border/60 select-none">
@@ -191,7 +191,7 @@ export default function LandingPage() {
                 <div className="relative mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-accent/20 bg-accent/10 transition-colors group-hover:border-accent/40 group-hover:bg-accent/15">
                   {icon}
                 </div>
-                <h3 className="font-display mb-2 text-base font-semibold text-foreground">{title}</h3>
+                <h3 className="font-display mb-2 text-[1.05rem] font-semibold text-foreground">{title}</h3>
                 <p className="text-sm leading-6 text-muted">{description}</p>
               </TiltCard>
             ))}
