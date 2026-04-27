@@ -58,6 +58,10 @@
 - `components/DashboardShell.tsx`: `experienceLevel` prop, `targetPages` state, senior-only 1/2-page toggle
 - `lib/hooks/useTailorResume.ts`: `experienceLevel`/`targetPages` options threaded through step2, PDF, and DOCX requests
 
+## Completed (session: 2026-04-26) — Multi-theme infrastructure + Settings UI
+- PR 1: migration (theme_id + theme_mode on profiles), theme registry (lib/themes/registry.ts — 8 palettes), theme CSS (app/themes.css — 16 blocks), client utilities (lib/themes/client.ts), profile sync hook (lib/themes/use-theme-sync.ts + components/ThemeSync.tsx), globals.css migrated to [data-theme-id] selectors, layout.tsx reads cookies server-side for zero-FOUC SSR
+- PR 2: ThemeSection (palette grid + mode toggle, optimistic + DB write), AppearanceSection replaced, Footer Logo tone="auto" fix for light mode
+
 ## Next step
 - test with real resumes and tune evaluator/tailoring prompts against validation failures
 - replace placeholder content in /privacy and /refund-policy with lawyer-reviewed or Termly/Iubenda-generated policy before launch (/terms is complete)

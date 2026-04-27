@@ -7,7 +7,7 @@ import MembershipSection from '@/components/settings/MembershipSection'
 import PaymentHistory from '@/components/settings/PaymentHistory'
 import AvatarImage from '@/components/settings/AvatarImage'
 import MockPaymentsBanner from '@/components/MockPaymentsBanner'
-import AppearanceSection from '@/components/settings/AppearanceSection'
+import ThemeSection from '@/components/settings/ThemeSection'
 import ExperienceLevelSection from '@/components/settings/ExperienceLevelSection'
 import { ArrowLeft, BarChart2, User, ShieldCheck } from 'lucide-react'
 
@@ -157,7 +157,7 @@ export default async function SettingsPage() {
         </div>
 
         {/* Appearance */}
-        <AppearanceSection />
+        <ThemeSection />
 
         {/* Experience Level */}
         <ExperienceLevelSection initialLevel={experienceLevel} />

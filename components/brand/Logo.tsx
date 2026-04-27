@@ -3,7 +3,7 @@ import { Sora } from 'next/font/google'
 
 const sora = Sora({ subsets: ['latin'], weight: ['400', '600'] })
 
-export type LogoTone = 'light' | 'dark'
+export type LogoTone = 'light' | 'dark' | 'auto'
 export type LogoVariant = 'mark' | 'horizontal' | 'stacked'
 
 export interface LogoProps {
@@ -18,6 +18,7 @@ export interface LogoProps {
 const MARK_SOURCES: Record<LogoTone, string> = {
   light: '/brand/forte-icon-sora-dark.svg',
   dark:  '/brand/forte-icon-sora-light.svg',
+  auto:  '/brand/forte-icon-sora-light.svg',
 }
 
 export function Logo({ variant = 'horizontal', tone, className, priority = false }: LogoProps) {
@@ -37,7 +38,7 @@ export function Logo({ variant = 'horizontal', tone, className, priority = false
     )
   }
 
-  const textColor = tone === 'dark' ? 'text-white' : 'text-gray-900'
+  const textColor = tone === 'dark' ? 'text-white' : tone === 'light' ? 'text-gray-900' : 'text-foreground'
   return (
     <span className={`inline-flex items-center ${sora.className} ${textColor} font-semibold tracking-tight ${className ?? ''}`}>
       forte

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./themes.css";
 
 @keyframes gradient-flow {
   0%, 100% { background-position: 0% 50%; }
@@ -13,45 +14,11 @@
   to   { opacity: 1; }
 }
 
-/* Aurora · Crimson Mono — dark default */
+/* forte document tokens — invariant across all themes */
 :root {
-  --background:        #0D1226;
-  --bg:                #0D1226;
-  --surface:           #141A32;
-  --surface-raised:    #1C2340;
-  --surface-2:         #1C2340;
-  --foreground:        #F3F4FA;
-  --text:              #F3F4FA;
-  --muted:             #A4ABC4;
-  --text-muted:        #A4ABC4;
-  --text-dim:          #6C748D;
-  --border:            #242C4A;
-  --accent:            #FF1F4E;
-  --accent-hover:      #E6093A;
-  --accent-secondary:  #FFB0C2;
-  --accent-2:          #FFB0C2;
-  /* Brand · resume document (unchanged across themes) */
-  --forte-ink:         #0A0A0A;
-  --forte-paper:       #F7F6F3;
-  --forte-stone:       #DBD9D2;
-}
-
-[data-theme="light"] {
-  --background:        #F8F7F9;
-  --bg:                #F8F7F9;
-  --surface:           #FFFFFF;
-  --surface-raised:    #F1EDEF;
-  --surface-2:         #F1EDEF;
-  --foreground:        #0D1226;
-  --text:              #0D1226;
-  --muted:             #5A5663;
-  --text-muted:        #5A5663;
-  --text-dim:          #8E8A93;
-  --border:            #E5DFE2;
-  --accent:            #D6133E;
-  --accent-hover:      #B00A30;
-  --accent-secondary:  #A85268;
-  --accent-2:          #A85268;
+  --forte-ink:   #0A0A0A;
+  --forte-paper: #F7F6F3;
+  --forte-stone: #DBD9D2;
 }
 
 @theme inline {

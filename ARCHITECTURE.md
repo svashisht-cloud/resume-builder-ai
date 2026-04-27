@@ -35,7 +35,8 @@ Auth state managed by Supabase (Google OAuth) + middleware.ts
 resume-builder/
 ├── app/                        # Next.js App Router
 │   ├── layout.tsx              # Root HTML shell (Space Grotesk + Inter + JetBrains Mono fonts, CSS vars, metadata)
-│   ├── globals.css             # Tailwind v4 @theme inline tokens + keyframes (gradient-flow, fade-in-up, fade-in), .animate-gradient-flow utility + print styles; Aurora · Crimson Mono palette (dark: #FF1F4E accent, light: #D6133E; crimson ramp crimson-100…700; forte document tokens invariant)
+│   ├── globals.css             # Tailwind v4 @theme inline tokens + keyframes; imports themes.css; :root holds only --forte-ink/paper/stone; crimson ramp crimson-100…700 in @theme inline; forte document tokens invariant
+│   ├── themes.css              # 16 CSS blocks — 8 palettes × 2 modes using [data-theme-id="<id>"] and [data-theme-id="<id>"][data-theme="light"] selectors
 │   ├── page.tsx                # Root — shows LandingPage or redirects to /dashboard if signed in
 │   ├── (legal)/
 │   │   ├── layout.tsx          # Shared legal layout — PublicHeader + Footer; no width constraint (each page manages its own max-width)
@@ -72,6 +73,7 @@ resume-builder/
 │   ├── PublicHeader.tsx        # Client component — sticky public nav (Logo + Pricing link + Sign In → AuthModal); used on /pricing and legal pages
 │   ├── Footer.tsx              # Server component — 4-column footer (Product, Company, Legal, Support) + logo/copyright; used on /pricing and legal pages
 │   ├── DashboardShell.tsx      # PRIMARY UI: 3-panel sliding layout; Regenerate button gated only by regen_count >= 2 (isPaidCredit gate removed); Style button still requires isPaidCredit
+│   ├── ThemeSync.tsx           # Null-render client component that calls useThemeSync — mounted in root layout for cross-device sync
 │   ├── AppNavbar.tsx           # Authenticated top nav — forte mark icon + "Resume Builder" text label, avatar, z-10 nav (backdrop-blur stacking fix), dropdown with Settings + Sign Out
 │   ├── LandingPage.tsx         # Marketing page — two-col hero (HeroTrailer), How It Works, Testimonials, Pricing (uses PricingCards), footer
 │   ├── AuthModal.tsx           # Google OAuth modal — always mounted, data-state open/closed CSS transition (scale+fade), ToS line; uses horizontal logo at h-9
@@ -87,9 +89,14 @@ resume-builder/
 │   │   └── PublicPricingCards.tsx  # Thin wrapper for public /pricing page; passes onAuthRequired → router.push('/dashboard')
 │   └── settings/
 │       ├── AvatarImage.tsx     # Client component — plain <img> with referrerPolicy + onError initials fallback
+│       ├── ThemeSection.tsx    # Self-fetching client component — palette grid (8 cards) + Dark/Light mode toggle; optimistic writes to profiles.theme_id/theme_mode + cookies
 │       └── SwitchPlanSection.tsx # Self-fetching client component — reads plan_type/plan_status from profiles, passes currentPlan to PricingCards; heading "Manage Plan"
 │
 ├── lib/
+│   ├── themes/
+│   │   ├── registry.ts         # THEMES array (8 entries), DEFAULT_THEME_ID/MODE, isValidThemeId/isValidThemeMode
+│   │   ├── client.ts           # Browser utilities: applyTheme(id, mode), getCurrentTheme() — writes cookies + html data attrs
+│   │   └── use-theme-sync.ts   # useThemeSync hook — on mount, fetches profile theme_id/theme_mode and calls applyTheme if diverged
 │   ├── ai/
 │   │   ├── client.ts           # Lazy OpenAI singleton + model name constants (AI_EVAL_MODEL, AI_TAILOR_MODEL)
 │   │   ├── pipeline.ts         # Core AI functions: evaluate, tailor, re-evaluate, render text; includes project preservation
@@ -302,6 +309,8 @@ POST /api/tailor/step3
 | `plan_current_period_end` | timestamptz | Pro subscription period end; null = no period limit |
 | `plan_monthly_usage` | int not null default 0 | Resumes generated this billing cycle (Pro only) |
 | `plan_usage_reset_at` | timestamptz | When monthly_usage was last reset to 0 |
+| `theme_id` | text not null default 'aurora-crimson' | Selected palette; check constraint lists all 8 valid IDs |
+| `theme_mode` | text not null default 'dark' | `dark` or `light` |
 
 ### `resumes` (server-side only — no client insert/update policy)
 

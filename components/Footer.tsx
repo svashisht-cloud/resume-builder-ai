@@ -70,7 +70,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-8 sm:flex-row">
-          <Logo variant="stacked" tone="dark" className="h-14" />
+          <Logo variant="stacked" tone="auto" className="h-14" />
           <span className="text-sm text-muted">© 2026 Forte</span>
         </div>
       </div>
