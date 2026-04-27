@@ -27,7 +27,7 @@
   --muted:            #585858;
   --text-muted:       #585858;
   --text-dim:         #8C8C8C;
-  --border:           #EAEAEA;
+  --border:           #E2E2E2;
   --accent:           #D6133E;
   --accent-hover:     #B00A30;
   --accent-secondary: #A85268;
@@ -63,7 +63,7 @@
   --muted:            #5B5B5B;
   --text-muted:       #5B5B5B;
   --text-dim:         #8D8D8D;
-  --border:           #EBEBEB;
+  --border:           #E2E2E2;
   --accent:           #5161D2;
   --accent-hover:     #3947B3;
   --accent-secondary: #4655C7;
@@ -99,7 +99,7 @@
   --muted:            #5B5B5B;
   --text-muted:       #5B5B5B;
   --text-dim:         #929292;
-  --border:           #EAEAEA;
+  --border:           #E2E2E2;
   --accent:           #C24A39;
   --accent-hover:     #9E3829;
   --accent-secondary: #A84838;
@@ -135,7 +135,7 @@
   --muted:            #61605F;
   --text-muted:       #61605F;
   --text-dim:         #939291;
-  --border:           #EAEAE8;
+  --border:           #E2E2DF;
   --accent:           #B36013;
   --accent-hover:     #8E4708;
   --accent-secondary: #8F4D12;
@@ -171,7 +171,7 @@
   --muted:            #525B69;
   --text-muted:       #525B69;
   --text-dim:         #8B94A3;
-  --border:           #E6E9EF;
+  --border:           #DDE1E8;
   --accent:           #A0420D;
   --accent-hover:     #7E3308;
   --accent-secondary: #3B66C4;
@@ -207,7 +207,7 @@
   --muted:            #516068;
   --text-muted:       #516068;
   --text-dim:         #8A949A;
-  --border:           #E5EAEB;
+  --border:           #DCE3E4;
   --accent:           #A06808;
   --accent-hover:     #7E5006;
   --accent-secondary: #2F7975;
@@ -243,7 +243,7 @@
   --muted:            #5A5E54;
   --text-muted:       #5A5E54;
   --text-dim:         #8A8E83;
-  --border:           #E7E4D7;
+  --border:           #DEDACB;
   --accent:           #4D6B3D;
   --accent-hover:     #36502A;
   --accent-secondary: #7A6638;
@@ -279,7 +279,7 @@
   --muted:            #5A5C66;
   --text-muted:       #5A5C66;
   --text-dim:         #8A8C93;
-  --border:           #E6DDCA;
+  --border:           #DDD2BC;
   --accent:           #7A4F1F;
   --accent-hover:     #5C3A12;
   --accent-secondary: #3D4A63;

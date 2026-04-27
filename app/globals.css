@@ -142,13 +142,13 @@ a {
 
 .surface-card {
   background: color-mix(in srgb, var(--surface) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 84%, transparent);
   box-shadow: var(--shadow-card);
 }
 
 .surface-card-quiet {
   background: color-mix(in srgb, var(--surface) 86%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 54%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
 }
 
 .surface-card-accent {

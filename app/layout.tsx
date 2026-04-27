@@ -10,6 +10,10 @@ import {
   DEFAULT_THEME_ID,
   DEFAULT_THEME_MODE,
 } from "@/lib/themes/registry";
+import {
+  isLegacyDefaultTheme,
+  THEME_COOKIE_VERSION,
+} from "@/lib/themes/client";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -55,8 +59,11 @@ export default async function RootLayout({
   const cookieStore = await cookies()
   const rawId   = cookieStore.get('theme-id')?.value   ?? ''
   const rawMode = cookieStore.get('theme-mode')?.value ?? ''
-  const themeId   = isValidThemeId(rawId)     ? rawId   : DEFAULT_THEME_ID
-  const themeMode = isValidThemeMode(rawMode) ? rawMode : DEFAULT_THEME_MODE
+  const rawVersion = cookieStore.get('theme-version')?.value ?? ''
+  const hasCurrentThemeCookie = rawVersion === THEME_COOKIE_VERSION
+  const hasLegacyDefaultCookie = !hasCurrentThemeCookie && isLegacyDefaultTheme(rawId, rawMode)
+  const themeId   = !hasLegacyDefaultCookie && isValidThemeId(rawId)     ? rawId   : DEFAULT_THEME_ID
+  const themeMode = !hasLegacyDefaultCookie && isValidThemeMode(rawMode) ? rawMode : DEFAULT_THEME_MODE
 
   return (
     <html
