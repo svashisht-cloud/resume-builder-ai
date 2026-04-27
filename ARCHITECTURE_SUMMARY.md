@@ -22,7 +22,7 @@
 ## Important Routes
 | Route | Purpose |
 |---|---|
-| `/` | Public landing page; redirects signed-in users to `/dashboard` |
+| `/` | Public landing page with full-viewport resume-first hero; redirects signed-in users to `/dashboard` |
 | `/pricing` | Public pricing page |
 | `/terms`, `/privacy`, `/refund-policy` | Legal pages; privacy/refund still need final reviewed content |
 | `/dashboard` | Protected tailoring UI |
@@ -36,6 +36,9 @@
 ## Important Components
 | Component | Role |
 |---|---|
+| `LandingPage` | Public marketing page; full-viewport hero, How It Works, testimonials, pricing, footer |
+| `InteractiveHeroPreview` | Resume-first landing hero scene; ATS fit animates from 63 to 94 on preview interaction, rewrite callout appears from highlighted bullet |
+| `HeroTrailer` | Animated product walkthrough reused in How It Works; respects reduced motion |
 | `DashboardShell` | Primary 3-panel tailoring UI, keyword confirmation, regenerate/refine, style editing |
 | `useTailorResume` | Client fetch/state orchestration for step1/2/3, regen, export downloads |
 | `ResumePreview` | HTML resume renderer and modal preview |

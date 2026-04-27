@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Upload, Target, Sparkles, ArrowRight } from 'lucide-react'
+import { Upload, Target, Sparkles, ArrowRight, CheckCircle2, Zap } from 'lucide-react'
 import AuthModal from './AuthModal'
 import Testimonials from './landing/Testimonials'
 import HeroTrailer from './landing/HeroTrailer'
+import InteractiveHeroPreview from './landing/InteractiveHeroPreview'
+import TiltCard from './landing/TiltCard'
 import PricingCards from './pricing/PricingCards'
 import Footer from './Footer'
 import { Sora } from 'next/font/google'
@@ -51,12 +53,12 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative mx-auto max-w-6xl overflow-hidden px-6 py-12 sm:py-20">
+      <section className="relative mx-auto flex min-h-[calc(100vh-65px)] max-w-6xl items-center overflow-hidden px-6 py-8 sm:py-10">
         {/* Radial glow behind content */}
         <div className="pointer-events-none absolute -top-40 left-1/4 h-[200px] w-[200px] rounded-full bg-accent/5 blur-3xl sm:h-[500px] sm:w-[500px]" />
         <div className="pointer-events-none absolute -top-20 right-1/4 h-[150px] w-[150px] rounded-full bg-accent-secondary/5 blur-3xl sm:h-[400px] sm:w-[400px]" />
 
-        <div className="relative grid grid-cols-1 items-center gap-12 lg:grid-cols-[9fr_11fr]">
+        <div className="relative grid w-full grid-cols-1 items-center gap-12 lg:grid-cols-[9fr_11fr]">
           {/* Left: copy + CTAs */}
           <div>
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1">
@@ -87,18 +89,72 @@ export default function LandingPage() {
                 See How It Works
               </button>
             </div>
+            <div className="mt-6 flex items-center gap-x-4">
+              <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted sm:text-sm">
+                <CheckCircle2 size={13} className="flex-shrink-0 text-success" />
+                No credit card
+              </span>
+              <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted sm:text-sm">
+                <CheckCircle2 size={13} className="flex-shrink-0 text-success" />
+                Cancel anytime
+              </span>
+              <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted sm:text-sm">
+                <Zap size={13} className="flex-shrink-0 text-accent" />
+                Instant results
+              </span>
+            </div>
+            <div className="mt-6 flex items-center gap-6 border-t border-border/40 pt-5">
+              <div>
+                <p className="text-xl font-bold text-foreground">12k+</p>
+                <p className="text-xs text-muted">Users</p>
+              </div>
+              <div className="h-8 w-px bg-border/50" />
+              <div>
+                <p className="text-xl font-bold text-foreground">94%</p>
+                <p className="text-xs text-muted">Pass rate</p>
+              </div>
+              <div className="h-8 w-px bg-border/50" />
+              <div>
+                <p className="text-xl font-bold text-foreground">30s</p>
+                <p className="text-xs text-muted">Avg time</p>
+              </div>
+            </div>
           </div>
-          {/* Right: animated product trailer */}
-          <HeroTrailer />
+          {/* Right: interactive product preview */}
+          <InteractiveHeroPreview />
         </div>
       </section>
 
       {/* How It Works */}
       <section id="how-it-works" className="border-t border-border/50 bg-surface/70 py-12 md:py-20">
-        <div className="mx-auto max-w-5xl px-6">
+        <div className="mx-auto max-w-6xl px-6">
           <div className="mb-12 text-center">
             <h2 className="font-display mb-3 text-3xl font-bold text-foreground">How It Works</h2>
-            <p className="text-sm text-muted">From paste to polished in under a minute.</p>
+            <p className="text-sm text-muted">Three steps. No reformatting. Under 60 seconds.</p>
+          </div>
+          <div className="mb-10 grid items-center gap-8 lg:grid-cols-[minmax(0,1.08fr)_minmax(300px,0.92fr)]">
+            <HeroTrailer />
+            <div className="surface-card-quiet rounded-[1.75rem] p-6 sm:p-8">
+              <h3 className="font-display text-3xl font-bold leading-tight text-foreground">
+                Your resume, tailored to the job — in 30 seconds
+              </h3>
+              <p className="mt-4 text-sm leading-7 text-muted">
+                Paste your resume and the job description. The AI reads the requirements, finds your
+                gaps, and rewrites your bullets — using only what you actually wrote.
+              </p>
+              <div className="mt-6 space-y-3">
+                {[
+                  'Your original resume is the only source. No experience is invented.',
+                  'Keywords and skills from the job description get woven in naturally.',
+                  'See a before/after ATS score and a diff of every change — you stay in control.',
+                ].map((item) => (
+                  <div key={item} className="flex items-start gap-3 rounded-2xl border border-border/70 bg-surface px-4 py-3">
+                    <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-accent" />
+                    <p className="text-sm leading-6 text-foreground">{item}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             {[
@@ -107,26 +163,26 @@ export default function LandingPage() {
                 step: '01',
                 title: 'Upload your resume',
                 description:
-                  "Drop in your existing resume as a PDF or paste it as plain text. We'll parse every section — experience, skills, education — so nothing gets lost.",
+                  'PDF, DOCX, or plain text — drop it in. We parse every section automatically, so nothing gets lost or misformatted.',
               },
               {
                 icon: <Target className="text-accent" size={24} />,
                 step: '02',
                 title: 'Add a job description',
                 description:
-                  "Paste the JD for the role you're targeting. Requirements, responsibilities, and tech stack all feed into the tailoring engine.",
+                  "Paste the job listing directly — even a rough copy works. We read the requirements, keywords, and tech stack to find your gaps.",
               },
               {
                 icon: <Sparkles className="text-accent" size={24} />,
                 step: '03',
                 title: 'Get your tailored resume',
                 description:
-                  'Receive a rewritten resume with a diff showing what changed and why — plus an ATS match score and one-click PDF export.',
+                  'In under 30 seconds, get a rewritten resume with a diff of every change, your new ATS match score, and one-click PDF or DOCX export.',
               },
             ].map(({ icon, step, title, description }) => (
-              <div
+              <TiltCard
                 key={step}
-                className="surface-card-quiet group relative flex h-full flex-col overflow-hidden rounded-xl p-6 transition-all hover:border-accent/30 hover:shadow-accent-soft"
+                className="surface-card-quiet group relative flex h-full flex-col overflow-hidden rounded-xl p-6 hover:border-accent/30 hover:shadow-accent-soft"
               >
                 {/* Step number watermark */}
                 <span className="absolute right-4 top-3 font-display text-5xl font-bold text-border/60 select-none">
@@ -137,7 +193,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="font-display mb-2 text-base font-semibold text-foreground">{title}</h3>
                 <p className="text-sm leading-6 text-muted">{description}</p>
-              </div>
+              </TiltCard>
             ))}
           </div>
         </div>

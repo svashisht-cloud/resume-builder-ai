@@ -75,14 +75,17 @@ resume-builder/
 │   ├── DashboardShell.tsx      # PRIMARY UI: 3-panel sliding layout; Regenerate button gated only by regen_count >= 5 (isPaidCredit gate removed); Style button still requires isPaidCredit
 │   ├── ThemeSync.tsx           # Null-render client component that calls useThemeSync — mounted in root layout for cross-device sync
 │   ├── AppNavbar.tsx           # Authenticated top nav — forte mark icon + "Resume Builder" text label, avatar, z-10 nav (backdrop-blur stacking fix), dropdown with Settings + Sign Out
-│   ├── LandingPage.tsx         # Marketing page — two-col hero (HeroTrailer), How It Works, Testimonials, Pricing (uses PricingCards), footer
+│   ├── LandingPage.tsx         # Marketing page — full-viewport hero with InteractiveHeroPreview (static resume card) + trust badges (✓ No credit card, ✓ Cancel anytime, ⚡ Instant results) + stats row (12k+ Users, 94% Pass rate, 30s Avg time); How It Works with HeroTrailer + explainer card (product-focused copy, no animation badge) and TiltCard step cards; Testimonials; Pricing; footer
 │   ├── AuthModal.tsx           # Google OAuth modal — always mounted, data-state open/closed CSS transition (scale+fade), ToS line; uses horizontal logo at h-9
 │   ├── EditableName.tsx        # Inline-editable display name field
 │   ├── DeleteAccountButton.tsx # Danger zone delete button (used on settings page)
 │   ├── ResumePreview.tsx       # Web HTML resume renderer — accepts resumeStyle?: ResumeStyle for dynamic font/size/spacing; supports interactiveMode
 │   ├── ResumePDFDocument.tsx   # React-PDF resume document — accepts resumeStyle?: ResumeStyle; makeStyles() factory produces dynamic StyleSheet
 │   ├── landing/
-│   │   ├── HeroTrailer.tsx     # Animated product trailer; prefersReducedMotion → static
+│   │   ├── InteractiveHeroPreview.tsx # Static hero resume card — mobile: ATS Score horizontal strip (Before 63 amber | +31 pts | After 94 green) appears ABOVE resume for dashboard feel; desktop: ATS vertical card sits beside resume (sm:flex-row, self-center); resume max-w-[380px] with accent top border, contact icons, skills (accent-highlighted), experience (success-highlighted bullets), education
+│   │   ├── TiltCard.tsx        # Client component — Stripe-style 3D perspective tilt wrapper; tracks cursor position, applies rotateX/rotateY + scale on hover; directional border highlight (thin 1.5px accent line, intensity proportional to cursor proximity to each edge, no shadow blur); glare overlay follows cursor; spring-back on leave; respects prefers-reduced-motion; used for How It Works step cards
+│   │   ├── ResumeTransformSection.tsx # Scroll-driven transformation section (currently unused/removed from LandingPage); sticky resume transforms across 4 phases as user scrolls; maxScrollProgress one-way latch; preserved on disk for later use
+│   │   ├── HeroTrailer.tsx     # Animated product trailer reused in How It Works; prefersReducedMotion → static
 │   │   └── Testimonials.tsx    # Snap carousel with 6 cards, stars, Quote watermark, chevrons, dots
 │   ├── pricing/
 │   │   ├── PricingCards.tsx    # Three-card grid: Free / Pro (monthly+annual toggle, Most Popular/Best Value badge) / Resume Pack ($9, Pack Plus as upsell link). Props: currentPlan?, onAuthRequired?. Internal auth check via createClient(). Cancel plan button for Pro users.

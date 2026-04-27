@@ -22,6 +22,18 @@
 - project URL rendered inline in header (name + techStack + URL on one line); only URL text is clickable
 - PDF spacing tuned: bullet marginBottom 3pt, expBlock marginBottom 4pt, name marginBottom 10pt, lineHeight 1.27
 
+## Completed (session: 2026-04-26) - Landing page hero refresh
+- Hero auto-playing `HeroTrailer` moved out of the landing hero and replaced with `components/landing/InteractiveHeroPreview.tsx`
+- `components/LandingPage.tsx` now treats the hero-right area as a live product preview, while `How It Works` was restructured into a two-column feature section pairing the existing `HeroTrailer` animation with stronger ATS-fit explanatory copy
+- Existing auth modal, pricing, testimonials, trailer behavior, and resume/PDF flows left unchanged
+
+## Completed (session: 2026-04-27) - Resume-first hero preview polish
+- `components/landing/InteractiveHeroPreview.tsx` simplified to a resume-only hero scene with no top labels, helper text, or step controls
+- ATS fit overlay animates 63 -> 94 on preview hover/focus/tap; highlighted resume bullet opens an evidence-backed rewrite callout
+- Resume scene uses theme-aware accent/accent-secondary background treatment while keeping the document itself recruiter-style and fictional
+- Landing hero now fills the first viewport below the navbar via `min-h-[calc(100vh-65px)]`
+- `ARCHITECTURE.md` and `ARCHITECTURE_SUMMARY.md` updated to describe the final landing hero structure
+
 ## Completed (session: 2026-04-21, continued)
 - Credit restore on AI failure: `restore_credit(p_resume_id)` RPC (migration 20260421000001) restores credit within 5-min window if AI pipeline errors after `spend_credit`; called in step1/route.ts and route.ts inner try/catch; P0003 (`paid_credit_required`) now handled in both routes
 
