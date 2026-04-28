@@ -35,7 +35,7 @@ export default function MembershipSection({
   const periodExpired = periodEnd ? new Date(periodEnd) <= new Date() : false
   const hasProAccess =
     (planType === 'pro_monthly' || planType === 'pro_annual') &&
-    (planStatus === 'active' || (planStatus === 'cancelled' && !periodExpired))
+    (planStatus === 'active' || (planStatus === 'cancelled' && !periodExpired) || (planStatus === 'past_due' && !periodExpired))
   const cancellationScheduled = planStatus === 'cancelled' && !periodExpired && (planType === 'pro_monthly' || planType === 'pro_annual')
   const planLabel = planType === 'pro_monthly' ? 'Pro · Monthly' : planType === 'pro_annual' ? 'Pro · Annual' : null
 
@@ -66,7 +66,7 @@ export default function MembershipSection({
                 <p className="text-sm font-medium text-foreground">{planLabel}</p>
                 {periodEnd && (
                   <p className="mt-0.5 text-xs text-muted">
-                    {cancellationScheduled ? 'Access until' : 'Renews'} {formatPeriodEnd(periodEnd)}
+                    {cancellationScheduled || planStatus === 'past_due' ? 'Access until' : 'Renews'} {formatPeriodEnd(periodEnd)}
                   </p>
                 )}
               </>

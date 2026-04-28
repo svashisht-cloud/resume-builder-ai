@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   const stillInPeriod = planPeriodEnd ? new Date(planPeriodEnd) > new Date() : false
   const navPlan: 'free' | 'pro_monthly' | 'pro_annual' =
     (planType === 'pro_monthly' || planType === 'pro_annual') &&
-    (planStatus === 'active' || (planStatus === 'cancelled' && stillInPeriod))
+    (planStatus === 'active' || (planStatus === 'cancelled' && stillInPeriod) || (planStatus === 'past_due' && stillInPeriod))
       ? (planType as 'pro_monthly' | 'pro_annual')
       : 'free'
 

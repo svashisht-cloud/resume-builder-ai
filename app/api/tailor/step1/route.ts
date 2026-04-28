@@ -104,7 +104,7 @@ export async function POST(request: Request) {
 
       const isActivePro =
         (profileData?.plan_type === "pro_monthly" || profileData?.plan_type === "pro_annual") &&
-        (profileData?.plan_status === "active" || profileData?.plan_status === "cancelled") &&
+        (profileData?.plan_status === "active" || profileData?.plan_status === "cancelled" || profileData?.plan_status === "past_due") &&
         (profileData?.plan_current_period_end == null ||
           new Date(profileData.plan_current_period_end) > new Date());
 

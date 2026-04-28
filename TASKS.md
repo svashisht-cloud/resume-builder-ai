@@ -89,6 +89,7 @@
 
 ## Next step
 - Replace mock billing routes with real Dodo integration and verified webhook handling
+- Deferred: dashboard/settings UX refresh plan lives in `specs/App-Workspace-UX-Refresh.md`
 - Test with real resumes and keep tuning evaluator/tailoring prompts against validation failures
 - Rename `middleware.ts` to the Next.js `proxy` convention to remove the current build warning
 - Review legal copy/contact details before launch if a final legal pass is still required

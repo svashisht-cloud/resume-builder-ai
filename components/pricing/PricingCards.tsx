@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Check } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -43,7 +42,6 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
   const [loadingProduct, setLoadingProduct] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; ok: boolean } | null>(null)
   const [showCancelModal, setShowCancelModal] = useState(false)
-  const router = useRouter()
 
   function showToast(message: string, ok: boolean) {
     setToast({ message, ok })
@@ -65,20 +63,16 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
     setToast(null)
 
     try {
-      const res = await fetch('/api/billing/mock-purchase', {
+      const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product }),
       })
-      if (res.status === 404) {
-        alert('Pro subscriptions are coming soon!')
-        return
-      }
-      const data = await res.json() as { success?: boolean; plan?: string; error?: string }
-      if (res.ok) {
-        router.push('/settings')
+      const data = await res.json() as { checkoutUrl?: string; error?: string }
+      if (res.ok && data.checkoutUrl) {
+        window.location.href = data.checkoutUrl
       } else {
-        showToast(data.error ?? 'Purchase failed. Please try again.', false)
+        showToast(data.error ?? 'Could not start checkout. Please try again.', false)
       }
     } catch {
       showToast('Network error. Please try again.', false)
@@ -95,21 +89,16 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
     setToast(null)
 
     try {
-      const res = await fetch('/api/billing/mock-purchase', {
+      const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product }),
       })
-      if (res.status === 404) {
-        alert('Credit packs are coming soon!')
-        return
-      }
-      const data = await res.json() as { success?: boolean; payment_id?: string; error?: string }
-      if (res.ok) {
-        const count = product === 'resume_pack' ? 3 : 10
-        showToast(`${count} credits added to your account`, true)
+      const data = await res.json() as { checkoutUrl?: string; error?: string }
+      if (res.ok && data.checkoutUrl) {
+        window.location.href = data.checkoutUrl
       } else {
-        showToast(data.error ?? 'Purchase failed. Please try again.', false)
+        showToast(data.error ?? 'Could not start checkout. Please try again.', false)
       }
     } catch {
       showToast('Network error. Please try again.', false)
@@ -122,12 +111,12 @@ export default function PricingCards({ currentPlan, onAuthRequired, stacked, can
     setLoadingProduct('cancel')
     setToast(null)
     try {
-      const res = await fetch('/api/billing/mock-cancel', { method: 'POST' })
-      const data = await res.json() as { success?: boolean; error?: string }
-      if (res.ok) {
-        router.push('/settings')
+      const res = await fetch('/api/billing/portal', { method: 'POST' })
+      const data = await res.json() as { portalUrl?: string; error?: string }
+      if (res.ok && data.portalUrl) {
+        window.location.href = data.portalUrl
       } else {
-        showToast(data.error ?? 'Cancellation failed. Please try again.', false)
+        showToast(data.error ?? 'Could not open billing portal. Please try again.', false)
       }
     } catch {
       showToast('Network error. Please try again.', false)

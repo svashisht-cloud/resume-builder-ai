@@ -9,6 +9,7 @@ import AvatarImage from '@/components/settings/AvatarImage'
 import MockPaymentsBanner from '@/components/MockPaymentsBanner'
 import ThemeSection from '@/components/settings/ThemeSection'
 import ExperienceLevelSection from '@/components/settings/ExperienceLevelSection'
+import CheckoutStatusBanner from '@/components/settings/CheckoutStatusBanner'
 import { ArrowLeft, BarChart2, User, ShieldCheck } from 'lucide-react'
 
 function formatMemberSince(isoDate: string) {
@@ -104,6 +105,14 @@ export default async function SettingsPage() {
         </div>
 
         <h1 className="font-display text-2xl font-bold text-foreground">Settings</h1>
+
+        <CheckoutStatusBanner
+          userId={user.id}
+          initialPlanType={profile?.plan_type as string | null | undefined}
+          initialPlanStatus={profile?.plan_status as string | null | undefined}
+          initialPeriodEnd={profile?.plan_current_period_end as string | null | undefined}
+          initialCreditsRemaining={creditsRemaining}
+        />
 
         {/* Profile */}
         <div className="surface-card-quiet rounded-xl p-6">

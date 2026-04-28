@@ -16,6 +16,8 @@ interface Payment {
 function formatProduct(product: string) {
   if (product === "resume_pack") return "Resume Pack";
   if (product === "resume_pack_plus") return "Resume Pack Plus";
+  if (product === "pro_monthly") return "Pro — Monthly";
+  if (product === "pro_annual") return "Pro — Annual";
   return product;
 }
 
@@ -109,7 +111,7 @@ export default function PaymentHistory() {
                       {formatProduct(p.product)}
                     </p>
                     <p className="mt-0.5 text-xs text-muted">
-                      {formatDate(p.paid_at)} · {p.credits_granted} credit{p.credits_granted !== 1 ? "s" : ""}
+                      {formatDate(p.paid_at)}{p.credits_granted > 0 ? ` · ${p.credits_granted} credit${p.credits_granted !== 1 ? "s" : ""}` : ""}
                     </p>
                   </div>
                   <div className="flex flex-shrink-0 flex-col items-end gap-1">
