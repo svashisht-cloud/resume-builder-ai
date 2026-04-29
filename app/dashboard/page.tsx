@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import AppNavbar from '@/components/AppNavbar'
 import { DashboardShell } from '@/components/DashboardShell'
-import MockPaymentsBanner from '@/components/MockPaymentsBanner'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -30,7 +29,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <MockPaymentsBanner />
       <AppNavbar
         user={{
           display_name: profile?.display_name ?? null,

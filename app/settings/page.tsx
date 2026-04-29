@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import AppNavbar from '@/components/AppNavbar'
-import MockPaymentsBanner from '@/components/MockPaymentsBanner'
 import SettingsClient from '@/components/settings/SettingsClient'
 import { ArrowLeft } from 'lucide-react'
 
@@ -91,7 +90,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
 
   return (
     <>
-      <MockPaymentsBanner />
       <AppNavbar
         user={{
           display_name: profile?.display_name ?? null,
