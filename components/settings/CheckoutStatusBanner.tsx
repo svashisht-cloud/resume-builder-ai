@@ -75,7 +75,7 @@ export default function CheckoutStatusBanner({
           initialPeriodEnd !== periodEnd;
 
         if (subscriptionConfirmed || creditsConfirmed || planChanged) {
-          router.replace("/settings");
+          router.replace("/settings?section=billing");
           router.refresh();
           return;
         }

@@ -361,8 +361,12 @@ These must not change with app theme selection.
 - Pro Monthly / Pro Annual: 100 resumes per month fair-use cap
 
 ### Current implementation state
-- Billing routes are still mock/scaffold routes
-- Real Dodo integration is not complete yet
+- Real Dodo Payments integration is complete (checkout, cancel, change-plan, webhooks)
+- Settings page has a sidebar nav (`SettingsSectionNav`) with sections: Billing, Theme, Account
+- `BillingSection` renders the full billing UI: current plan, credits, buy credits, payment history
+- Switch-to-annual and cancel-subscription each open a confirmation modal before acting:
+  - `SwitchToAnnualModal` — shows $79/yr pricing, savings badge, benefit list
+  - `CancelSubscriptionModal` — retention copy, period-end reminder, monthly-to-annual nudge
 
 ### Important behavior
 - Fresh tailoring spends a credit for free/pack users

@@ -12,7 +12,16 @@
 - Section order is detected from raw resume text and preserved across HTML, PDF, and DOCX
 - Role subtitle, experience layout, and inline project URL behavior are aligned across all three renderers
 - Public landing page is in its current resume-first marketing state with stabilized desktop/mobile behavior
-- Theme system, experience-level-aware length controls, auth gating, admin surfaces, and mock billing scaffolding are all live
+- Theme system, experience-level-aware length controls, auth gating, admin surfaces, mock billing scaffolding, and the sectioned settings IA are all live
+
+## Completed (session: 2026-04-28) - Settings IA refresh
+- `/settings` now uses a local section navigation layout instead of a single long undifferentiated stack
+- Billing was consolidated into a single `Billing & Credits` area with current subscription state, credit balance, compact purchase controls, an embedded billing explainer, and in-page payment history
+- `Usage`, `Appearance`, `Experience Level`, `Account`, and conditional `Admin` remain distinct settings sections, with delete-account controls moved under `Account`
+- The old inline `Manage Plan` pricing-card block was removed from settings in favor of an account-first billing presentation
+- Settings sidebar items now render focused panels via `/settings?section=...` instead of scrolling through every section
+- Settings section changes are handled client-side after the initial `/settings` load, avoiding repeated server/proxy navigations when switching panels
+- Active subscribers can cancel or switch Pro plans through first-party API routes backed by the Dodo subscriptions API instead of being sent to the hosted customer portal
 
 ## Completed (session: 2026-04-26) - Landing page hero refresh
 - `HeroTrailer` was removed from the hero and replaced with `components/landing/InteractiveHeroPreview.tsx`

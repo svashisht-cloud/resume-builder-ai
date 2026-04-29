@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Receipt } from "lucide-react";
 
 interface Payment {
@@ -11,6 +11,38 @@ interface Payment {
   credits_granted: number;
   status: string;
   paid_at: string;
+}
+
+let cachedPayments: Payment[] | null = null;
+let cachedError: string | null = null;
+let pendingPaymentsRequest: Promise<Payment[]> | null = null;
+
+export function clearPaymentHistoryCache() {
+  cachedPayments = null;
+  cachedError = null;
+}
+
+async function fetchPayments() {
+  if (cachedPayments) return cachedPayments;
+  if (pendingPaymentsRequest) return pendingPaymentsRequest;
+
+  pendingPaymentsRequest = fetch("/api/billing/payment-history")
+    .then(async (res) => {
+      const data = await res.json() as { payments?: Payment[]; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Failed to load payment history.");
+      cachedPayments = data.payments ?? [];
+      cachedError = null;
+      return cachedPayments;
+    })
+    .catch((err) => {
+      cachedError = err instanceof Error ? err.message : "Failed to load payment history.";
+      throw err;
+    })
+    .finally(() => {
+      pendingPaymentsRequest = null;
+    });
+
+  return pendingPaymentsRequest;
 }
 
 function formatProduct(product: string) {
@@ -39,35 +71,53 @@ function formatAmount(cents: number, currency: string) {
 
 export default function PaymentHistory() {
   const [open, setOpen] = useState(false);
-  const [fetched, setFetched] = useState(false);
+  const [fetched, setFetched] = useState(cachedPayments !== null || cachedError !== null);
   const [loading, setLoading] = useState(false);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [payments, setPayments] = useState<Payment[]>(cachedPayments ?? []);
+  const [error, setError] = useState<string | null>(cachedError);
 
-  async function handleToggle() {
-    if (!open && !fetched) {
+  useEffect(() => {
+    if (!open || fetched) return;
+
+    let cancelled = false;
+
+    async function loadPayments() {
       setLoading(true);
+      setError(null);
       try {
-        const res = await fetch("/api/billing/payment-history");
-        const data = await res.json() as { payments?: Payment[]; error?: string };
-        if (!res.ok) throw new Error(data.error ?? "Failed to load payment history.");
-        setPayments(data.payments ?? []);
-        setFetched(true);
+        const nextPayments = await fetchPayments();
+        if (!cancelled) {
+          setPayments(nextPayments);
+          setFetched(true);
+        }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load payment history.");
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load payment history.");
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
+
+    void loadPayments();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetched, open]);
+
+  function handleToggle() {
     setOpen((v) => !v);
   }
 
   return (
-    <div className="surface-card-quiet rounded-xl">
+    <div className="surface-card-quiet rounded-2xl">
       <button
         type="button"
         onClick={handleToggle}
-        className="flex w-full items-center justify-between px-6 py-5 text-left transition-colors hover:bg-surface-raised/50 rounded-xl"
+        className="flex w-full items-center justify-between rounded-2xl px-6 py-5 text-left transition-colors hover:bg-surface-raised/50"
       >
         <div className="flex items-center gap-2">
           <Receipt size={15} className="text-muted" />
@@ -104,7 +154,7 @@ export default function PaymentHistory() {
               {payments.map((p) => (
                 <li
                   key={p.id}
-                  className="flex items-center justify-between gap-4 rounded-lg border border-border/40 bg-background/50 px-4 py-3"
+                  className="flex items-center justify-between gap-4 rounded-xl border border-border/40 bg-background/50 px-4 py-3"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground">
