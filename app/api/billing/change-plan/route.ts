@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('dodo_subscription_id, plan_type, plan_status, plan_current_period_end')
+    .select('dodo_subscription_id, plan_type, plan_status, plan_current_period_end, pending_plan_type')
     .eq('id', user.id)
     .single()
 
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
   const currentPlan = profile?.plan_type as string | null
   const currentStatus = profile?.plan_status as string | null
   const periodEnd = profile?.plan_current_period_end as string | null
+  const pendingPlanType = profile?.pending_plan_type as string | null
   const stillInPeriod = periodEnd ? new Date(periodEnd) > new Date() : false
   const canChange =
     !!subscriptionId &&
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
     return Response.json({ error: 'No active subscription found.' }, { status: 400 })
   }
 
-  if (currentPlan === product) {
+  if (currentPlan === product || pendingPlanType === product) {
     return Response.json({ success: true, unchanged: true })
   }
 
@@ -58,19 +59,24 @@ export async function POST(request: Request) {
     await dodo.subscriptions.changePlan(subscriptionId, {
       product_id: getDodoProductId(product),
       quantity: 1,
-      proration_billing_mode: 'difference_immediately',
-      effective_at: 'immediately',
+      proration_billing_mode: 'full_immediately',
+      effective_at: 'next_billing_date',
       on_payment_failure: 'prevent_change',
       metadata: { supabase_user_id: user.id },
     })
 
-    const { error: updateError } = await supabase
+    // Record the pending switch so the UI can show "Annual starts on [date]"
+    // and so the webhook guard knows when the activation is expected.
+    const { error: pendingError } = await supabase
       .from('profiles')
-      .update({ plan_type: product, plan_status: 'active' })
+      .update({ pending_plan_type: product, pending_plan_date: periodEnd })
       .eq('id', user.id)
 
-    if (updateError) {
-      return Response.json({ error: updateError.message }, { status: 500 })
+    if (pendingError) {
+      console.error('[change-plan] Failed to persist pending plan state:', pendingError)
+      // Dodo switch is scheduled but local state couldn't be recorded.
+      // Signal the client so it can prompt a refresh instead of a silent gap.
+      return Response.json({ success: true, pendingStateError: true })
     }
 
     return Response.json({ success: true })

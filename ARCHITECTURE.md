@@ -52,7 +52,7 @@ Protected routes are guarded by middleware.ts and server checks
 - `/api/tailor/*`
 - `/api/export-pdf`
 - `/api/export-docx`
-- `/api/billing/mock-*`
+- `/api/billing/*`
 - `/api/admin/*`
 
 ---
@@ -153,8 +153,9 @@ resume-builder/
 
 ### `/settings`
 - Protected page
-- Server-fetched profile state
-- Contains plan, credits, usage, theme selector, experience level selector, and account actions
+- Server-fetched profile state plus pending plan metadata
+- Uses section-based IA with desktop sidebar navigation and mobile index/detail navigation
+- Contains profile, billing & credits, payment method, usage, theme selector, experience level, account actions, and conditional admin access
 
 ### `/admin/*`
 - Protected by middleware and layout re-checks
@@ -208,7 +209,7 @@ resume-builder/
   - Free
   - Pro with monthly/annual toggle
   - Resume Pack with Pack Plus upsell link
-- Uses mock purchase and cancel routes
+- Uses first-party billing routes backed by Dodo checkout and subscription flows
 - Hides the Free card for active Pro users
 
 ### `DashboardShell`
@@ -222,6 +223,13 @@ resume-builder/
 ### `ResumePDFDocument`
 - React-PDF renderer
 - Must remain layout-aligned with the HTML preview
+
+### Settings surface
+- `SettingsClient` owns the sectioned settings experience
+- Desktop uses `SettingsSectionNav` plus a constrained detail column
+- Mobile uses `MobileSettingsIndex` and a detail view with client-side history state
+- Billing confirmation modals render through `SettingsModalPortal` so fixed overlays center against the viewport instead of transformed section containers
+- `CheckoutStatusBanner` verifies hosted checkout completion by polling `/api/billing/checkout-status` with `type`, `product`, and `started_at`
 
 ---
 
@@ -361,12 +369,15 @@ These must not change with app theme selection.
 - Pro Monthly / Pro Annual: 100 resumes per month fair-use cap
 
 ### Current implementation state
-- Real Dodo Payments integration is complete (checkout, cancel, change-plan, webhooks)
-- Settings page has a sidebar nav (`SettingsSectionNav`) with sections: Billing, Theme, Account
-- `BillingSection` renders the full billing UI: current plan, credits, buy credits, payment history
+- Real Dodo Payments integration is live for checkout, payment-method management, subscription cancellation, deferred plan changes, and webhook-driven reconciliation
+- Settings page uses a sectioned billing surface instead of the old inline pricing block
+- `BillingSection` renders current plan, pending switch state, credits, credit-pack purchase controls, and embedded payment history
+- `PaymentMethodSection` manages the saved card on file through Dodo-hosted update/delete flows
+- `PaymentHistory` reads from the real `payments` table and is embedded directly in settings
 - Switch-to-annual and cancel-subscription each open a confirmation modal before acting:
   - `SwitchToAnnualModal` — shows $79/yr pricing, savings badge, benefit list
   - `CancelSubscriptionModal` — retention copy, period-end reminder, monthly-to-annual nudge
+- `ConfirmChargeModal` supports charging a saved card on file immediately for subscription starts or one-time credit packs, with a fallback path to hosted checkout for a different card
 
 ### Important behavior
 - Fresh tailoring spends a credit for free/pack users
@@ -374,6 +385,11 @@ These must not change with app theme selection.
 - Regen limit is 5 per resume
 - Pro usage is tracked with `plan_monthly_usage`
 - `restore_credit` compensates for AI failures after a spend event
+- Hosted checkout returns to `/settings?section=billing&checkout=success...`; `CheckoutStatusBanner` polls durable billing state instead of relying on an in-memory diff from the pre-checkout page
+- Deferred monthly→annual switching stores `pending_plan_type` / `pending_plan_date` on `profiles`; the UI shows the scheduled annual activation and the webhook path uses those fields to avoid premature local plan flips
+- `subscription.updated` only syncs ancillary metadata; `subscription.plan_changed` is the path that actually activates a new plan tier in local state
+- `payment.succeeded` for subscription invoices resolves product by Dodo product ID when available, then by checkout metadata, then by subscription/profile state for renewals and deferred-switch invoices
+- Direct saved-card `confirm: true` checkout currently returns JSON success and refreshes settings immediately; hosted checkout gets the stronger status-verification banner flow
 
 ### RPC errors
 - `P0001 -> no_credits`
@@ -390,7 +406,9 @@ These must not change with app theme selection.
 Stores:
 - identity fields
 - `credits_remaining`
-- plan fields
+- plan fields (`plan_type`, `plan_status`, `plan_current_period_end`, `plan_monthly_usage`, `plan_usage_reset_at`)
+- Dodo identifiers (`dodo_customer_id`, `dodo_subscription_id`)
+- deferred-switch metadata (`pending_plan_type`, `pending_plan_date`)
 - `theme_id`
 - `theme_mode`
 - `experience_level`
@@ -409,7 +427,9 @@ Stores:
 - expiry-aware
 
 ### `payments`
-- mock payment records
+- one row per successful credit or subscription payment
+- Dodo identifiers and settlement metadata used for webhook idempotency and settings payment history
+- credit purchases grant `credits_granted > 0`; subscription invoice rows use `credits_granted = 0`
 
 ### `pipeline_runs`
 - admin telemetry for usage, errors, and cost reporting
@@ -462,6 +482,14 @@ Stores:
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Server-only admin operations |
+| `DODO_PAYMENTS_API_KEY` | Yes for real billing | Dodo API credentials |
+| `DODO_PAYMENTS_ENV` | No | `test_mode` or `live_mode`, defaults to `test_mode` |
+| `DODO_PAYMENTS_WEBHOOK_SECRET` | Yes for real billing | Verifies incoming Dodo webhooks |
+| `APP_URL` | Yes for real billing | Canonical app URL for Dodo return URLs |
+| `DODO_PRODUCT_ID_PRO_MONTHLY` | Yes for real billing | Dodo product ID for monthly Pro |
+| `DODO_PRODUCT_ID_PRO_ANNUAL` | Yes for real billing | Dodo product ID for annual Pro |
+| `DODO_PRODUCT_ID_RESUME_PACK` | Yes for real billing | Dodo product ID for Resume Pack |
+| `DODO_PRODUCT_ID_RESUME_PACK_PLUS` | Yes for real billing | Dodo product ID for Resume Pack Plus |
 | `ENABLE_MOCK_PAYMENTS` | No | Enables mock billing routes |
 | `UPSTASH_REDIS_REST_URL` | No | Rate limiting backend |
 | `UPSTASH_REDIS_REST_TOKEN` | No | Rate limiting auth token |
@@ -472,7 +500,8 @@ If Upstash vars are absent, rate limiting degrades gracefully rather than breaki
 
 ## Current known gaps / next work
 
-- Real Dodo billing and webhook integration
+- Validate Dodo test-mode assumptions around subscription-payment metadata propagation and deferred-switch `payment.succeeded.timestamp` timing
+- Consider improving the direct saved-card `confirm: true` checkout path so it gets the same durable post-payment verification UX as hosted checkout
 - Continued evaluator/tailor prompt tuning against real resumes
 - `middleware.ts` -> `proxy` migration
 - Final legal-content review if needed before launch

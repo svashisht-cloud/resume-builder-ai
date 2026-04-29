@@ -16,7 +16,8 @@ const SECTION_ICONS: Record<string, React.ElementType> = {
 const MOBILE_GROUPS = [
   { label: 'ACCOUNT',     ids: ['profile', 'billing', 'payment', 'usage'], danger: false },
   { label: 'PREFERENCES', ids: ['appearance', 'experience'],                danger: false },
-  { label: 'DANGER',      ids: ['account', 'admin'],                        danger: true  },
+  { label: 'DANGER',      ids: ['account'],                                 danger: true  },
+  { label: 'ADMIN',       ids: ['admin'],                                   danger: false },
 ]
 
 interface MobileSettingsIndexProps {
@@ -37,12 +38,12 @@ export default function MobileSettingsIndex({ sections, onSelect }: MobileSettin
           <div key={group.label}>
             <p
               className={`mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider ${
-                group.danger ? 'text-red-400' : 'text-muted/60'
+                group.danger ? 'text-danger-fg' : 'text-muted/60'
               }`}
             >
               {group.label}
             </p>
-            <div className="divide-y divide-border/30 overflow-hidden rounded-[14px] border border-border/40 bg-background">
+            <div className="overflow-hidden rounded-2xl border border-border/50 bg-surface/80 shadow-[0_10px_26px_rgba(0,0,0,0.08)] backdrop-blur-sm">
               {groupSections.map((section) => {
                 const Icon = SECTION_ICONS[section.id] ?? Settings2
                 return (
@@ -50,9 +51,9 @@ export default function MobileSettingsIndex({ sections, onSelect }: MobileSettin
                     key={section.id}
                     type="button"
                     onClick={() => onSelect(section.id)}
-                    className="flex min-h-[44px] w-full items-center gap-3.5 px-4 py-3.5 text-left transition-transform duration-100 active:scale-[0.98] active:bg-surface-raised/50"
+                    className="flex min-h-[52px] w-full items-center gap-3.5 border-b border-border/30 px-4 py-3.5 text-left transition-transform duration-100 last:border-b-0 active:scale-[0.98] active:bg-surface-raised/50"
                   >
-                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[8px] bg-accent/10 text-accent">
+                    <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px] bg-accent/10 text-accent">
                       <Icon size={16} />
                     </span>
                     <span className="flex-1 text-[15px] font-medium text-foreground">

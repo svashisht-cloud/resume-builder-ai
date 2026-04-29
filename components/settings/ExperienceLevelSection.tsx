@@ -43,22 +43,22 @@ export default function ExperienceLevelSection({ initialLevel }: { initialLevel:
   const description = LEVELS.find((l) => l.value === level)?.description ?? ''
 
   return (
-    <div className="surface-card-quiet rounded-xl p-6">
-      <div className="mb-5 flex items-center gap-2">
+    <div className="surface-card-quiet rounded-xl p-5 sm:p-6">
+      <div className="mb-4 flex items-center gap-2 sm:mb-5">
         <Briefcase size={15} className="text-muted" />
         <h2 className="font-display text-base font-semibold text-foreground">Experience level</h2>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-sm text-foreground">Career stage</span>
-        <div className="flex rounded-lg border border-border/60 bg-surface-raised p-0.5 gap-0.5">
+        <div className="grid w-full grid-cols-3 gap-0.5 rounded-lg border border-border/60 bg-surface-raised p-0.5 sm:flex sm:w-auto">
           {LEVELS.map(({ value, label }) => (
             <button
               key={value}
               type="button"
               disabled={saving}
               onClick={() => void handleChange(value)}
-              className={`flex items-center rounded-md px-3 py-1.5 text-xs font-medium transition-all disabled:opacity-60 ${
+              className={`flex items-center justify-center rounded-md px-3 py-2 text-xs font-medium transition-all disabled:opacity-60 sm:py-1.5 ${
                 level === value
                   ? 'bg-accent text-accent-foreground shadow-sm'
                   : 'text-muted hover:text-foreground'

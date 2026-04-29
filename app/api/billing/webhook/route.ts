@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 import { getAdminClient } from '@/lib/supabase/admin'
 import { makeDodoClient } from '@/lib/billing/dodo-client'
 import { getProductFromDodoId, CREDIT_PRODUCTS, SUBSCRIPTION_PRODUCTS } from '@/lib/billing/products'
+import type { DodoProduct } from '@/lib/billing/products'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AdminDb = any
@@ -70,10 +71,60 @@ export async function POST(request: Request) {
       const currency: string = (data as { currency?: string }).currency ?? 'usd'
       const productCart = (data as { product_cart?: Array<{ product_id: string }> }).product_cart
 
-      const dodoProductId = productCart?.[0]?.product_id ?? null
-      const product = dodoProductId ? getProductFromDodoId(dodoProductId) : null
+      const subscriptionId = (data as { subscription_id?: string }).subscription_id ?? null
 
-      if (!product) break
+      const dodoProductId = productCart?.[0]?.product_id ?? null
+      let product = dodoProductId ? getProductFromDodoId(dodoProductId) : null
+
+      // Subscription payments have product_cart = null; resolve product via fallbacks.
+      // NOTE: Fallback 1 relies on Dodo propagating checkout-session metadata into the
+      // payment.succeeded payload. Validate this holds in test mode before relying on it
+      // for production first-time subscriptions.
+      let metaProduct: string | null = null
+      if (!product && subscriptionId) {
+        // Fallback 1: product embedded in checkout session metadata (new subscriptions).
+        metaProduct = (data.metadata as { product?: string } | undefined)?.product ?? null
+        if (metaProduct && SUBSCRIPTION_PRODUCTS.includes(metaProduct as DodoProduct)) {
+          product = metaProduct as DodoProduct
+        }
+        // Fallback 2: subscription_id → profile lookup (renewals and deferred switches).
+        // Select pending_plan_type alongside plan_type: on the billing date of a monthly→annual
+        // switch, payment.succeeded may arrive before subscription.plan_changed, so plan_type
+        // is still the old value. pending_plan_type is the authoritative "switching to" plan.
+        if (!product) {
+          const { data: subProfile } = await db
+            .from('profiles')
+            .select('plan_type, pending_plan_type, pending_plan_date')
+            .eq('dodo_subscription_id', subscriptionId)
+            .single()
+          const pendingType = subProfile?.pending_plan_type as string | null | undefined
+          const pendingDate = subProfile?.pending_plan_date as string | null | undefined
+          // Use pending_plan_type only when this payment is for the switch billing cycle.
+          // event.timestamp is when Dodo emitted payment.succeeded (i.e. success time),
+          // which is a better proxy than data.created_at (payment creation time) for the
+          // dunning/retry case where a payment is created before the switch date but
+          // confirmed after it. Assumes Dodo emits the event at or after the billing date
+          // for the actual annual charge — validate this once in test mode.
+          const usesPendingPlan =
+            pendingType &&
+            pendingDate &&
+            SUBSCRIPTION_PRODUCTS.includes(pendingType as DodoProduct) &&
+            new Date(event.timestamp) >= new Date(pendingDate)
+          const pt = usesPendingPlan
+            ? pendingType
+            : (subProfile?.plan_type as string | null | undefined)
+          if (pt && SUBSCRIPTION_PRODUCTS.includes(pt as DodoProduct)) {
+            product = pt as DodoProduct
+          }
+        }
+      }
+
+      if (!product) {
+        console.error('[webhook] payment.succeeded: could not resolve product', {
+          paymentId, dodoProductId, subscriptionId, customerId, metaProduct,
+        })
+        break
+      }
 
       let userId = await findUserByCustomerId(db, customerId)
 
@@ -198,10 +249,12 @@ export async function POST(request: Request) {
         console.error('[webhook] cancel_subscription_webhook error:', error)
         return Response.json({ error: 'Failed to cancel subscription' }, { status: 500 })
       }
+      // Any deferred plan change can no longer activate — clear pending state.
+      await db.from('profiles').update({ pending_plan_type: null, pending_plan_date: null }).eq('id', userId)
       break
     }
 
-    // FIX 3: payment failure / dunning — keep access but flag as past_due
+    // payment failure / dunning — keep access but flag as past_due
     case 'subscription.on_hold':
     case 'subscription.failed': {
       const data = event.data
@@ -220,10 +273,12 @@ export async function POST(request: Request) {
         console.error(`[webhook] set_subscription_status error (${event.type}):`, error)
         return Response.json({ error: 'Failed to update subscription status' }, { status: 500 })
       }
+      // Payment failed so any deferred plan change (e.g. monthly→annual) won't proceed.
+      await db.from('profiles').update({ pending_plan_type: null, pending_plan_date: null }).eq('id', userId)
       break
     }
 
-    // FIX 3: subscription fully expired — mark inactive
+    // subscription fully expired — mark inactive
     case 'subscription.expired': {
       const data = event.data
       const subscriptionId: string = data.subscription_id
@@ -241,14 +296,44 @@ export async function POST(request: Request) {
         console.error('[webhook] set_subscription_status error (expired):', error)
         return Response.json({ error: 'Failed to update subscription status' }, { status: 500 })
       }
+      // Subscription is gone — no pending plan change can ever activate.
+      await db.from('profiles').update({ pending_plan_type: null, pending_plan_date: null }).eq('id', userId)
       break
     }
 
-    // Sync plan metadata only — do NOT reset monthly usage.
-    // subscription.updated fires for any field change (payment method, metadata, etc.)
-    // subscription.plan_changed fires on plan tier changes.
-    // Neither represents a new billing cycle, so usage counters must be preserved.
-    case 'subscription.updated':
+    // subscription.updated fires for any field change (payment method, metadata, scheduled
+    // plan changes, etc.) — do NOT sync plan_type here because a deferred plan change
+    // (effective_at: next_billing_date) will carry the future product_id in the payload
+    // before billing has actually switched. Only sync ancillary fields.
+    case 'subscription.updated': {
+      const data = event.data
+      const subscriptionId: string = data.subscription_id
+      const customerId: string = data.customer.customer_id
+      const nextBillingDate: string = data.next_billing_date
+      const metadata = (data as { metadata?: Record<string, string> }).metadata
+
+      const userId = await resolveSubscriptionUserId(db, subscriptionId, customerId, metadata)
+      if (!userId) {
+        console.error('[webhook] subscription.updated: no user found for subscription', subscriptionId)
+        return Response.json({ error: 'User not found' }, { status: 500 })
+      }
+
+      const { error } = await db.rpc('sync_subscription_meta', {
+        p_user_id: userId,
+        p_period_end: nextBillingDate,
+        p_dodo_subscription_id: subscriptionId,
+        p_dodo_customer_id: customerId,
+      })
+      if (error) {
+        console.error('[webhook] sync_subscription_meta error (subscription.updated):', error)
+        return Response.json({ error: 'Failed to sync subscription' }, { status: 500 })
+      }
+      break
+    }
+
+    // subscription.plan_changed fires only when the plan tier actually activates —
+    // safe to sync plan_type here. Does not represent a new billing cycle so usage
+    // counters must be preserved.
     case 'subscription.plan_changed': {
       const data = event.data
       const subscriptionId: string = data.subscription_id
@@ -259,13 +344,13 @@ export async function POST(request: Request) {
 
       const product = getProductFromDodoId(productId)
       if (!product || !SUBSCRIPTION_PRODUCTS.includes(product)) {
-        console.warn(`[webhook] ${event.type}: unknown product_id`, productId)
+        console.warn('[webhook] subscription.plan_changed: unknown product_id', productId)
         break
       }
 
       const userId = await resolveSubscriptionUserId(db, subscriptionId, customerId, metadata)
       if (!userId) {
-        console.error(`[webhook] ${event.type}: no user found for subscription`, subscriptionId)
+        console.error('[webhook] subscription.plan_changed: no user found for subscription', subscriptionId)
         return Response.json({ error: 'User not found' }, { status: 500 })
       }
 
@@ -277,7 +362,7 @@ export async function POST(request: Request) {
         p_dodo_customer_id: customerId,
       })
       if (error) {
-        console.error(`[webhook] sync_subscription error (${event.type}):`, error)
+        console.error('[webhook] sync_subscription error (subscription.plan_changed):', error)
         return Response.json({ error: 'Failed to sync subscription' }, { status: 500 })
       }
       break

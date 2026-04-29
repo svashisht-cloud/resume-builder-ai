@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react'
 import { CreditCard, X } from 'lucide-react'
 
+type CheckoutProduct = 'pro_monthly' | 'pro_annual' | 'resume_pack' | 'resume_pack_plus'
+
 interface ConfirmChargeModalProps {
   open: boolean
   onClose: () => void
   onConfirm: (billingZip: string) => void
   loading: boolean
-  plan: 'pro_monthly' | 'pro_annual'
+  plan: CheckoutProduct
   card: {
     brand: string | null
     last4: string | null
@@ -16,11 +18,14 @@ interface ConfirmChargeModalProps {
     expiryYear: number | null
     country: string | null
   }
+  onUseGateway?: () => void
 }
 
-const PLAN_LABELS: Record<'pro_monthly' | 'pro_annual', { name: string; price: string }> = {
+const PLAN_LABELS: Record<CheckoutProduct, { name: string; price: string }> = {
   pro_monthly: { name: 'Pro Monthly', price: '$12/month' },
   pro_annual: { name: 'Pro Annual', price: '$79/year' },
+  resume_pack: { name: 'Resume Pack', price: '$9 · 3 credits' },
+  resume_pack_plus: { name: 'Resume Pack Plus', price: '$19 · 10 credits' },
 }
 
 function capitalize(s: string) {
@@ -39,6 +44,7 @@ export default function ConfirmChargeModal({
   loading,
   plan,
   card,
+  onUseGateway,
 }: ConfirmChargeModalProps) {
   const [zip, setZip] = useState('')
   const [zipError, setZipError] = useState('')
@@ -78,13 +84,13 @@ export default function ConfirmChargeModal({
       aria-labelledby="confirm-charge-title"
     >
       <div
-        className="shadow-elevated relative mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-border/80 bg-surface"
+        className="shadow-elevated relative mx-3 max-h-[calc(100vh-1.5rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-border/80 bg-surface sm:mx-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
 
-        <div className="p-6">
-          <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="p-5 sm:p-6">
+          <div className="mb-4 flex items-start justify-between gap-4 sm:mb-5">
             <h2
               id="confirm-charge-title"
               className="font-display text-xl font-bold text-foreground"
@@ -102,16 +108,26 @@ export default function ConfirmChargeModal({
           </div>
 
           <div className="mb-5 space-y-3">
-            <div className="flex items-center justify-between rounded-lg border border-border/60 bg-surface-raised px-4 py-3">
+            <div className="flex flex-col items-start gap-1.5 rounded-lg border border-border/60 bg-surface-raised px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm font-medium text-foreground">{name}</span>
               <span className="text-sm font-semibold text-foreground">{price}</span>
             </div>
 
-            <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-surface-raised px-4 py-3">
+            <div className="flex flex-col items-start gap-2 rounded-lg border border-border/60 bg-surface-raised px-4 py-3 sm:flex-row sm:items-center sm:gap-3">
               <CreditCard size={15} className="shrink-0 text-muted" />
               <span className="flex-1 text-sm text-foreground">{cardLabel}</span>
               {expiry && <span className="text-xs text-muted">exp {expiry}</span>}
             </div>
+            {onUseGateway && (
+              <button
+                type="button"
+                onClick={onUseGateway}
+                disabled={loading}
+                className="mt-1 text-xs text-accent underline-offset-2 hover:underline disabled:opacity-50"
+              >
+                Use a different card →
+              </button>
+            )}
 
             <div>
               <label htmlFor="billing-zip" className="mb-1.5 block text-xs font-medium text-muted">
@@ -138,13 +154,15 @@ export default function ConfirmChargeModal({
           </div>
 
           <p className="mb-5 text-xs text-muted">
-            You&rsquo;ll be charged immediately. Cancel anytime from settings.
+            {plan === 'resume_pack' || plan === 'resume_pack_plus'
+              ? "You'll be charged immediately. Credits are added to your account right away."
+              : "You'll be charged immediately. Cancel anytime from settings."}
           </p>
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <button
               onClick={handleConfirm}
-              disabled={loading}
+              disabled={loading || !zip.trim()}
               className="flex h-10 flex-1 items-center justify-center rounded-lg bg-gradient-to-r from-accent to-accent-hover text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? 'Processing…' : 'Confirm & subscribe'}

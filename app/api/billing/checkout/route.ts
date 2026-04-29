@@ -2,7 +2,12 @@ export const runtime = 'nodejs'
 
 import { createClient } from '@/lib/supabase/server'
 import { makeDodoClient, getAppUrl } from '@/lib/billing/dodo-client'
-import { getDodoProductId, isValidDodoProduct, SUBSCRIPTION_PRODUCTS } from '@/lib/billing/products'
+import {
+  CREDIT_PRODUCTS,
+  getDodoProductId,
+  isValidDodoProduct,
+  SUBSCRIPTION_PRODUCTS,
+} from '@/lib/billing/products'
 import type { DodoProduct } from '@/lib/billing/products'
 import type DodoPayments from 'dodopayments'
 
@@ -41,6 +46,23 @@ export async function POST(request: Request) {
     const dodo = makeDodoClient()
     const appUrl = getAppUrl()
     const productId = getDodoProductId(product as DodoProduct)
+    const checkoutType = SUBSCRIPTION_PRODUCTS.includes(product as DodoProduct) ? 'subscription' : 'credits'
+    const startedAt = new Date().toISOString()
+    const returnUrl = new URL('/settings', appUrl)
+    returnUrl.searchParams.set('section', 'billing')
+    returnUrl.searchParams.set('checkout', 'success')
+    returnUrl.searchParams.set('type', checkoutType)
+    returnUrl.searchParams.set('product', product)
+    returnUrl.searchParams.set('started_at', startedAt)
+
+    const cancelUrl = new URL('/settings', appUrl)
+    cancelUrl.searchParams.set('section', 'billing')
+    cancelUrl.searchParams.set('checkout', 'cancelled')
+    if (CREDIT_PRODUCTS.includes(product as DodoProduct)) {
+      cancelUrl.searchParams.set('type', 'credits')
+    } else {
+      cancelUrl.searchParams.set('type', 'subscription')
+    }
 
     if (paymentMethodId && existingCustomerId && billingZip && billingCountry) {
       // Charge card on file — no redirect needed
@@ -51,8 +73,8 @@ export async function POST(request: Request) {
         payment_method_id: paymentMethodId,
         minimal_address: true,
         billing_address: { country: billingCountry as DodoPayments.CheckoutSessionBillingAddress['country'], zipcode: billingZip },
-        return_url: `${appUrl}/settings?section=billing&checkout=success${SUBSCRIPTION_PRODUCTS.includes(product as DodoProduct) ? '&type=subscription' : ''}`,
-        metadata: { supabase_user_id: user.id },
+        return_url: returnUrl.toString(),
+        metadata: { supabase_user_id: user.id, product },
       })
       return Response.json({ success: true })
     }
@@ -63,9 +85,9 @@ export async function POST(request: Request) {
       customer: existingCustomerId
         ? { customer_id: existingCustomerId }
         : { email: userEmail },
-      return_url: `${appUrl}/settings?section=billing&checkout=success${SUBSCRIPTION_PRODUCTS.includes(product as DodoProduct) ? '&type=subscription' : ''}`,
-      cancel_url: `${appUrl}/settings?section=billing&checkout=cancelled`,
-      metadata: { supabase_user_id: user.id },
+      return_url: returnUrl.toString(),
+      cancel_url: cancelUrl.toString(),
+      metadata: { supabase_user_id: user.id, product },
     })
 
     if (!session.checkout_url) {

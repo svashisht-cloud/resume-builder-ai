@@ -78,14 +78,14 @@ export default function ThemeSection() {
 
   if (loading) {
     return (
-      <div className="surface-card-quiet rounded-xl p-6 text-sm text-muted">
+      <div className="surface-card-quiet rounded-xl p-5 text-sm text-muted sm:p-6">
         Loading appearance…
       </div>
     )
   }
 
   return (
-    <div className="surface-card-quiet rounded-xl p-6">
+    <div className="surface-card-quiet rounded-xl p-5 sm:p-6">
       <div className="mb-1 flex items-center gap-2">
         <Palette size={15} className="text-muted" />
         <h2 className="font-display text-base font-semibold text-foreground">Appearance</h2>
@@ -95,13 +95,13 @@ export default function ThemeSection() {
       </p>
 
       {/* Mode toggle */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-sm text-foreground">Mode</span>
-        <div className="flex rounded-lg border border-border/60 bg-surface-raised p-0.5 gap-0.5">
+        <div className="flex w-full gap-0.5 rounded-lg border border-border/60 bg-surface-raised p-0.5 sm:w-auto">
           <button
             type="button"
             onClick={() => void handleModeChange('dark')}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all sm:flex-none sm:py-1.5 ${
               themeMode === 'dark'
                 ? 'bg-accent text-accent-foreground shadow-sm'
                 : 'text-muted hover:text-foreground'
@@ -113,7 +113,7 @@ export default function ThemeSection() {
           <button
             type="button"
             onClick={() => void handleModeChange('light')}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-all sm:flex-none sm:py-1.5 ${
               themeMode === 'light'
                 ? 'bg-accent text-accent-foreground shadow-sm'
                 : 'text-muted hover:text-foreground'

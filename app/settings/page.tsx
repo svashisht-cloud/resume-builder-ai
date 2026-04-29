@@ -40,7 +40,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const [profileResult, resumesResult, spentCreditsResult] = await Promise.all([
     supabase
       .from('profiles')
-      .select('display_name, email, avatar_url, credits_remaining, is_admin, plan_type, plan_status, plan_current_period_end, experience_level')
+      .select('display_name, email, avatar_url, credits_remaining, is_admin, plan_type, plan_status, plan_current_period_end, experience_level, pending_plan_type, pending_plan_date')
       .eq('id', user.id)
       .single(),
     supabase
@@ -120,7 +120,6 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <SettingsClient
           initialSection={activeSection}
           sections={settingsSections}
-          userId={user.id}
           profile={{
             email,
             avatarUrl,
@@ -129,6 +128,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             planType: profile?.plan_type as string | null | undefined,
             planStatus: profile?.plan_status as string | null | undefined,
             periodEnd: profile?.plan_current_period_end as string | null | undefined,
+            pendingPlanType: profile?.pending_plan_type as string | null | undefined,
+            pendingPlanDate: profile?.pending_plan_date as string | null | undefined,
             creditsRemaining,
             experienceLevel,
             isAdmin,

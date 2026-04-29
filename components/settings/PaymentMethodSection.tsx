@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CreditCard, LoaderCircle } from 'lucide-react'
+import { AlertTriangle, CreditCard, LoaderCircle } from 'lucide-react'
 
 interface PaymentMethod {
   id: string
@@ -12,8 +12,14 @@ interface PaymentMethod {
   expiryYear: number | null
 }
 
+function formatDate(isoDate: string) {
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(isoDate))
+}
+
 interface PaymentMethodSectionProps {
   hasSubscription: boolean
+  pendingPlanType?: string | null
+  pendingPlanDate?: string | null
 }
 
 function capitalize(s: string) {
@@ -25,7 +31,7 @@ function formatExpiry(month: number | null, year: number | null) {
   return `${String(month).padStart(2, '0')}/${String(year).slice(-2)}`
 }
 
-export default function PaymentMethodSection({ hasSubscription }: PaymentMethodSectionProps) {
+export default function PaymentMethodSection({ hasSubscription, pendingPlanType, pendingPlanDate }: PaymentMethodSectionProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
@@ -102,8 +108,8 @@ export default function PaymentMethodSection({ hasSubscription }: PaymentMethodS
 
   return (
     <div className="space-y-5">
-      <div className="surface-card-quiet rounded-xl p-6">
-        <div className="mb-5 flex items-center gap-2">
+      <div className="surface-card-quiet rounded-xl p-5 sm:p-6">
+        <div className="mb-4 flex items-center gap-2 border-b border-border/40 pb-3 sm:mb-5 sm:pb-4">
           <CreditCard size={16} className="text-muted" />
           <h2 className="font-display text-base font-semibold text-foreground">Payment Method</h2>
         </div>
@@ -140,12 +146,21 @@ export default function PaymentMethodSection({ hasSubscription }: PaymentMethodS
                 <p className="mb-3 text-sm text-danger-fg">
                   Remove this card? You&rsquo;ll need to add a new one before your next billing date.
                 </p>
-                <div className="flex gap-3">
+                {pendingPlanType === 'pro_annual' && pendingPlanDate && (
+                  <div className="mb-3 flex items-start gap-2 rounded-md border border-warning-border bg-warning-bg px-3 py-2.5">
+                    <AlertTriangle size={13} className="mt-0.5 shrink-0 text-warning-fg" />
+                    <p className="text-xs text-warning-fg">
+                      You have an Annual switch scheduled for{' '}
+                      <span className="font-semibold">{formatDate(pendingPlanDate)}</span>. Without a card on file that charge will fail and the switch won&rsquo;t complete.
+                    </p>
+                  </div>
+                )}
+                <div className="flex flex-col gap-3 sm:flex-row">
                   <button
                     type="button"
                     onClick={() => void handleRemoveCard()}
                     disabled={actionLoading}
-                    className="rounded-lg bg-danger-fg px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-lg bg-danger-fg px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-1.5"
                   >
                     {actionLoading ? 'Removing…' : 'Confirm remove'}
                   </button>
@@ -153,19 +168,19 @@ export default function PaymentMethodSection({ hasSubscription }: PaymentMethodS
                     type="button"
                     onClick={() => setConfirmingRemove(false)}
                     disabled={actionLoading}
-                    className="rounded-lg border border-border/60 px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-raised disabled:opacity-50"
+                    className="w-full rounded-lg border border-border/60 px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-surface-raised disabled:opacity-50 sm:w-auto sm:py-1.5"
                   >
                     Cancel
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="mt-4 flex flex-wrap gap-3">
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <button
                   type="button"
                   onClick={() => void handleUpdateCard()}
                   disabled={actionLoading}
-                  className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-2"
                 >
                   {actionLoading ? 'Processing…' : 'Update card'}
                 </button>
@@ -173,7 +188,7 @@ export default function PaymentMethodSection({ hasSubscription }: PaymentMethodS
                   type="button"
                   onClick={() => setConfirmingRemove(true)}
                   disabled={actionLoading}
-                  className="rounded-lg border border-danger-border px-4 py-2 text-sm font-medium text-danger-fg transition-colors hover:bg-danger-bg disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-lg border border-danger-border px-4 py-2.5 text-sm font-medium text-danger-fg transition-colors hover:bg-danger-bg disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-2"
                 >
                   Remove card
                 </button>
@@ -188,7 +203,7 @@ export default function PaymentMethodSection({ hasSubscription }: PaymentMethodS
                 type="button"
                 onClick={() => void handleUpdateCard()}
                 disabled={actionLoading}
-                className="mt-4 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-4 w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-2"
               >
                 {actionLoading ? 'Processing…' : 'Add a card'}
               </button>

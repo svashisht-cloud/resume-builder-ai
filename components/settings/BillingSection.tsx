@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Check, Coins, LoaderCircle } from 'lucide-react'
+import { CalendarClock, Check, Coins, LoaderCircle } from 'lucide-react'
 import PaymentHistory, { clearPaymentHistoryCache } from './PaymentHistory'
 import SwitchToAnnualModal from './SwitchToAnnualModal'
 import CancelSubscriptionModal from './CancelSubscriptionModal'
@@ -28,6 +28,8 @@ interface BillingSectionProps {
   planType: string | null | undefined
   planStatus: string | null | undefined
   periodEnd: string | null | undefined
+  pendingPlanType: string | null | undefined
+  pendingPlanDate: string | null | undefined
   creditsRemaining: number
 }
 
@@ -35,6 +37,8 @@ export default function BillingSection({
   planType,
   planStatus,
   periodEnd,
+  pendingPlanType,
+  pendingPlanDate,
   creditsRemaining,
 }: BillingSectionProps) {
   const router = useRouter()
@@ -43,7 +47,7 @@ export default function BillingSection({
   const [switchModalOpen, setSwitchModalOpen] = useState(false)
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [confirmChargeOpen, setConfirmChargeOpen] = useState(false)
-  const [pendingProduct, setPendingProduct] = useState<SubscriptionProduct | null>(null)
+  const [pendingProduct, setPendingProduct] = useState<CheckoutProduct | null>(null)
   const [savedCard, setSavedCard] = useState<SavedCard | null>(null)
 
   useEffect(() => {
@@ -82,7 +86,7 @@ export default function BillingSection({
     window.setTimeout(() => setMessage(null), 5000)
   }
 
-  function handleStartPro(product: SubscriptionProduct) {
+  function handleStartCheckout(product: CheckoutProduct) {
     if (savedCard) {
       setPendingProduct(product)
       setConfirmChargeOpen(true)
@@ -134,7 +138,13 @@ export default function BillingSection({
       const data = await res.json() as { success?: boolean; error?: string }
       if (res.ok && data.success) {
         clearPaymentHistoryCache()
-        showMessage('Pro activated! Your subscription is now live.', true)
+        const isCredits = pendingProduct === 'resume_pack' || pendingProduct === 'resume_pack_plus'
+        showMessage(
+          isCredits
+            ? 'Payment received! Your credits will appear shortly.'
+            : 'Pro activated! Your subscription is now live.',
+          true,
+        )
         router.refresh()
         return
       }
@@ -179,13 +189,22 @@ export default function BillingSection({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product }),
       })
-      const data = await res.json() as { error?: string }
+      const data = await res.json() as { error?: string; pendingStateError?: boolean }
       if (!res.ok) {
         showMessage(data.error ?? 'Could not change plan. Please try again.', false)
         return
       }
       clearPaymentHistoryCache()
-      showMessage(`Plan changed to ${product === 'pro_annual' ? 'Pro Annual' : 'Pro Monthly'}.`, true)
+      if (data.pendingStateError) {
+        showMessage('Annual switch scheduled — please refresh to see your updated status.', true)
+        return
+      }
+      showMessage(
+        product === 'pro_annual'
+          ? 'Switching to Pro Annual at your next renewal date.'
+          : 'Plan changed to Pro Monthly.',
+        true,
+      )
       router.refresh()
     } catch {
       showMessage('Network error. Please try again.', false)
@@ -196,8 +215,8 @@ export default function BillingSection({
 
   return (
     <div className="animate-fade-in space-y-5">
-      <div className="surface-card rounded-xl border border-border/50 p-6">
-        <div className="mb-5 flex items-center gap-2 border-b border-border/40 pb-4">
+      <div className="surface-card rounded-xl border border-border/50 p-5 sm:p-6">
+        <div className="mb-4 flex items-center gap-2 border-b border-border/40 pb-3 sm:mb-5 sm:pb-4">
           <Coins size={16} className="text-accent/70" />
           <h2 className="font-display text-[15px] font-semibold text-foreground">Billing &amp; Credits</h2>
         </div>
@@ -214,7 +233,7 @@ export default function BillingSection({
           </div>
         )}
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-5 md:grid-cols-2 md:gap-6">
           <div>
             <p className="text-xs font-semibold uppercase text-muted">Current plan</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -261,7 +280,7 @@ export default function BillingSection({
           <div>
             <p className="text-xs font-semibold uppercase text-muted">Credits</p>
             <div className="mt-2 flex items-end gap-2">
-              <p className="font-display text-4xl font-bold text-foreground">{creditsRemaining}</p>
+              <p className="font-display text-3xl font-bold text-foreground sm:text-4xl">{creditsRemaining}</p>
               <Coins size={20} className="mb-1 text-accent/60" />
             </div>
             <p className="mt-1 text-sm text-muted">credit{creditsRemaining !== 1 ? 's' : ''} remaining</p>
@@ -269,23 +288,33 @@ export default function BillingSection({
           </div>
         </div>
 
+        {pendingPlanType === 'pro_annual' && pendingPlanDate && (
+          <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-accent/30 bg-accent/8 px-4 py-3 text-sm">
+            <CalendarClock size={15} className="mt-0.5 shrink-0 text-accent" />
+            <span className="text-foreground/80">
+              Switching to <span className="font-medium text-foreground">Pro Annual</span> on{' '}
+              {formatPeriodEnd(pendingPlanDate)} — you&rsquo;ll be billed $79 at that time.
+            </span>
+          </div>
+        )}
+
         {(!hasProAccess || (hasProAccess && !cancellationScheduled)) && (
-          <div className="mt-5 flex flex-wrap gap-3 border-t border-border/40 pt-5">
+          <div className="mt-5 flex flex-col gap-3 border-t border-border/40 pt-5 sm:flex-row sm:flex-wrap">
             {!hasProAccess && (
               <>
                 <button
                   type="button"
-                  onClick={() => handleStartPro('pro_monthly')}
+                  onClick={() => handleStartCheckout('pro_monthly')}
                   disabled={!!loadingAction}
-                  className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition-all duration-150 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition-all duration-150 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-2"
                 >
                   {loadingAction === 'pro_monthly' ? 'Processing...' : 'Start Pro Monthly'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleStartPro('pro_annual')}
+                  onClick={() => handleStartCheckout('pro_annual')}
                   disabled={!!loadingAction}
-                  className="rounded-lg border border-border/60 px-4 py-2 text-sm font-medium text-foreground transition-all duration-150 hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-lg border border-border/60 px-4 py-2.5 text-sm font-medium text-foreground transition-all duration-150 hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-2"
                 >
                   {loadingAction === 'pro_annual' ? 'Processing...' : 'Start Pro Annual'}
                 </button>
@@ -294,19 +323,21 @@ export default function BillingSection({
 
             {hasProAccess && !cancellationScheduled && (
               <>
-                <button
-                  type="button"
-                  onClick={() => alternatePlan === 'pro_annual' ? setSwitchModalOpen(true) : void changePlan('pro_monthly')}
-                  disabled={!!loadingAction}
-                  className="rounded-lg border border-border/60 px-4 py-2 text-sm font-medium text-foreground transition-all duration-150 hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {loadingAction === alternatePlan ? 'Changing...' : `Switch to ${alternatePlanLabel}`}
-                </button>
+                {pendingPlanType !== 'pro_annual' && (
+                  <button
+                    type="button"
+                    onClick={() => alternatePlan === 'pro_annual' ? setSwitchModalOpen(true) : void changePlan('pro_monthly')}
+                    disabled={!!loadingAction}
+                    className="w-full rounded-lg border border-border/60 px-4 py-2.5 text-sm font-medium text-foreground transition-all duration-150 hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-2"
+                  >
+                    {loadingAction === alternatePlan ? 'Changing...' : `Switch to ${alternatePlanLabel}`}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setCancelModalOpen(true)}
                   disabled={!!loadingAction}
-                  className="rounded-lg border border-danger-border px-4 py-2 text-sm font-medium text-danger-fg transition-all duration-150 hover:bg-danger-bg disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-lg border border-danger-border px-4 py-2.5 text-sm font-medium text-danger-fg transition-all duration-150 hover:bg-danger-bg disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-2"
                 >
                   Cancel subscription
                 </button>
@@ -316,8 +347,8 @@ export default function BillingSection({
         )}
       </div>
 
-      <div className="surface-card rounded-xl border border-border/50 p-6">
-        <div className="mb-5 border-b border-border/40 pb-4">
+      <div className="surface-card rounded-xl border border-border/50 p-5 sm:p-6">
+        <div className="mb-4 border-b border-border/40 pb-3 sm:mb-5 sm:pb-4">
           <h3 className="font-display text-[15px] font-semibold text-foreground">Buy credits</h3>
           <p className="mt-1 text-sm text-muted">One-time credits are useful when you do not need a subscription.</p>
         </div>
@@ -325,9 +356,9 @@ export default function BillingSection({
         <div className="grid gap-3 sm:grid-cols-2">
           <button
             type="button"
-            onClick={() => void startCheckout('resume_pack')}
+            onClick={() => handleStartCheckout('resume_pack')}
             disabled={!!loadingAction}
-            className="group flex items-center justify-between rounded-lg border border-border/60 px-4 py-3 text-left transition-all duration-150 hover:border-accent/50 hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50"
+            className="group flex items-start justify-between gap-3 rounded-lg border border-border/60 px-4 py-3 text-left transition-all duration-150 hover:border-accent/50 hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50 sm:items-center"
           >
             <span>
               <span className="block text-sm font-medium text-foreground">Resume Pack</span>
@@ -340,12 +371,12 @@ export default function BillingSection({
 
           <button
             type="button"
-            onClick={() => void startCheckout('resume_pack_plus')}
+            onClick={() => handleStartCheckout('resume_pack_plus')}
             disabled={!!loadingAction}
-            className="group flex items-center justify-between rounded-lg border border-border/60 px-4 py-3 text-left transition-all duration-150 hover:border-accent/50 hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50"
+            className="group flex items-start justify-between gap-3 rounded-lg border border-border/60 px-4 py-3 text-left transition-all duration-150 hover:border-accent/50 hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50 sm:items-center"
           >
             <span>
-              <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <span className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-foreground">
                 Resume Pack Plus
                 <span className="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent">Best value</span>
               </span>
@@ -358,8 +389,8 @@ export default function BillingSection({
         </div>
       </div>
 
-      <div className="surface-card-quiet rounded-xl border border-border/30 p-6">
-        <div className="mb-5 border-b border-border/40 pb-4">
+      <div className="surface-card-quiet rounded-xl border border-border/30 p-5 sm:p-6">
+        <div className="mb-4 border-b border-border/40 pb-3 sm:mb-5 sm:pb-4">
           <h3 className="font-display text-[15px] font-semibold text-foreground">How credits and subscriptions work</h3>
         </div>
         <div className="grid gap-3 text-sm text-muted sm:grid-cols-2">
@@ -393,6 +424,10 @@ export default function BillingSection({
           loading={!!loadingAction}
           plan={pendingProduct}
           card={savedCard}
+          onUseGateway={() => {
+            setConfirmChargeOpen(false)
+            if (pendingProduct) void startCheckout(pendingProduct)
+          }}
         />
       )}
 

@@ -117,7 +117,7 @@ export default function PaymentHistory() {
       <button
         type="button"
         onClick={handleToggle}
-        className="flex w-full items-center justify-between rounded-2xl px-6 py-5 text-left transition-colors hover:bg-surface-raised/50"
+        className="flex w-full items-center justify-between rounded-2xl px-5 py-4 text-left transition-colors hover:bg-surface-raised/50 sm:px-6 sm:py-5"
       >
         <div className="flex items-center gap-2">
           <Receipt size={15} className="text-muted" />
@@ -133,7 +133,7 @@ export default function PaymentHistory() {
       </button>
 
       {open && (
-        <div className="border-t border-border/60 px-6 pb-6 pt-5">
+        <div className="border-t border-border/60 px-5 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-5">
           {loading && (
             <div className="flex items-center gap-2 text-sm text-muted">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-accent" />
@@ -154,7 +154,7 @@ export default function PaymentHistory() {
               {payments.map((p) => (
                 <li
                   key={p.id}
-                  className="flex items-center justify-between gap-4 rounded-xl border border-border/40 bg-background/50 px-4 py-3"
+                  className="flex flex-col gap-3 rounded-xl border border-border/40 bg-background/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground">
@@ -164,7 +164,7 @@ export default function PaymentHistory() {
                       {formatDate(p.paid_at)}{p.credits_granted > 0 ? ` · ${p.credits_granted} credit${p.credits_granted !== 1 ? "s" : ""}` : ""}
                     </p>
                   </div>
-                  <div className="flex flex-shrink-0 flex-col items-end gap-1">
+                  <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:flex-shrink-0 sm:flex-col sm:items-end sm:gap-1">
                     <span className="text-sm font-semibold text-foreground">
                       {formatAmount(p.amount_cents, p.currency)}
                     </span>

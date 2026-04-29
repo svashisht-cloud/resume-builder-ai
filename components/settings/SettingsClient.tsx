@@ -18,7 +18,6 @@ type ExperienceLevel = 'junior' | 'mid' | 'senior'
 interface SettingsClientProps {
   initialSection: string
   sections: Array<{ id: string; label: string }>
-  userId: string
   profile: {
     email: string
     avatarUrl: string | null
@@ -27,6 +26,8 @@ interface SettingsClientProps {
     planType: string | null | undefined
     planStatus: string | null | undefined
     periodEnd: string | null | undefined
+    pendingPlanType: string | null | undefined
+    pendingPlanDate: string | null | undefined
     creditsRemaining: number
     experienceLevel: ExperienceLevel
     isAdmin: boolean
@@ -63,7 +64,6 @@ function PlanBadge({ planType }: { planType: string | null | undefined }) {
 export default function SettingsClient({
   initialSection,
   sections,
-  userId,
   profile,
   usage,
 }: SettingsClientProps) {
@@ -119,31 +119,25 @@ export default function SettingsClient({
   function renderSectionPanels() {
     return (
       <>
-        <CheckoutStatusBanner
-          userId={userId}
-          initialPlanType={profile.planType}
-          initialPlanStatus={profile.planStatus}
-          initialPeriodEnd={profile.periodEnd}
-          initialCreditsRemaining={profile.creditsRemaining}
-        />
+        <CheckoutStatusBanner />
 
         {activeSection === 'profile' && (
-          <section className="surface-card animate-fade-in rounded-xl border border-border/50 p-6">
-            <div className="mb-5 flex items-center gap-2 border-b border-border/40 pb-4">
+          <section className="surface-card animate-fade-in rounded-xl border border-border/50 p-5 sm:p-6">
+            <div className="mb-4 flex items-center gap-2 border-b border-border/40 pb-3 sm:mb-5 sm:pb-4">
               <User size={15} className="text-accent/70" />
               <h2 className="font-display text-[15px] font-semibold text-foreground">Profile</h2>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <AvatarImage src={profile.avatarUrl} initial={profile.initial} />
-              <p className="font-medium text-foreground">{profile.email}</p>
+              <p className="min-w-0 break-all font-medium text-foreground">{profile.email}</p>
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border/40 pt-4">
-              <div className="flex items-center gap-2">
+            <div className="mt-4 flex flex-col gap-3 border-t border-border/40 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5 sm:gap-y-2">
+              <div className="flex items-center justify-between gap-3 sm:justify-start">
                 <span className="text-xs font-semibold uppercase tracking-wide text-muted/60">Plan</span>
                 <PlanBadge planType={profile.planType} />
               </div>
               {profile.memberSince && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-3 sm:justify-start">
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted/60">Member since</span>
                   <span className="text-sm text-foreground">{profile.memberSince}</span>
                 </div>
@@ -157,6 +151,8 @@ export default function SettingsClient({
             planType={profile.planType}
             planStatus={profile.planStatus}
             periodEnd={profile.periodEnd}
+            pendingPlanType={profile.pendingPlanType}
+            pendingPlanDate={profile.pendingPlanDate}
             creditsRemaining={profile.creditsRemaining}
           />
         )}
@@ -170,31 +166,33 @@ export default function SettingsClient({
                   !!profile.periodEnd &&
                   new Date(profile.periodEnd) > new Date()))
             }
+            pendingPlanType={profile.pendingPlanType}
+            pendingPlanDate={profile.pendingPlanDate}
           />
         )}
 
         {activeSection === 'usage' && (
-          <section className="surface-card animate-fade-in rounded-xl border border-border/50 p-6">
-            <div className="mb-5 flex items-center gap-2 border-b border-border/40 pb-4">
+          <section className="surface-card animate-fade-in rounded-xl border border-border/50 p-5 sm:p-6">
+            <div className="mb-4 flex items-center gap-2 border-b border-border/40 pb-3 sm:mb-5 sm:pb-4">
               <BarChart2 size={15} className="text-accent/70" />
               <h2 className="font-display text-[15px] font-semibold text-foreground">Usage</h2>
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
               <div className="rounded-lg border border-border/40 bg-surface/50 p-4">
                 <Zap size={16} className="mb-2 text-accent/70" />
-                <p className="font-display text-4xl font-bold text-foreground">
+                <p className="font-display text-3xl font-bold text-foreground sm:text-4xl">
                   {Math.max(0, usage.resumesGenerated - usage.creditsSpentLifetime)}
                 </p>
                 <p className="mt-1 text-xs text-muted">via subscription</p>
               </div>
               <div className="rounded-lg border border-border/40 bg-surface/50 p-4">
                 <Coins size={16} className="mb-2 text-accent/70" />
-                <p className="font-display text-4xl font-bold text-foreground">{usage.creditsSpentLifetime}</p>
+                <p className="font-display text-3xl font-bold text-foreground sm:text-4xl">{usage.creditsSpentLifetime}</p>
                 <p className="mt-1 text-xs text-muted">via credits</p>
               </div>
               <div className="rounded-lg border border-border/40 bg-surface/50 p-4">
                 <RefreshCw size={16} className="mb-2 text-accent/70" />
-                <p className="font-display text-4xl font-bold text-foreground">{usage.regensUsed}</p>
+                <p className="font-display text-3xl font-bold text-foreground sm:text-4xl">{usage.regensUsed}</p>
                 <p className="mt-1 text-xs text-muted">regenerations</p>
               </div>
             </div>
@@ -208,8 +206,8 @@ export default function SettingsClient({
         )}
 
         {activeSection === 'account' && (
-          <section className="surface-card animate-fade-in rounded-xl border border-border/50 p-6">
-            <div className="mb-5 flex items-center gap-2 border-b border-border/40 pb-4">
+          <section className="surface-card animate-fade-in rounded-xl border border-border/50 p-5 sm:p-6">
+            <div className="mb-4 flex items-center gap-2 border-b border-border/40 pb-3 sm:mb-5 sm:pb-4">
               <Wallet size={15} className="text-accent/70" />
               <h2 className="font-display text-[15px] font-semibold text-foreground">Account</h2>
             </div>
@@ -219,7 +217,7 @@ export default function SettingsClient({
                 <p className="mt-0.5 text-xs text-muted">Member since {profile.memberSince}</p>
               )}
             </div>
-            <div className="mt-6 rounded-xl border border-danger-border/80 bg-danger-bg p-5">
+            <div className="mt-6 rounded-xl border border-danger-border/80 bg-danger-bg p-4 sm:p-5">
               <h3 className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-danger-fg">
                 <AlertTriangle size={14} />
                 Danger Zone
@@ -233,8 +231,8 @@ export default function SettingsClient({
         )}
 
         {activeSection === 'admin' && profile.isAdmin && (
-          <section className="animate-fade-in rounded-xl border border-indigo-500/20 bg-indigo-950/20 p-6">
-            <div className="flex items-center justify-between gap-4">
+          <section className="animate-fade-in rounded-xl border border-indigo-500/20 bg-indigo-950/20 p-5 sm:p-6">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <div className="mb-2 flex items-center gap-2">
                   <ShieldCheck size={15} className="text-indigo-400" />
@@ -263,16 +261,16 @@ export default function SettingsClient({
       <div className="lg:hidden">
         {mobileView === 'index' ? (
           <>
-            <div className="mb-7 border-b border-border/40 pb-6">
+            <div className="mb-5 border-b border-border/35 pb-4 sm:mb-6 sm:pb-5">
               <Link
                 href="/dashboard"
-                className="mb-4 inline-flex items-center gap-2 rounded-lg border border-border/60 bg-surface-raised/60 px-3 py-2 text-sm font-medium text-muted transition-colors hover:border-border hover:text-foreground"
+                className="mb-3 inline-flex items-center gap-2 rounded-lg border border-border/60 bg-surface-raised/60 px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-border hover:text-foreground sm:mb-4 sm:py-2"
               >
                 <ArrowLeft size={14} />
                 Dashboard
               </Link>
-              <h1 className="font-display text-3xl font-bold text-foreground">Settings</h1>
-              <p className="mt-1 text-sm text-muted">
+              <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">Settings</h1>
+              <p className="mt-1 max-w-sm text-sm text-muted">
                 Manage your account, billing, preferences, and resume defaults.
               </p>
             </div>
@@ -280,20 +278,20 @@ export default function SettingsClient({
           </>
         ) : (
           <div key={activeSection} className="animate-slide-in-right">
-            <div className="mb-7 border-b border-border/40 pb-6">
+            <div className="mb-5 border-b border-border/35 pb-4 sm:mb-6 sm:pb-5">
               <button
                 type="button"
                 onClick={handleMobileBack}
-                className="mb-4 inline-flex items-center gap-2 rounded-lg border border-border/60 bg-surface-raised/60 px-3 py-2 text-sm font-medium text-muted transition-colors hover:border-border hover:text-foreground"
+                className="mb-3 inline-flex items-center gap-2 rounded-lg border border-border/60 bg-surface-raised/60 px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:border-border hover:text-foreground sm:mb-4 sm:py-2"
               >
                 <ChevronLeft size={14} />
                 Settings
               </button>
-              <h1 className="font-display text-3xl font-bold text-foreground">
+              <h1 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
                 {sections.find((s) => s.id === activeSection)?.label ?? ''}
               </h1>
             </div>
-            <div className="space-y-5">
+            <div className="space-y-4 sm:space-y-5">
               {renderSectionPanels()}
             </div>
           </div>
