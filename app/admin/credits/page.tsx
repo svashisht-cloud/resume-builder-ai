@@ -4,7 +4,7 @@ import Link from 'next/link'
 export const dynamic = 'force-dynamic'
 const PAGE_SIZE = 25
 
-const SOURCES = ['free_tier', 'admin_grant', 'courtesy', 'bug_compensation', 'resume_pack', 'resume_pack_plus']
+const SOURCES = ['free_signup', 'admin_grant', 'courtesy', 'bug_compensation', 'resume_pack', 'resume_pack_plus']
 
 export default async function CreditsPage({
   searchParams,
