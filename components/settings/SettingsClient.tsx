@@ -18,6 +18,7 @@ type ExperienceLevel = 'junior' | 'mid' | 'senior'
 interface SettingsClientProps {
   initialSection: string
   sections: Array<{ id: string; label: string }>
+  highlight?: string
   profile: {
     email: string
     avatarUrl: string | null
@@ -64,6 +65,7 @@ function PlanBadge({ planType }: { planType: string | null | undefined }) {
 export default function SettingsClient({
   initialSection,
   sections,
+  highlight,
   profile,
   usage,
 }: SettingsClientProps) {
@@ -154,6 +156,7 @@ export default function SettingsClient({
             pendingPlanType={profile.pendingPlanType}
             pendingPlanDate={profile.pendingPlanDate}
             creditsRemaining={profile.creditsRemaining}
+            highlight={highlight}
           />
         )}
 

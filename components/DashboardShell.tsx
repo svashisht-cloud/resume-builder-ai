@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ResumePreview } from "@/components/ResumePreview";
 import { useTailorResume } from "@/lib/hooks/useTailorResume";
 import NoCreditsModal from "@/components/NoCreditsModal";
-import { FileText, Briefcase, ArrowRight, Check, X, RefreshCw, AlertCircle, ChevronLeft, Sparkles, Download, FileDown, Upload, Info, Paintbrush, Eye, RotateCcw, MousePointerClick } from "lucide-react";
+import { FileText, Briefcase, ArrowRight, Check, X, RefreshCw, AlertCircle, ChevronLeft, Sparkles, Download, FileDown, Upload, Info, Paintbrush, Eye, RotateCcw, MousePointerClick, Lock } from "lucide-react";
 import type { ResumeStyle } from "@/types";
 import { DEFAULT_RESUME_STYLE, ResumeStyleSchema } from "@/types";
 
@@ -130,7 +132,16 @@ function SpacingToggle({ value, onChange }: { value: "compact" | "normal" | "rel
   );
 }
 
-export function DashboardShell({ experienceLevel = 'mid' }: { experienceLevel?: 'junior' | 'mid' | 'senior' }) {
+export function DashboardShell({
+  experienceLevel = 'mid',
+  plan = 'free',
+  creditsRemaining = 0,
+}: {
+  experienceLevel?: 'junior' | 'mid' | 'senior'
+  plan?: 'free' | 'pro_monthly' | 'pro_annual'
+  creditsRemaining?: number
+}) {
+  const router = useRouter();
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeFileName, setResumeFileName] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -191,6 +202,8 @@ export function DashboardShell({ experienceLevel = 'mid' }: { experienceLevel?: 
   }, []);
 
   const effectiveTargetPages: 1 | 2 = experienceLevel === 'senior' ? targetPages : 1;
+  const isFreePlan = plan === "free";
+  const isOutOfCredits = isFreePlan && creditsRemaining <= 0;
 
   const {
     result,
@@ -225,7 +238,7 @@ export function DashboardShell({ experienceLevel = 'mid' }: { experienceLevel?: 
     isPaidCredit,
     warning,
     dismissWarning,
-  } = useTailorResume({ resumeFile, jobDescription, resumeStyle, experienceLevel, targetPages: effectiveTargetPages });
+  } = useTailorResume({ resumeFile, jobDescription, resumeStyle, experienceLevel, targetPages: effectiveTargetPages, plan, creditsRemaining });
 
   function handleItemToggle(id: string, text: string) {
     setSelectedItems((prev) => {
@@ -280,6 +293,35 @@ export function DashboardShell({ experienceLevel = 'mid' }: { experienceLevel?: 
                     Upload your resume and paste a job description. The tailoring stays grounded in your actual experience.
                   </p>
                 </header>
+
+                {isFreePlan && creditsRemaining <= 1 && (
+                  <div className="mb-6 rounded-xl border border-accent/25 bg-accent/8 p-4 sm:p-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="max-w-xs">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+                          Free Plan
+                        </p>
+                        <h2 className="mt-2 font-display text-lg font-semibold leading-tight text-foreground">
+                          {isOutOfCredits
+                            ? "You’re out of free credits."
+                            : `${creditsRemaining} free credit${creditsRemaining === 1 ? "" : "s"} remaining.`}
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-muted">
+                          {isOutOfCredits
+                            ? "Upgrade to Pro for unlimited tailoring — from $12/mo."
+                            : "Upgrade to Pro to keep tailoring without watching your balance — from $12/mo."}
+                        </p>
+                      </div>
+                      <Link
+                        href="/settings?section=billing&highlight=pro"
+                        className="flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-accent to-accent-hover px-5 text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:opacity-95 active:scale-[0.98] sm:w-auto sm:shrink-0"
+                      >
+                        <Sparkles size={12} />
+                        Upgrade to Pro
+                      </Link>
+                    </div>
+                  </div>
+                )}
 
                 {error && (
                   <div className="mb-6 flex items-start gap-3 rounded-xl border border-danger-border bg-danger-bg p-4 text-sm text-danger-fg">
@@ -902,12 +944,15 @@ export function DashboardShell({ experienceLevel = 'mid' }: { experienceLevel?: 
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
-                                title={isPaidCredit ? "Style resume" : "Requires Resume Pack"}
-                                onClick={isPaidCredit ? () => { setStyleTab("left"); handleOpenStyleEditing(); } : undefined}
-                                disabled={!isPaidCredit}
-                                className="flex items-center gap-1 rounded-lg border border-border/60 px-2 py-2 text-xs font-medium text-muted transition-all hover:border-border hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                                title={isPaidCredit ? "Style resume" : "Pro feature — upgrade to style your resume"}
+                                onClick={isPaidCredit ? () => { setStyleTab("left"); handleOpenStyleEditing(); } : () => router.push('/settings?section=billing&highlight=pro')}
+                                className={`flex items-center gap-1 rounded-lg border px-2 py-2 text-xs font-medium transition-all ${
+                                  isPaidCredit
+                                    ? "border-border/60 text-muted hover:border-border hover:text-foreground"
+                                    : "border-accent/30 bg-accent/5 text-accent/70 hover:border-accent/50 hover:text-accent"
+                                }`}
                               >
-                                <Paintbrush size={12} />
+                                {isPaidCredit ? <Paintbrush size={12} /> : <Lock size={12} />}
                                 Style
                               </button>
                               {regenCount < 5 ? (
@@ -1114,6 +1159,36 @@ export function DashboardShell({ experienceLevel = 'mid' }: { experienceLevel?: 
                             </ul>
                           </div>
                         </section>
+
+                        {isFreePlan && (
+                          <section className="surface-card overflow-hidden rounded-xl">
+                            <div className="h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+                            <div className="p-5 sm:p-6">
+                              <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-foreground">
+                                <Sparkles size={15} className="text-accent" />
+                                Unlock unlimited tailoring with Pro
+                              </h2>
+                              <ul className="mb-5 space-y-2">
+                                {[
+                                  "Unlimited tailored resumes",
+                                  "Unlimited edits and regenerations",
+                                  "Resume styling, ATS reports & PDF/DOCX export",
+                                ].map((feature) => (
+                                  <li key={feature} className="flex items-center gap-2 text-sm text-muted">
+                                    <Check size={13} className="shrink-0 text-accent" />
+                                    {feature}
+                                  </li>
+                                ))}
+                              </ul>
+                              <Link
+                                href="/settings?section=billing&highlight=pro"
+                                className="flex h-10 w-full items-center justify-center rounded-lg bg-gradient-to-r from-accent to-accent-hover text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:opacity-95 active:scale-[0.98]"
+                              >
+                                Upgrade to Pro — from $12/mo
+                              </Link>
+                            </div>
+                          </section>
+                        )}
                       </div>
 
                     </div>

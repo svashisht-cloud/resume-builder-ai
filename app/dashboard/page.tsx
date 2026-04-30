@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import AppNavbar from '@/components/AppNavbar'
 import { DashboardShell } from '@/components/DashboardShell'
+import { resolveNavPlan } from '@/lib/utils/plan'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -17,15 +18,11 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
-  const planType = profile?.plan_type as string | null | undefined
-  const planStatus = profile?.plan_status as string | null | undefined
-  const planPeriodEnd = profile?.plan_current_period_end as string | null | undefined
-  const stillInPeriod = planPeriodEnd ? new Date(planPeriodEnd) > new Date() : false
-  const navPlan: 'free' | 'pro_monthly' | 'pro_annual' =
-    (planType === 'pro_monthly' || planType === 'pro_annual') &&
-    (planStatus === 'active' || (planStatus === 'cancelled' && stillInPeriod) || (planStatus === 'past_due' && stillInPeriod))
-      ? (planType as 'pro_monthly' | 'pro_annual')
-      : 'free'
+  const navPlan = resolveNavPlan(
+    profile?.plan_type,
+    profile?.plan_status,
+    profile?.plan_current_period_end,
+  )
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
@@ -41,7 +38,10 @@ export default async function DashboardPage() {
       <DashboardShell experienceLevel={
         (profile?.experience_level === 'junior' || profile?.experience_level === 'senior'
           ? profile.experience_level : 'mid') as 'junior' | 'mid' | 'senior'
-      } />
+      }
+        plan={navPlan}
+        creditsRemaining={profile?.credits_remaining ?? 0}
+      />
     </div>
   )
 }

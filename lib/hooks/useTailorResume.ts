@@ -53,12 +53,16 @@ export function useTailorResume({
   resumeStyle,
   experienceLevel = 'mid',
   targetPages = 1,
+  plan,
+  creditsRemaining,
 }: {
   resumeFile: File | null;
   jobDescription: string;
   resumeStyle?: ResumeStyle;
   experienceLevel?: 'junior' | 'mid' | 'senior';
   targetPages?: 1 | 2;
+  plan?: 'free' | 'pro_monthly' | 'pro_annual';
+  creditsRemaining?: number;
 }): TailorResumeState {
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -236,6 +240,11 @@ export function useTailorResume({
 
   function handleTailorResume() {
     if (!resumeFile || loadingStep !== 0 || pendingEvalData) return;
+
+    if (plan === 'free' && (creditsRemaining ?? 1) <= 0) {
+      setIsNoCreditsOpen(true);
+      return;
+    }
 
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();

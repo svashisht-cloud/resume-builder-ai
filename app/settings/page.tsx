@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import AppNavbar from '@/components/AppNavbar'
 import SettingsClient from '@/components/settings/SettingsClient'
 import { ArrowLeft } from 'lucide-react'
+import { resolveNavPlan } from '@/lib/utils/plan'
 
 function formatMemberSince(isoDate: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(
@@ -22,7 +23,7 @@ const BASE_SETTINGS_SECTIONS = [
 ]
 
 interface SettingsPageProps {
-  searchParams?: Promise<{ section?: string }>
+  searchParams?: Promise<{ section?: string; highlight?: string }>
 }
 
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
@@ -62,15 +63,11 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const initial = (email[0] ?? '?').toUpperCase()
 
   const creditsRemaining = profile?.credits_remaining ?? 0
-  const settingsPlanType = profile?.plan_type as string | null | undefined
-  const settingsPlanStatus = profile?.plan_status as string | null | undefined
-  const settingsPeriodEnd = profile?.plan_current_period_end as string | null | undefined
-  const settingsStillInPeriod = settingsPeriodEnd ? new Date(settingsPeriodEnd) > new Date() : false
-  const navPlan: 'free' | 'pro_monthly' | 'pro_annual' =
-    (settingsPlanType === 'pro_monthly' || settingsPlanType === 'pro_annual') &&
-    (settingsPlanStatus === 'active' || (settingsPlanStatus === 'cancelled' && settingsStillInPeriod))
-      ? (settingsPlanType as 'pro_monthly' | 'pro_annual')
-      : 'free'
+  const navPlan = resolveNavPlan(
+    profile?.plan_type,
+    profile?.plan_status,
+    profile?.plan_current_period_end,
+  )
   const resumesGenerated = resumesResult.data?.length ?? 0
   const regensUsed = resumesResult.data?.reduce((s, r) => s + r.regen_count, 0) ?? 0
   const creditsSpentLifetime = spentCreditsResult.count ?? 0
@@ -83,6 +80,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     ...BASE_SETTINGS_SECTIONS,
     ...(isAdmin ? [{ id: 'admin', label: 'Admin' }] : []),
   ]
+  const requestedHighlight = resolvedSearchParams?.highlight
   const requestedSection = resolvedSearchParams?.section ?? 'profile'
   const activeSection = settingsSections.some((section) => section.id === requestedSection)
     ? requestedSection
@@ -118,6 +116,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <SettingsClient
           initialSection={activeSection}
           sections={settingsSections}
+          highlight={requestedHighlight}
           profile={{
             email,
             avatarUrl,

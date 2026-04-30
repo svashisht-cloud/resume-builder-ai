@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Settings, LogOut, Monitor, Sun, Moon } from 'lucide-react'
+import { Settings, LogOut, Monitor, Sun, Moon, Sparkles } from 'lucide-react'
 import { Sora } from 'next/font/google'
 import { useTheme, type Theme } from '@/components/ThemeProvider'
 
@@ -25,7 +25,9 @@ const themeOrder: Theme[] = ['dark', 'light', 'system']
 
 export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
   const [open, setOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null)
+  const avatarButtonRef = useRef<HTMLButtonElement>(null)
+  const desktopDropdownRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const { theme, setTheme } = useTheme()
 
@@ -36,16 +38,44 @@ export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
 
   const ThemeIcon = theme === 'light' ? Sun : theme === 'system' ? Monitor : Moon
   const themeLabel = theme === 'light' ? 'Light' : theme === 'dark' ? 'Dark' : 'System'
+  const isFreePlan = plan === 'free'
 
   useEffect(() => {
     function handleOutsideClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (
+        !avatarButtonRef.current?.contains(target) &&
+        !desktopDropdownRef.current?.contains(target)
+      ) {
         setOpen(false)
       }
     }
+    function handleClose() { setOpen(false) }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', handleOutsideClick)
-    return () => document.removeEventListener('mousedown', handleOutsideClick)
+    document.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('scroll', handleClose, { capture: true })
+    window.addEventListener('resize', handleClose)
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick)
+      document.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('scroll', handleClose, { capture: true })
+      window.removeEventListener('resize', handleClose)
+    }
   }, [])
+
+  function handleAvatarClick() {
+    if (!open && avatarButtonRef.current) {
+      const rect = avatarButtonRef.current.getBoundingClientRect()
+      setDropdownPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      })
+    }
+    setOpen((v) => !v)
+  }
 
   async function handleSignOut() {
     setOpen(false)
@@ -57,7 +87,7 @@ export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
 
   return (
     <>
-      <nav className="z-10 flex-shrink-0 border-b border-border/50 bg-app-glass backdrop-blur-md">
+      <nav className="z-50 flex-shrink-0 border-b border-border/50 bg-app-glass backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <button
             onClick={() => router.push('/dashboard')}
@@ -81,71 +111,91 @@ export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
                 </span>
               ) : (
                 <button
-                  onClick={() => router.push('/settings')}
-                  className="rounded-full border border-danger-border bg-danger-bg px-2.5 py-1 text-xs font-medium text-danger-fg transition-colors hover:border-danger"
+                  onClick={() => router.push('/settings?section=billing&highlight=pro')}
+                  className="rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 text-xs font-medium text-accent transition-colors hover:border-accent/60"
                 >
-                  Upgrade
+                  Get Premium
                 </button>
               )
             )}
 
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setOpen((v) => !v)}
-                className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border bg-surface-raised text-sm font-semibold text-foreground transition-all hover:border-accent/60 hover:shadow-accent-soft"
-                aria-label="Account menu"
-              >
-                {user.avatar_url ? (
-                  <Image
-                    src={user.avatar_url}
-                    alt="Avatar"
-                    width={36}
-                    height={36}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  initial.toUpperCase()
-                )}
-              </button>
-
-              {/* Desktop dropdown — hidden on mobile */}
-              {open && (
-                <div className="shadow-elevated absolute right-0 top-11 z-50 hidden w-56 overflow-hidden rounded-xl border border-border/70 bg-surface md:block">
-                  <div className="border-b border-border/60 px-4 py-3">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {user.display_name ?? 'User'}
-                    </p>
-                    <p className="truncate text-xs text-muted">{user.email}</p>
-                  </div>
-                  <div className="p-1">
-                    <button
-                      onClick={cycleTheme}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-raised"
-                    >
-                      <ThemeIcon size={14} className="text-muted" />
-                      {themeLabel} Theme
-                    </button>
-                    <button
-                      onClick={() => { setOpen(false); router.push('/settings') }}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-raised"
-                    >
-                      <Settings size={14} className="text-muted" />
-                      Settings
-                    </button>
-                    <button
-                      onClick={handleSignOut}
-                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-raised"
-                    >
-                      <LogOut size={14} className="text-muted" />
-                      Sign Out
-                    </button>
-                  </div>
-                </div>
+            <button
+              ref={avatarButtonRef}
+              onClick={handleAvatarClick}
+              className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border bg-surface-raised text-sm font-semibold text-foreground transition-all hover:border-accent/60 hover:shadow-accent-soft"
+              aria-label="Account menu"
+              aria-expanded={open}
+              aria-haspopup="menu"
+            >
+              {user.avatar_url ? (
+                <Image
+                  src={user.avatar_url}
+                  alt="Avatar"
+                  width={36}
+                  height={36}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                initial.toUpperCase()
               )}
-            </div>
+            </button>
           </div>
         </div>
       </nav>
+
+      {/*
+        Desktop dropdown — rendered as a sibling to <nav>, NOT inside it.
+        The nav's backdrop-filter creates a stacking context; any child with
+        position:absolute is trapped inside it and can be occluded by page content.
+        Using position:fixed outside the nav escapes that context entirely.
+        Coordinates are computed from the avatar button's bounding rect on open.
+      */}
+      {open && dropdownPos && (
+        <div
+          ref={desktopDropdownRef}
+          className="shadow-elevated fixed z-[100] hidden w-56 overflow-hidden rounded-xl border border-border/70 bg-surface md:block"
+          style={{ top: dropdownPos.top, right: dropdownPos.right }}
+        >
+          <div className="border-b border-border/60 px-4 py-3">
+            <p className="truncate text-sm font-medium text-foreground">
+              {user.display_name ?? 'User'}
+            </p>
+            <p className="truncate text-xs text-muted">{user.email}</p>
+          </div>
+          <div className="p-1">
+            {isFreePlan && (
+              <button
+                onClick={() => { setOpen(false); router.push('/settings?section=billing&highlight=pro') }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-accent transition-colors hover:bg-surface-raised"
+              >
+                <Sparkles size={14} className="text-accent" />
+                Get Premium
+              </button>
+            )}
+            <button
+              onClick={cycleTheme}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-raised"
+            >
+              <ThemeIcon size={14} className="text-muted" />
+              {themeLabel} Theme
+            </button>
+            <button
+              onClick={() => { setOpen(false); router.push('/settings') }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-raised"
+            >
+              <Settings size={14} className="text-muted" />
+              Settings
+            </button>
+            <button
+              onClick={handleSignOut}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-surface-raised"
+            >
+              <LogOut size={14} className="text-muted" />
+              Sign Out
+            </button>
+          </div>
+        </div>
+      )}
 
       {/*
         Bottom sheet + backdrop — rendered as siblings to <nav>, NOT inside it.
@@ -181,6 +231,15 @@ export default function AppNavbar({ user, credits, plan }: AppNavbarProps) {
 
         {/* Menu items — 56px+ touch targets */}
         <div className="space-y-1 p-4">
+          {isFreePlan && (
+            <button
+              onClick={() => { setOpen(false); router.push('/settings?section=billing&highlight=pro') }}
+              className="flex w-full items-center gap-4 rounded-xl px-4 py-4 text-left text-accent transition-colors hover:bg-surface-raised active:bg-surface-raised"
+            >
+              <Sparkles size={18} />
+              <span className="text-sm font-semibold">Get Premium</span>
+            </button>
+          )}
           <button
             onClick={cycleTheme}
             className="flex w-full items-center gap-4 rounded-xl px-4 py-4 text-left text-foreground transition-colors hover:bg-surface-raised active:bg-surface-raised"

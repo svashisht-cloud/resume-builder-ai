@@ -61,6 +61,7 @@ export default function ConfirmChargeModal({
   if (!open) return null
 
   const { name, price } = PLAN_LABELS[plan]
+  const isSubscription = plan === 'pro_monthly' || plan === 'pro_annual'
   const cardBrand = card.brand ? capitalize(card.brand) : 'Card'
   const cardLabel = card.last4 ? `${cardBrand} •••• ${card.last4}` : cardBrand
   const expiry = formatExpiry(card.expiryMonth, card.expiryYear)
@@ -95,7 +96,7 @@ export default function ConfirmChargeModal({
               id="confirm-charge-title"
               className="font-display text-xl font-bold text-foreground"
             >
-              Confirm subscription
+              {isSubscription ? 'Confirm subscription' : 'Confirm purchase'}
             </h2>
             <button
               onClick={onClose}
@@ -165,7 +166,7 @@ export default function ConfirmChargeModal({
               disabled={loading || !zip.trim()}
               className="flex h-10 flex-1 items-center justify-center rounded-lg bg-gradient-to-r from-accent to-accent-hover text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:opacity-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? 'Processing…' : 'Confirm & subscribe'}
+              {loading ? 'Processing…' : isSubscription ? 'Confirm & subscribe' : 'Confirm & pay'}
             </button>
             <button
               onClick={onClose}
