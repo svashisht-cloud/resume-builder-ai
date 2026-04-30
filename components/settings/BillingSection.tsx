@@ -72,9 +72,10 @@ export default function BillingSection({
     (planStatus === 'active' || (planStatus === 'cancelled' && !periodExpired) || (planStatus === 'past_due' && !periodExpired))
   const cancellationScheduled = isProPlan && planStatus === 'cancelled' && !periodExpired
   const pastDue = isProPlan && planStatus === 'past_due' && !periodExpired
+  const isMonthly = planType === 'pro_monthly'
+  const isAnnual = planType === 'pro_annual'
+  const canSwitchPlan = hasProAccess && !cancellationScheduled && !pastDue
   const planLabel = planType === 'pro_monthly' ? 'Pro Monthly' : planType === 'pro_annual' ? 'Pro Annual' : 'Free'
-  const alternatePlan: SubscriptionProduct = planType === 'pro_monthly' ? 'pro_annual' : 'pro_monthly'
-  const alternatePlanLabel = alternatePlan === 'pro_annual' ? 'Pro Annual' : 'Pro Monthly'
   const creditsContextLine = hasProAccess && !pastDue
     ? 'Used when you exceed 100 resumes per month on your Pro plan.'
     : pastDue
@@ -300,103 +301,184 @@ export default function BillingSection({
           </div>
         )}
 
-        {(!hasProAccess || (hasProAccess && !cancellationScheduled)) && (
-          <div className="mt-5 border-t border-border/40 pt-5">
-            {!hasProAccess && (
-              <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 rounded-xl transition-shadow ${highlight === 'pro' ? 'ring-2 ring-accent/40' : ''}`}>
-                {/* Pro Monthly card */}
-                <div className="flex flex-col overflow-hidden rounded-xl border border-border/60 bg-surface-raised/60 transition-all duration-200 hover:border-border hover:bg-surface-raised/80 hover:shadow-accent-soft">
-                  <div className="h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
-                  <div className="flex flex-1 flex-col p-4 sm:p-5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">Monthly</p>
-                    <p className="mt-2 font-display text-2xl font-bold leading-none tracking-tight text-foreground">
-                      $12<span className="text-sm font-normal tracking-normal text-muted"> / month</span>
-                    </p>
-                    <p className="mt-1 text-xs text-muted">Billed monthly · cancel any time</p>
-                    <ul className="mt-3 space-y-1.5">
-                      <li className="flex items-center gap-2 text-xs text-muted">
-                        <Check size={11} className="shrink-0 text-accent" />Full Pro access
-                      </li>
-                      <li className="flex items-center gap-2 text-xs text-muted">
-                        <Check size={11} className="shrink-0 text-accent" />Cancel any time
-                      </li>
-                      <li className="flex items-center gap-2 text-xs text-muted">
-                        <Check size={11} className="shrink-0 text-accent" />Start tailoring today
-                      </li>
-                    </ul>
-                    <div className="flex-1 min-h-3" />
-                    <button
-                      type="button"
-                      onClick={() => handleStartCheckout('pro_monthly')}
-                      disabled={!!loadingAction}
-                      className="mt-4 w-full rounded-lg border border-accent/50 bg-accent/10 px-4 py-2 text-sm font-semibold text-accent transition-all hover:bg-accent/20 hover:border-accent/60 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {loadingAction === 'pro_monthly' ? 'Processing...' : 'Start Pro Monthly'}
-                    </button>
-                  </div>
-                </div>
+        <div className="mt-5 border-t border-border/40 pt-5">
+          <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 rounded-xl transition-shadow ${highlight === 'pro' ? 'ring-2 ring-accent/40' : ''}`}>
 
-                {/* Pro Annual card */}
-                <div className="flex flex-col overflow-hidden rounded-xl border border-accent/40 bg-accent/5 transition-all duration-200 hover:border-accent/55 hover:bg-accent/8">
-                  <div className="h-px bg-gradient-to-r from-transparent via-accent/60 to-transparent" />
-                  <div className="flex flex-1 flex-col p-4 sm:p-5">
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Annual</p>
-                      <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent">Best value</span>
-                    </div>
-                    <p className="mt-2 font-display text-2xl font-bold leading-none tracking-tight text-foreground">
-                      $79<span className="text-sm font-normal tracking-normal text-muted"> / year</span>
-                    </p>
-                    <p className="mt-1 text-xs text-muted">~$6.58/mo · save ~45%</p>
-                    <ul className="mt-3 space-y-1.5">
-                      <li className="flex items-center gap-2 text-xs text-muted">
-                        <Check size={11} className="shrink-0 text-accent" />Unlimited tailoring &amp; regenerations
-                      </li>
-                      <li className="flex items-center gap-2 text-xs text-muted">
-                        <Check size={11} className="shrink-0 text-accent" />Save ~45% vs monthly
-                      </li>
-                      <li className="flex items-center gap-2 text-xs text-muted">
-                        <Check size={11} className="shrink-0 text-accent" />All export formats
-                      </li>
-                    </ul>
-                    <div className="flex-1 min-h-3" />
-                    <button
-                      type="button"
-                      onClick={() => handleStartCheckout('pro_annual')}
-                      disabled={!!loadingAction}
-                      className="mt-4 w-full rounded-lg bg-gradient-to-r from-accent to-accent-hover px-4 py-2 text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:opacity-95 hover:shadow-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {loadingAction === 'pro_annual' ? 'Processing...' : 'Start Pro Annual'}
-                    </button>
-                  </div>
+            {/* Pro Monthly card */}
+            <div className={`flex flex-col overflow-hidden rounded-xl border transition-all duration-200 ${
+              isMonthly
+                ? 'border-accent/40 bg-accent/5'
+                : 'border-border/60 bg-surface-raised/60 hover:border-border hover:bg-surface-raised/80 hover:shadow-accent-soft'
+            }`}>
+              <div className={`h-px bg-gradient-to-r from-transparent ${isMonthly ? 'via-accent/60' : 'via-border/60'} to-transparent`} />
+              <div className="flex flex-1 flex-col p-4 sm:p-5">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${isMonthly ? 'text-accent' : 'text-muted'}`}>Monthly</p>
+                  {isMonthly && (
+                    <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent">Current plan</span>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {hasProAccess && !cancellationScheduled && (
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                {pendingPlanType !== 'pro_annual' && (
+                <p className="mt-2 font-display text-2xl font-bold leading-none tracking-tight text-foreground">
+                  $12<span className="text-sm font-normal tracking-normal text-muted"> / month</span>
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  {isMonthly && hasProAccess
+                    ? cancellationScheduled && periodEnd
+                      ? `Access until ${formatPeriodEnd(periodEnd)}`
+                      : pastDue
+                        ? 'Payment issue'
+                        : periodEnd ? `Renews on ${formatPeriodEnd(periodEnd)}` : 'Active'
+                    : 'Billed monthly · cancel any time'}
+                </p>
+                <ul className="mt-3 space-y-1.5">
+                  <li className="flex items-center gap-2 text-xs text-muted">
+                    <Check size={11} className="shrink-0 text-accent" />Full Pro access
+                  </li>
+                  <li className="flex items-center gap-2 text-xs text-muted">
+                    <Check size={11} className="shrink-0 text-accent" />Cancel any time
+                  </li>
+                  <li className="flex items-center gap-2 text-xs text-muted">
+                    <Check size={11} className="shrink-0 text-accent" />Start tailoring today
+                  </li>
+                </ul>
+                <div className="flex-1 min-h-3" />
+                {isMonthly ? (
                   <button
                     type="button"
-                    onClick={() => alternatePlan === 'pro_annual' ? setSwitchModalOpen(true) : void changePlan('pro_monthly')}
-                    disabled={!!loadingAction}
-                    className="w-full rounded-lg border border-border/60 px-4 py-2.5 text-sm font-medium text-foreground transition-all duration-150 hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-2"
+                    disabled
+                    className="mt-4 w-full rounded-lg border border-border/40 bg-muted/10 px-4 py-2 text-sm font-semibold text-muted cursor-not-allowed"
                   >
-                    {loadingAction === alternatePlan ? 'Changing...' : `Switch to ${alternatePlanLabel}`}
+                    Current plan
+                  </button>
+                ) : isAnnual ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { if (canSwitchPlan) void changePlan('pro_monthly') }}
+                      disabled={!canSwitchPlan || !!loadingAction}
+                      className="mt-4 w-full rounded-lg border border-accent/50 bg-accent/10 px-4 py-2 text-sm font-semibold text-accent transition-all hover:bg-accent/20 hover:border-accent/60 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {loadingAction === 'pro_monthly' ? 'Changing...' : 'Switch to Pro Monthly'}
+                    </button>
+                    {!canSwitchPlan && (
+                      <p className="mt-1.5 text-center text-xs text-muted">
+                        {cancellationScheduled
+                          ? periodEnd
+                            ? `This subscription ends on ${formatPeriodEnd(periodEnd)}. Plan changes are disabled until a new subscription is started.`
+                            : 'Plan changes are unavailable after cancellation is scheduled.'
+                          : 'Update payment to switch plans'}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleStartCheckout('pro_monthly')}
+                    disabled={!!loadingAction}
+                    className="mt-4 w-full rounded-lg border border-accent/50 bg-accent/10 px-4 py-2 text-sm font-semibold text-accent transition-all hover:bg-accent/20 hover:border-accent/60 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {loadingAction === 'pro_monthly' ? 'Processing...' : 'Start Pro Monthly'}
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setCancelModalOpen(true)}
-                  disabled={!!loadingAction}
-                  className="w-full rounded-lg border border-danger-border px-4 py-2.5 text-sm font-medium text-danger-fg transition-all duration-150 hover:bg-danger-bg disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:py-2"
-                >
-                  Cancel subscription
-                </button>
               </div>
-            )}
+            </div>
+
+            {/* Pro Annual card */}
+            <div className="flex flex-col overflow-hidden rounded-xl border border-accent/40 bg-accent/5 transition-all duration-200 hover:border-accent/55 hover:bg-accent/8">
+              <div className="h-px bg-gradient-to-r from-transparent via-accent/60 to-transparent" />
+              <div className="flex flex-1 flex-col p-4 sm:p-5">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Annual</p>
+                  {isAnnual ? (
+                    <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent">Current plan</span>
+                  ) : (
+                    <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent">Best value</span>
+                  )}
+                </div>
+                <p className="mt-2 font-display text-2xl font-bold leading-none tracking-tight text-foreground">
+                  $79<span className="text-sm font-normal tracking-normal text-muted"> / year</span>
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  {isAnnual && hasProAccess
+                    ? cancellationScheduled && periodEnd
+                      ? `Access until ${formatPeriodEnd(periodEnd)}`
+                      : pastDue
+                        ? 'Payment issue'
+                        : periodEnd ? `Renews on ${formatPeriodEnd(periodEnd)}` : 'Active'
+                    : '~$6.58/mo · save ~45%'}
+                </p>
+                <ul className="mt-3 space-y-1.5">
+                  <li className="flex items-center gap-2 text-xs text-muted">
+                    <Check size={11} className="shrink-0 text-accent" />Unlimited tailoring &amp; regenerations
+                  </li>
+                  <li className="flex items-center gap-2 text-xs text-muted">
+                    <Check size={11} className="shrink-0 text-accent" />Save ~45% vs monthly
+                  </li>
+                  <li className="flex items-center gap-2 text-xs text-muted">
+                    <Check size={11} className="shrink-0 text-accent" />All export formats
+                  </li>
+                </ul>
+                <div className="flex-1 min-h-3" />
+                {isAnnual ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="mt-4 w-full rounded-lg border border-border/40 bg-muted/10 px-4 py-2 text-sm font-semibold text-muted cursor-not-allowed"
+                  >
+                    Current plan
+                  </button>
+                ) : pendingPlanType === 'pro_annual' ? (
+                  <div className="mt-4 rounded-lg border border-accent/30 bg-accent/8 px-4 py-2 text-center text-sm font-semibold text-accent">
+                    Switching soon
+                  </div>
+                ) : isMonthly ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { if (canSwitchPlan) setSwitchModalOpen(true) }}
+                      disabled={!canSwitchPlan || !!loadingAction}
+                      className="mt-4 w-full rounded-lg bg-gradient-to-r from-accent to-accent-hover px-4 py-2 text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:opacity-95 hover:shadow-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {loadingAction === 'pro_annual' ? 'Changing...' : 'Switch to Pro Annual'}
+                    </button>
+                    {!canSwitchPlan && (
+                      <p className="mt-1.5 text-center text-xs text-muted">
+                        {cancellationScheduled
+                          ? periodEnd
+                            ? `This subscription ends on ${formatPeriodEnd(periodEnd)}. Plan changes are disabled until a new subscription is started.`
+                            : 'Plan changes are unavailable after cancellation is scheduled.'
+                          : 'Update payment to switch plans'}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleStartCheckout('pro_annual')}
+                    disabled={!!loadingAction}
+                    className="mt-4 w-full rounded-lg bg-gradient-to-r from-accent to-accent-hover px-4 py-2 text-sm font-semibold text-accent-foreground shadow-accent-soft transition-all hover:opacity-95 hover:shadow-accent-strong disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {loadingAction === 'pro_annual' ? 'Processing...' : 'Start Pro Annual'}
+                  </button>
+                )}
+              </div>
+            </div>
+
           </div>
-        )}
+
+          {hasProAccess && !cancellationScheduled && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setCancelModalOpen(true)}
+                disabled={!!loadingAction}
+                className="rounded-lg border border-danger-border px-4 py-2.5 text-sm font-medium text-danger-fg transition-all duration-150 hover:bg-danger-bg disabled:cursor-not-allowed disabled:opacity-50 sm:py-2"
+              >
+                Cancel subscription
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className={`surface-card rounded-xl border border-border/50 p-5 sm:p-6 transition-shadow ${highlight === 'credits' ? 'ring-2 ring-accent/40' : ''}`}>
@@ -483,7 +565,7 @@ export default function BillingSection({
         />
       )}
 
-      {alternatePlan === 'pro_annual' && (
+      {isMonthly && (
         <SwitchToAnnualModal
           open={switchModalOpen}
           onClose={() => setSwitchModalOpen(false)}

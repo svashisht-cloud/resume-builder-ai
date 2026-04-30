@@ -58,6 +58,9 @@ export async function GET() {
       },
     })
   } catch (err) {
+    if ((err as { status?: number }).status === 404) {
+      return Response.json({ paymentMethod: null })
+    }
     console.error('[payment-method] Dodo API error:', err)
     return Response.json({ error: 'Failed to fetch payment method.' }, { status: 500 })
   }
